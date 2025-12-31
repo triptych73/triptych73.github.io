@@ -3,36 +3,353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON Linker</title>
-    <style>
-        /* Simple styling to make it look decent */
-        body { font-family: sans-serif; padding: 50px; text-align: center; }
-        input { padding: 10px; width: 300px; margin-bottom: 10px; }
-        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; }
-        button:hover { background-color: #0056b3; }
-    </style>
-</head>
-<body>
+    <title>St Mary Somerset | The Private Tower</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@300;400&display=swap" rel="stylesheet">
 
-    <h1>Dashboard</h1>
-
-    <input type="text" id="jsonInput" placeholder='Enter JSON e.g. {"id": 123}'>
-    <br>
-
-    <button onclick="goToEngineering()">Go to Engineering</button>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 
     <script>
-        function goToEngineering() {
-            // Get the value from the textbox
-            const jsonValue = document.getElementById('jsonInput').value;
-
-            // Encode it so it is safe for a URL (turns spaces into %20, etc.)
-            const encodedJson = encodeURIComponent(jsonValue);
-
-            // Redirect the browser to engineering.html with the query parameter
-            window.location.href = 'engineering.html?config=' + encodedJson;
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portland': '#F5F5F0', // Weathered Stone
+                        'midnight': '#0F1115', // Thames Midnight
+                        'bronze': '#9A8C74',   // Patinated Bronze
+                    },
+                    fontFamily: {
+                        'serif': ['Cinzel', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                    }
+                }
+            }
         }
     </script>
 
+    <style>
+        /* CUSTOM UTILITIES */
+        body {
+            background-color: #F5F5F0;
+            overflow-x: hidden;
+            cursor: none; /* Hiding default cursor for custom one */
+        }
+
+        /* Custom Cursor */
+        .cursor-dot,
+        .cursor-outline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        .cursor-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #9A8C74;
+        }
+        .cursor-outline {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(154, 140, 116, 0.5);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+        }
+
+        /* Hide Scrollbar for cleaner aesthetic */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        /* Smooth text rendering */
+        .smooth-text {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Image overlay gradients */
+        .overlay-gradient {
+            background: linear-gradient(to top, rgba(15,17,21,0.8), transparent);
+        }
+    </style>
+</head>
+<body class="text-midnight smooth-text selection:bg-bronze selection:text-white">
+
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+
+    <div id="loader" class="fixed inset-0 z-50 flex items-center justify-center bg-midnight text-portland">
+        <div class="text-center">
+            <h1 class="font-serif text-3xl tracking-[0.3em] uppercase opacity-0" id="loader-text">St Mary Somerset</h1>
+            <p class="font-sans text-xs tracking-widest mt-4 opacity-0 text-bronze" id="loader-sub">Est. 1694</p>
+        </div>
+    </div>
+
+    <nav class="fixed top-0 w-full p-8 z-40 flex justify-between items-center mix-blend-difference text-portland">
+        <div class="font-serif tracking-widest text-sm uppercase">SMS • 1694</div>
+        <div class="group cursor-pointer">
+            <span class="font-sans text-xs tracking-[0.2em] uppercase hover:text-bronze transition-colors duration-300">Private Dossier +</span>
+        </div>
+    </nav>
+
+    <section class="relative h-screen w-full overflow-hidden flex items-center justify-center">
+        <div class="absolute inset-0 z-0 scale-110" id="hero-bg">
+            <img src="assets/images/0001.jpg" 
+                 class="w-full h-full object-cover filter brightness-[0.7] grayscale-[20%]" 
+                 alt="St Mary Somerset Tower Street View">
+        </div>
+        
+        <div class="relative z-10 text-center text-portland px-4">
+            <p class="hero-anim font-sans text-xs tracking-[0.4em] mb-6 text-bronze uppercase">The Solitary Pursuit</p>
+            <h1 class="hero-anim font-serif text-5xl md:text-7xl lg:text-8xl tracking-wide leading-tight mb-8">
+                One Wren<br>Masterpiece
+            </h1>
+            <p class="hero-anim font-sans text-sm md:text-base tracking-wide max-w-lg mx-auto opacity-80 leading-relaxed">
+                Resurrecting the architectural soul of 1694 London, distilled into a singular, ultra-prime residence for the modern age.
+            </p>
+        </div>
+
+        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 text-portland opacity-50 text-[10px] tracking-[0.3em] uppercase animate-pulse">
+            Ascend
+        </div>
+    </section>
+
+    <section class="min-h-screen bg-portland flex flex-col justify-center py-32 px-6 md:px-20 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
+            
+            <div class="md:col-span-7 space-y-12">
+                <span class="block font-sans text-xs tracking-[0.3em] text-bronze uppercase reveal-text">The Philosophy</span>
+                
+                <h2 class="font-serif text-4xl md:text-6xl text-midnight leading-none reveal-text">
+                    In an industry of volume, <br>
+                    <span class="italic text-bronze">we chose obsession.</span>
+                </h2>
+                
+                <div class="space-y-6 max-w-xl reveal-text">
+                    <p class="font-sans text-sm md:text-base leading-loose text-gray-600">
+                        We are not a developer of portfolios; we are custodians of the unique. Our philosophy is radical in its simplicity: <strong class="text-midnight">We execute only one project at a time.</strong>
+                    </p>
+                    <p class="font-sans text-sm md:text-base leading-loose text-gray-600">
+                        To restore a Grade I listed structure born from the mind of Sir Christopher Wren demands a forensic attention to detail that cannot be diluted. We are currently dedicated entirely to St Mary Somerset. Until it is flawless, we look nowhere else.
+                    </p>
+                </div>
+            </div>
+
+            <div class="md:col-span-5 h-[60vh] overflow-hidden relative border-l border-bronze/30">
+                <img src="assets/images/0002.jpg" 
+                     class="absolute top-0 left-0 w-full h-[120%] object-cover parallax-img grayscale-[10%]" 
+                     alt="Portland Stone Detail">
+            </div>
+        </div>
+    </section>
+
+    <section class="min-h-screen bg-midnight text-portland relative py-32 overflow-hidden">
+        
+        <div class="absolute inset-0 w-full h-full opacity-[0.08] mix-blend-overlay">
+             <img src="assets/images/0040.jpg" class="w-full h-full object-cover grayscale invert" alt="Historic Graffiti">
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 md:px-20 relative z-10">
+            <div class="mb-24">
+                <span class="block font-sans text-xs tracking-[0.3em] text-bronze uppercase mb-4 reveal-dark">The Project</span>
+                <h2 class="font-serif text-5xl md:text-7xl reveal-dark">St Mary Somerset:<br>The Private Tower</h2>
+            </div>
+
+            <div class="w-full h-[80vh] relative mb-24 overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-t from-midnight/80 via-transparent to-transparent z-10"></div>
+                <img src="assets/images/0014.jpg" 
+                     class="w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-105 filter saturate-[0.8]" 
+                     alt="Baroque Pinnacles">
+                
+                <div class="absolute bottom-8 left-8 z-20 max-w-md">
+                    <p class="font-serif text-2xl italic mb-2 text-portland">1694 Shell. 2025 Soul.</p>
+                    <p class="font-sans text-xs tracking-wide opacity-80 leading-relaxed text-portland">Eight Baroque pinnacles piercing the London sky. A fortress of Portland Stone shielding a core of intelligent, bespoke luxury.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/10 pt-16">
+                <div class="reveal-dark">
+                    <h3 class="font-serif text-xl mb-4 text-bronze">Invisible Modernity</h3>
+                    <p class="font-sans text-sm opacity-60 leading-relaxed">Museum-grade MVHR air purification and radiant thermal control, hidden within the floor voids.</p>
+                </div>
+                <div class="reveal-dark">
+                    <h3 class="font-serif text-xl mb-4 text-bronze">Vertical Ascent</h3>
+                    <p class="font-sans text-sm opacity-60 leading-relaxed">A custom-engineered, whisper-quiet lift serves the primary floors, respecting the Grade I fabric.</p>
+                </div>
+                <div class="reveal-dark">
+                    <h3 class="font-serif text-xl mb-4 text-bronze">Acoustic Sanctuary</h3>
+                    <p class="font-sans text-sm opacity-60 leading-relaxed">Secondary glazing and hermetic sealing turn the City's hum into absolute silence.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="h-[70vh] bg-portland flex flex-col items-center justify-center relative px-4">
+        <div class="text-center space-y-8 z-10">
+            <p class="font-sans text-xs tracking-[0.4em] text-bronze uppercase">The Opportunity</p>
+            <h2 class="font-serif text-5xl md:text-7xl text-midnight">Inherit the Genius.</h2>
+            <div class="pt-8">
+                <button class="border border-midnight px-12 py-4 font-sans text-xs tracking-[0.3em] uppercase hover:bg-midnight hover:text-portland transition-all duration-500">
+                    Request Private Dossier
+                </button>
+            </div>
+        </div>
+        
+        <div class="absolute bottom-8 w-full flex justify-between px-8 text-[10px] tracking-widest text-midnight opacity-40 font-sans uppercase">
+            <span>London, UK</span>
+            <span>&copy; MMXIV St Mary Somerset</span>
+        </div>
+    </section>
+
+    <script>
+        // 1. CUSTOM CURSOR LOGIC
+        const cursorDot = document.querySelector('.cursor-dot');
+        const cursorOutline = document.querySelector('.cursor-outline');
+
+        window.addEventListener('mousemove', (e) => {
+            const posX = e.clientX;
+            const posY = e.clientY;
+
+            // Dot follows instantly
+            cursorDot.style.left = `${posX}px`;
+            cursorDot.style.top = `${posY}px`;
+
+            // Outline follows with slight delay (animation in CSS)
+            cursorOutline.animate({
+                left: `${posX}px`,
+                top: `${posY}px`
+            }, { duration: 500, fill: "forwards" });
+        });
+
+        // Hover effects for cursor
+        document.querySelectorAll('a, button, .group').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursorOutline.style.width = '60px';
+                cursorOutline.style.height = '60px';
+                cursorOutline.style.backgroundColor = 'rgba(154, 140, 116, 0.1)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursorOutline.style.width = '40px';
+                cursorOutline.style.height = '40px';
+                cursorOutline.style.backgroundColor = 'transparent';
+            });
+        });
+
+        // 2. GSAP ANIMATIONS
+        gsap.registerPlugin(ScrollTrigger);
+
+        // A. Opening Loader Sequence
+        const tl = gsap.timeline();
+
+        tl.to("#loader-text", { opacity: 1, duration: 1.5, ease: "power2.out" })
+          .to("#loader-sub", { opacity: 1, duration: 1, ease: "power2.out" }, "-=0.5")
+          .to("#loader-text, #loader-sub", { opacity: 0, duration: 0.5, delay: 1 })
+          .to("#loader", { yPercent: -100, duration: 1.2, ease: "power4.inOut" })
+          .from(".hero-anim", { 
+              y: 50, 
+              opacity: 0, 
+              duration: 1.5, 
+              stagger: 0.2, 
+              ease: "power3.out" 
+          }, "-=0.5");
+
+        // B. Hero Parallax
+        gsap.to("#hero-bg", {
+            scrollTrigger: {
+                trigger: "section:nth-of-type(1)",
+                start: "top top",
+                end: "bottom top",
+                scrub: true
+            },
+            yPercent: 30,
+            ease: "none"
+        });
+
+        // C. Philosophy Text Reveal
+        const revealText = document.querySelectorAll(".reveal-text");
+        revealText.forEach(text => {
+            gsap.from(text, {
+                scrollTrigger: {
+                    trigger: text,
+                    start: "top 85%",
+                    toggleActions: "play none none reverse"
+                },
+                y: 30,
+                opacity: 0,
+                duration: 1.2,
+                ease: "power3.out"
+            });
+        });
+
+        // D. Image Parallax in Philosophy Section
+        gsap.to(".parallax-img", {
+            scrollTrigger: {
+                trigger: ".parallax-img",
+                start: "top bottom",
+                end: "bottom top",
+                scrub: 1
+            },
+            y: -50,
+            ease: "none"
+        });
+
+        // E. Dark Section Reveals
+        const revealDark = document.querySelectorAll(".reveal-dark");
+        revealDark.forEach((text, i) => {
+            gsap.from(text, {
+                scrollTrigger: {
+                    trigger: text,
+                    start: "top 90%",
+                    toggleActions: "play none none reverse"
+                },
+                y: 40,
+                opacity: 0,
+                duration: 1,
+                delay: i * 0.1,
+                ease: "power3.out"
+            });
+        });
+
+    </script>
+
+        <div class="fixed bottom-2 right-2 z-50 flex items-center gap-3 p-3 rounded-lg bg-midnight/90 backdrop-blur-md border border-white/10 opacity-0 hover:opacity-100 transition-opacity duration-500">
+        <span class="text-[8px] uppercase tracking-widest text-bronze">Dev:</span>
+        
+        <input type="text" 
+               id="jsonInput" 
+               placeholder='{"id": 123}' 
+               class="bg-transparent border-b border-bronze/30 text-[10px] font-mono text-portland w-40 focus:outline-none focus:border-bronze placeholder-white/20 py-1">
+        
+        <button onclick="goToEngineering()" 
+                class="text-[10px] font-sans tracking-widest text-portland uppercase hover:text-bronze transition-colors">
+            Enter &rarr;
+        </button>
+    </div>
+
+    <script>
+        // Existing GSAP/Cursor scripts are above...
+
+        // --- ADD THIS FUNCTION ---
+        function goToEngineering() {
+            // Get the value from the textbox
+            const input = document.getElementById('jsonInput');
+            
+            // Safety check: don't redirect if empty
+            if (!input.value) return;
+
+            // Encode it so it is safe for a URL
+            const encodedJson = encodeURIComponent(input.value);
+
+            // Redirect
+            window.location.href = 'engineering.html?config=' + encodedJson;
+        }
+    </script>
 </body>
 </html>
