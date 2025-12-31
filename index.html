@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Linker</title>
+    <style>
+        /* Simple styling to make it look decent */
+        body { font-family: sans-serif; padding: 50px; text-align: center; }
+        input { padding: 10px; width: 300px; margin-bottom: 10px; }
+        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <h1>Dashboard</h1>
+
+    <input type="text" id="jsonInput" placeholder='Enter JSON e.g. {"id": 123}'>
+    <br>
+
+    <button onclick="goToEngineering()">Go to Engineering</button>
+
+    <script>
+        function goToEngineering() {
+            // Get the value from the textbox
+            const jsonValue = document.getElementById('jsonInput').value;
+
+            // Encode it so it is safe for a URL (turns spaces into %20, etc.)
+            const encodedJson = encodeURIComponent(jsonValue);
+
+            // Redirect the browser to engineering.html with the query parameter
+            window.location.href = 'engineering.html?query=' + encodedJson;
+        }
+    </script>
+
+</body>
+</html>
