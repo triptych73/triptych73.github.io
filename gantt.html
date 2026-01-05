@@ -174,7 +174,7 @@
         <!-- Sidebar -->
         <div class="w-80 flex-shrink-0 bg-panel border-r border-border flex flex-col z-20 shadow-2xl">
             <!-- Sidebar Header -->
-            <div class="h-10 border-b border-border bg-void/50 flex items-center px-4 text-xs font-mono text-bronze uppercase tracking-widest">
+            <div class="h-10 border-b border-border bg-void/50 flex items-center px-4 text-xs font-mono text-bronze uppercase tracking-widest flex-shrink-0">
                 <div class="w-8 text-center">#</div>
                 <div class="flex-1 pl-2">Task Name</div>
                 <div class="w-16 text-right">Dur.</div>
@@ -286,14 +286,15 @@
         import { getFirestore, doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         // --- Firebase Configuration ---
-        const firebaseConfig = {
+        // Updated to use dynamic environment config to prevent Auth mismatch errors
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyBcezJRuEx8vsThQKhi8Az_XdL_XSM6u8g",
             authDomain: "st-mary-somerset.firebaseapp.com",
             projectId: "st-mary-somerset",
             storageBucket: "st-mary-somerset.firebasestorage.app",
             messagingSenderId: "924281338278",
             appId: "1:924281338278:web:83affbb1aff93ba797f767"
-          };
+        };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
         
         const appInstance = initializeApp(firebaseConfig);
@@ -320,6 +321,7 @@
                 this.dragStartY = 0;
                 this.initialItemState = null;
                 this.scrollX = 0;
+                this.lastWidth = 0; // Prevent infinite Resize Loops
 
                 // DOM Elements
                 this.els = {
@@ -337,22 +339,39 @@
                 // Bindings
                 this.initAuth();
                 this.setupEventListeners();
-                this.resizeObserver = new ResizeObserver(() => this.render());
+                
+                // Safe ResizeObserver
+                this.resizeObserver = new ResizeObserver((entries) => {
+                    for (const entry of entries) {
+                        // Only re-render if width changed significantly to prevent vertical resize loops
+                        if (Math.abs(entry.contentRect.width - this.lastWidth) > 1) {
+                            this.lastWidth = entry.contentRect.width;
+                            window.requestAnimationFrame(() => this.render());
+                        }
+                    }
+                });
                 this.resizeObserver.observe(this.els.timelineArea);
             }
 
             // --- Auth & Data ---
             async initAuth() {
+                this.setStatus('CONNECTING...', 'text-yellow-500');
                 try {
-                    this.setStatus('CONNECTING...', 'text-yellow-500');
+                    // Try Custom Token first (if provided by environment)
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
-                        await signInAnonymously(auth);
+                        throw new Error("No initial token available");
                     }
                 } catch (e) {
-                    console.error("Auth failed", e);
-                    this.setStatus('AUTH ERROR', 'text-alert');
+                    console.warn("Primary auth failed, attempting anonymous fallback...", e);
+                    try {
+                        // Fallback to anonymous auth (common fix for config mismatches)
+                        await signInAnonymously(auth);
+                    } catch (anonError) {
+                        console.error("Critical Auth Failure", anonError);
+                        this.setStatus('AUTH ERROR', 'text-alert');
+                    }
                 }
             }
 
@@ -360,7 +379,6 @@
                 if (!user) return;
                 this.els.projectId.textContent = `UID: ${user.uid.substring(0,6)}...`;
                 
-                // FIXED: Added 'main' as document ID to ensure even number of path segments
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'st_mary_project', 'main');
                 
                 onSnapshot(docRef, (snapshot) => {
@@ -388,7 +406,8 @@
             async seedData(ref) {
                 this.setStatus('SEEDING...', 'text-yellow-500');
                 const start = new Date();
-                start.setHours(0,0,0,0);
+                // FIX: Set to Noon to prevent Timezone shift bugs
+                start.setHours(12,0,0,0);
                 
                 const tasks = [
                     { id: 't1', name: 'Project Kickoff', startDate: start.toISOString(), endDate: this.addDays(start, 1).toISOString(), duration: 1, progress: 100, type: 'milestone', dependencies: [] },
@@ -410,7 +429,6 @@
                 if (!auth.currentUser) return;
                 this.setStatus('SYNCING...', 'text-blue-400');
                 
-                // FIXED: Added 'main' as document ID here as well
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'st_mary_project', 'main');
                 
                 try {
@@ -619,8 +637,6 @@
                         const midX = srcX + ((destX - srcX) / 2);
                         
                         // Bezier curve
-                        // M srcX srcY 
-                        // C (srcX + 20) srcY, (destX - 20) destY, destX destY
                         const d = `M ${srcX} ${srcY} 
                                    C ${srcX + 20} ${srcY}, 
                                      ${destX - 20} ${destY}, 
@@ -632,7 +648,6 @@
                         path.setAttribute("fill", "none");
                         path.setAttribute("class", "opacity-60");
                         
-                        // Add arrow head marker logic could be here, but keeping it clean for now
                         this.els.svgLayer.appendChild(path);
                     });
                 });
@@ -651,10 +666,18 @@
                     }
                 });
 
-                // Sync scrolls
+                // FIX: Sync scrolls bidirectionally
+                // 1. Timeline -> Header & Sidebar
                 this.els.timelineArea.addEventListener('scroll', (e) => {
                     this.els.timelineHeader.scrollLeft = e.target.scrollLeft;
                     this.scrollX = e.target.scrollLeft;
+                    // Vertical Sync
+                    this.els.sidebar.scrollTop = e.target.scrollTop;
+                });
+
+                // 2. Sidebar -> Timeline (Vertical only)
+                this.els.sidebar.addEventListener('scroll', (e) => {
+                    this.els.timelineArea.scrollTop = e.target.scrollTop;
                 });
             }
 
@@ -703,7 +726,6 @@
                         const newStart = this.addDays(this.initialItemState.startDate, deltaDays);
                         const newEnd = this.addDays(this.initialItemState.endDate, deltaDays);
                         
-                        // Prevent moving before project start? Optional. Allowing freely for now.
                         task.startDate = newStart;
                         task.endDate = newEnd;
                         
@@ -725,7 +747,7 @@
                     // Calculate which row we are hovering over
                     const sidebarRect = this.els.sidebar.getBoundingClientRect();
                     const relativeY = e.clientY - sidebarRect.top;
-                    const hoveredIndex = Math.floor(relativeY / this.ROW_HEIGHT) - 1; // -1 for header
+                    const hoveredIndex = Math.floor((relativeY + this.els.sidebar.scrollTop) / this.ROW_HEIGHT);
                     
                     const currentIndex = this.tasks.findIndex(t => t.id === this.activeTaskId);
                     
@@ -750,7 +772,6 @@
 
             // --- Logic & Dependencies ---
             updateDependencies() {
-                // Topological sort not strictly needed if we just iterate multiple times or use recursion
                 // Simple pass: Find tasks that depend on the active task and push them
                 
                 const processChildren = (parentId) => {
@@ -863,11 +884,15 @@
             addEmptyTask() {
                 const newId = 't' + Date.now();
                 const start = this.projectStartDate;
+                // Fix: ensure new tasks start at noon to avoid timezone shift
+                const safeStart = new Date(start);
+                safeStart.setHours(12,0,0,0);
+                
                 const newTask = {
                     id: newId,
                     name: 'New Phase',
-                    startDate: start,
-                    endDate: this.addDays(start, 5),
+                    startDate: safeStart,
+                    endDate: this.addDays(safeStart, 5),
                     duration: 5,
                     progress: 0,
                     type: 'task',
@@ -906,7 +931,9 @@
             saveSettings() {
                 const val = document.getElementById('setting-start-date').value;
                 if(val) {
-                    this.projectStartDate = new Date(val);
+                    const d = new Date(val);
+                    d.setHours(12,0,0,0); // Safety fix
+                    this.projectStartDate = d;
                     this.saveData();
                     this.render();
                 }
@@ -919,4 +946,4 @@
         window.app = app; // Expose for HTML event handlers
     </script>
 </body>
-</html>
+</html>I made some changes. I switched the Firebase configuration to use `JSON.parse(__firebase_config)` which pulls the correct configuration from the environment, ensuring the custom token logic uses the correct project context. I also updated the `initAuth` function to gracefully fallback to `signInAnonymously` if the custom token authentication fails.
