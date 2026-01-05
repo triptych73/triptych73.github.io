@@ -193,6 +193,7 @@
         <div id="sidebar-container" class="w-full md:w-80 flex-shrink-0 bg-panel border-r border-border flex flex-col z-30 shadow-2xl absolute md:relative h-full transition-transform duration-300">
             <!-- Sidebar Header -->
             <div class="h-10 border-b border-border bg-void/50 flex items-center px-4 text-xs font-mono text-bronze uppercase tracking-widest flex-shrink-0">
+                <div class="w-6"></div> <!-- Spacer for handle -->
                 <div class="w-8 text-center">#</div>
                 <div class="flex-1 pl-2">Task Name</div>
                 <div class="w-16 text-right">Dur.</div>
@@ -539,6 +540,13 @@
                 const diff = this.getDiffDays(date, this.viewStartDate);
                 return diff * this.getColumnWidth();
             }
+            
+            getEventY(e) {
+                return e.touches ? e.touches[0].clientY : e.clientY;
+            }
+            getEventX(e) {
+                return e.touches ? e.touches[0].clientX : e.clientX;
+            }
 
             // --- Rendering ---
             render() {
@@ -554,22 +562,37 @@
                 this.tasks.forEach((task, index) => {
                     const row = document.createElement('div');
                     // Taller rows for mobile
-                    row.className = `h-[56px] border-b border-border flex items-center px-4 hover:bg-white/5 transition-colors cursor-pointer group ${this.activeTaskId === task.id ? 'bg-white/10' : ''}`;
+                    row.className = `h-[56px] border-b border-border flex items-center px-2 hover:bg-white/5 transition-colors cursor-pointer group ${this.activeTaskId === task.id ? 'bg-white/10' : ''}`;
                     row.dataset.id = task.id;
                     
-                    // Allow click to edit on mobile (since double click is hard)
-                    row.onclick = () => {
-                         // On mobile, single tap opens modal. On desktop, we keep it simple (tap also selects/opens)
+                    // 1. Drag Handle
+                    const handle = document.createElement('div');
+                    handle.className = 'w-8 h-full flex items-center justify-center text-bronze/50 cursor-grab touch-none active:cursor-grabbing active:text-stone';
+                    handle.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>`;
+                    
+                    // Attach listeners specifically to the handle
+                    handle.addEventListener('mousedown', (e) => this.handleRowDragStart(e, index));
+                    handle.addEventListener('touchstart', (e) => this.handleRowDragStart(e, index), { passive: false });
+                    
+                    row.appendChild(handle);
+                    
+                    // Rest of the row content
+                    const content = document.createElement('div');
+                    content.className = 'flex-1 flex items-center overflow-hidden';
+                    content.innerHTML = `
+                        <div class="w-6 text-center text-xs text-gray-500 font-mono select-none">${index + 1}</div>
+                        <div class="flex-1 pl-2 truncate text-sm text-gray-300 font-ui">${task.name}</div>
+                        <div class="w-12 text-right font-mono text-xs text-bronze">${task.duration}d</div>
+                    `;
+                    
+                    // Click entire row to edit (except when dragging handle)
+                    content.onclick = (e) => {
                          if(window.innerWidth < 768) {
                              this.openModal(task);
                          }
                     };
-
-                    row.innerHTML = `
-                        <div class="w-8 text-bronze/50 font-mono text-xs select-none">${index + 1}</div>
-                        <div class="flex-1 pl-2 truncate text-sm text-gray-300 font-ui group-hover:text-stone">${task.name}</div>
-                        <div class="w-16 text-right font-mono text-xs text-bronze">${task.duration}d</div>
-                    `;
+                    
+                    row.appendChild(content);
                     this.els.sidebar.appendChild(row);
                 });
             }
@@ -741,8 +764,19 @@
                 });
             }
 
-            getEventX(e) {
-                return e.touches ? e.touches[0].clientX : e.clientX;
+            handleRowDragStart(e, index) {
+                // Prevent browser scroll
+                if(e.cancelable) e.preventDefault();
+                e.stopPropagation();
+                
+                this.isDragging = true;
+                this.dragType = 'reorder';
+                this.activeTaskId = this.tasks[index].id;
+                
+                // Haptic feedback if available
+                if (window.navigator && window.navigator.vibrate) {
+                    window.navigator.vibrate(10);
+                }
             }
 
             handleTaskDragStart(e, task) {
@@ -768,16 +802,16 @@
 
             handleGlobalMove(e) {
                 if (!this.isDragging) return;
-                // e.preventDefault(); // Stop page scroll while dragging task (handled in event options)
+                if(e.cancelable) e.preventDefault(); // Stop scroll while dragging
 
                 const task = this.tasks.find(t => t.id === this.activeTaskId);
                 if (!task) return;
 
-                const currentX = this.getEventX(e);
-                const deltaPixels = currentX - this.dragStartX;
-                const deltaDays = Math.round(deltaPixels / this.getColumnWidth());
-
                 if (this.dragType === 'move') {
+                    const currentX = this.getEventX(e);
+                    const deltaPixels = currentX - this.dragStartX;
+                    const deltaDays = Math.round(deltaPixels / this.getColumnWidth());
+                    
                     if (deltaDays !== 0) {
                         const newStart = this.addDays(this.initialItemState.startDate, deltaDays);
                         const newEnd = this.addDays(this.initialItemState.endDate, deltaDays);
@@ -787,11 +821,35 @@
                         this.render();
                     }
                 } else if (this.dragType === 'resize') {
+                    const currentX = this.getEventX(e);
+                    const deltaPixels = currentX - this.dragStartX;
+                    const deltaDays = Math.round(deltaPixels / this.getColumnWidth());
+                    
                     const newDuration = Math.max(1, this.initialItemState.duration + deltaDays);
                     task.duration = newDuration;
                     task.endDate = this.addDays(task.startDate, newDuration);
                     this.updateDependencies();
                     this.render();
+                } else if (this.dragType === 'reorder') {
+                    // Mobile reordering logic
+                    const currentY = this.getEventY(e);
+                    const sidebarRect = this.els.sidebar.getBoundingClientRect();
+                    // Need to account for scroll position of the sidebar
+                    const relativeY = currentY - sidebarRect.top + this.els.sidebar.scrollTop;
+                    const hoveredIndex = Math.floor(relativeY / this.ROW_HEIGHT);
+                    
+                    const currentIndex = this.tasks.findIndex(t => t.id === this.activeTaskId);
+                    
+                    if (hoveredIndex >= 0 && hoveredIndex < this.tasks.length && hoveredIndex !== currentIndex) {
+                        const temp = this.tasks[currentIndex];
+                        this.tasks.splice(currentIndex, 1);
+                        this.tasks.splice(hoveredIndex, 0, temp);
+                        this.render(); 
+                        // Haptic
+                         if (window.navigator && window.navigator.vibrate) {
+                            window.navigator.vibrate(5);
+                        }
+                    }
                 }
             }
 
