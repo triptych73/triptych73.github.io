@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St Mary Somerset | Restricted</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 'midnight': '#0F1115', 'bronze': '#9A8C74', 'portland': '#F5F5F0' },
+                    fontFamily: { 'serif': ['Cinzel', 'serif'], 'sans': ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+</head>
+<body class="bg-midnight text-portland h-screen flex flex-col items-center justify-center overflow-hidden selection:bg-bronze selection:text-white">
+
+    <div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: url('assets/images/0001.jpg'); background-size: cover; filter: grayscale(100%);"></div>
+
+    <div class="relative z-10 w-full max-w-sm px-6 text-center space-y-8">
+        
+        <div>
+            <p class="font-sans text-[10px] tracking-[0.4em] text-bronze uppercase mb-4">Internal Systems</p>
+            <h1 class="font-serif text-3xl tracking-wide">Identify</h1>
+        </div>
+
+        <form id="loginForm" class="space-y-6" onsubmit="handleLogin(event)">
+            <div class="relative group">
+                <input type="password" 
+                       id="passcode" 
+                       class="w-full bg-transparent border-b border-white/20 py-3 text-center font-sans text-xs tracking-[0.5em] focus:outline-none focus:border-bronze transition-colors placeholder-white/10"
+                       placeholder="PASSCODE"
+                       autocomplete="off"
+                       autofocus>
+                
+                <div class="absolute bottom-0 left-0 w-full h-[1px] bg-bronze scale-x-0 group-focus-within:scale-x-100 transition-transform duration-500"></div>
+            </div>
+
+            <button type="submit" 
+                    class="w-full py-4 border border-white/10 hover:border-bronze hover:bg-bronze/10 transition-all duration-500 font-sans text-[10px] tracking-[0.3em] uppercase opacity-60 hover:opacity-100">
+                Access Console
+            </button>
+        </form>
+
+        <div id="errorMsg" class="h-4 font-sans text-[10px] tracking-widest text-red-400 opacity-0 transition-opacity duration-300">
+            INVALID CREDENTIALS
+        </div>
+
+        <a href="index.html" class="block mt-12 font-sans text-[9px] tracking-widest opacity-30 hover:opacity-100 transition-opacity">
+            &larr; Return to Surface
+        </a>
+    </div>
+
+    <script>
+        function handleLogin(e) {
+            e.preventDefault();
+            const input = document.getElementById('passcode');
+            const error = document.getElementById('errorMsg');
+            
+            // SET YOUR PASSWORD HERE
+            // Currently set to: 1694 (The year St Mary Somerset was built)
+            const SECRET_KEY = "1694"; 
+
+            if (input.value === SECRET_KEY) {
+                // Success visual
+                input.style.borderColor = "#9A8C74";
+                document.body.style.opacity = "0";
+                document.body.style.transition = "opacity 1s ease";
+                
+                // Redirect after fade out
+                setTimeout(() => {
+                    // Update this to your actual admin dashboard file
+                    window.location.href = "engineering.html"; 
+                }, 1000);
+            } else {
+                // Shake animation and error
+                error.style.opacity = "1";
+                input.value = "";
+                input.classList.add('animate-pulse');
+                setTimeout(() => { 
+                    error.style.opacity = "0"; 
+                    input.classList.remove('animate-pulse');
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
