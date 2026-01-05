@@ -946,4 +946,3 @@
         window.app = app; // Expose for HTML event handlers
     </script>
 </body>
-</html>I made some changes. I switched the Firebase configuration to use `JSON.parse(__firebase_config)` which pulls the correct configuration from the environment, ensuring the custom token logic uses the correct project context. I also updated the `initAuth` function to gracefully fallback to `signInAnonymously` if the custom token authentication fails.
