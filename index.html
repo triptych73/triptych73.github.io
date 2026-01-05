@@ -319,42 +319,20 @@
 
     </script>
 
-            <div class="group fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 p-4 rounded-lg bg-midnight/90 backdrop-blur-md border border-white/10 opacity-0 hover:opacity-100 transition-all duration-500 translate-y-8 hover:translate-y-0">
-        
-        <div class="flex items-center gap-3">
-            <span class="text-[8px] uppercase tracking-widest text-bronze">Dev:</span>
-            
-            <input type="text" 
-                   id="jsonInput" 
-                   placeholder='{"id": 123}' 
-                   class="bg-transparent border-b border-bronze/30 text-[10px] font-mono text-portland w-32 focus:outline-none focus:border-bronze placeholder-white/20 py-1 focus:w-48 transition-all duration-300">
-            
-            <button onclick="goToEngineering()" 
-                    class="text-[10px] font-sans tracking-widest text-portland uppercase hover:text-bronze transition-colors">
-                Enter &rarr;
-            </button>
-        </div>
+<a href="admin-login.html" 
+   class="fixed bottom-6 right-6 z-50 flex items-center gap-3 p-4 opacity-0 hover:opacity-100 transition-all duration-700 cursor-pointer group">
+    
+    <span class="font-sans text-[9px] tracking-[0.3em] uppercase text-bronze translate-x-4 group-hover:translate-x-0 transition-transform duration-500">
+        Staff Entrance
+    </span>
 
-        <div class="hidden group-hover:block w-full border-t border-white/10 pt-2 animate-fade-in-up">
-            <span class="block text-[8px] uppercase tracking-widest text-white/30 mb-2 text-right">Quick Links</span>
-            
-            <ul class="space-y-2 text-right">
-                <li>
-                    <a href="shutters.html" class="text-[10px] font-sans tracking-wider text-portland hover:text-bronze transition-colors uppercase">
-                        Shutters Control &nearr;
-                    </a>
-                </li>
-                </ul>
-        </div>
+    <div class="w-8 h-8 rounded-full border border-bronze/30 flex items-center justify-center bg-midnight/80 backdrop-blur-sm group-hover:border-bronze transition-colors duration-300">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9A8C74" stroke-width="2" stroke-linecap="square">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
     </div>
-
-    <script>
-        function goToEngineering() {
-            const input = document.getElementById('jsonInput');
-            if (!input.value) return;
-            const encodedJson = encodeURIComponent(input.value);
-            window.location.href = 'engineering.html?config=' + encodedJson;
-        }
-    </script>
+</a>
+    
 </body>
 </html>
