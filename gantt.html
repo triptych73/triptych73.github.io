@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St Mary Somerset - Project Executive</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        midnight: '#0F1115',
+                        void: '#050505',
+                        panel: '#16191D',
+                        border: '#2A2E35',
+                        stone: '#F5F5F0',
+                        bronze: '#9A8C74',
+                        bronzeDark: '#5C5242',
+                        emerald: '#10B981',
+                        alert: '#EF4444',
+                        glass: 'rgba(255, 255, 255, 0.05)'
+                    },
+                    fontFamily: {
+                        header: ['Cinzel', 'serif'],
+                        ui: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'glow': '0 0 15px rgba(154, 140, 116, 0.15)',
+                        'ingot': 'inset 0 1px 0 rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.5)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0F1115;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A2E35;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9A8C74;
+        }
+
+        /* Blueprint Grid Background */
+        .blueprint-grid {
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(42, 46, 53, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(42, 46, 53, 0.3) 1px, transparent 1px);
+        }
+
+        /* Gantt Bar Styles */
+        .gantt-bar {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 6px rgba(0,0,0,0.5);
+            transition: box-shadow 0.2s;
+        }
+        .gantt-bar:hover {
+            filter: brightness(1.1);
+            z-index: 20;
+        }
+        .gantt-milestone {
+            transform: rotate(45deg);
+            box-shadow: 0 0 10px rgba(154, 140, 116, 0.8);
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(22, 25, 29, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(154, 140, 116, 0.2);
+        }
+
+        /* Range Input */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #9A8C74;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #2A2E35;
+            border-radius: 2px;
+        }
+
+        /* Utility */
+        .no-select {
+            user-select: none;
+        }
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing; }
+        .resize-handle {
+            cursor: e-resize;
+            transition: background 0.2s;
+        }
+        .resize-handle:hover {
+            background: #F5F5F0;
+        }
+        
+        /* Dragging row feedback */
+        .dragging-row {
+            opacity: 0.5;
+            background: #2A2E35;
+        }
+    </style>
+</head>
+<body class="bg-midnight text-stone h-screen w-screen overflow-hidden flex flex-col font-ui select-none">
+
+    <!-- Header -->
+    <header class="h-16 border-b border-border bg-void flex items-center justify-between px-6 z-30 shadow-lg">
+        <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded border border-bronze/50 flex items-center justify-center bg-bronze/10">
+                <span class="font-header text-bronze font-bold text-lg">S</span>
+            </div>
+            <div>
+                <h1 class="font-header text-xl tracking-widest text-stone">ST MARY SOMERSET</h1>
+                <div class="flex items-center gap-2 text-xs text-gray-400 font-mono tracking-wider">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="status-indicator">SYSTEM ONLINE</span>
+                    <span class="text-bronze/50">|</span>
+                    <span id="project-id-display">LOADING...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <!-- View Controls -->
+            <div class="bg-panel border border-border rounded-lg p-1 flex gap-1 font-mono text-xs">
+                <button onclick="app.setViewMode('day')" id="btn-day" class="px-3 py-1 rounded hover:bg-border transition-colors text-gray-400">DAY</button>
+                <button onclick="app.setViewMode('week')" id="btn-week" class="px-3 py-1 rounded bg-bronze/20 text-bronze border border-bronze/30 shadow-glow">WEEK</button>
+                <button onclick="app.setViewMode('month')" id="btn-month" class="px-3 py-1 rounded hover:bg-border transition-colors text-gray-400">MONTH</button>
+            </div>
+
+            <button onclick="app.addEmptyTask()" class="bg-bronze hover:bg-bronzeDark text-midnight font-bold px-4 py-2 rounded font-header text-sm tracking-wide transition-colors">
+                + NEW PHASE
+            </button>
+             <button onclick="app.openSettings()" class="text-gray-400 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex overflow-hidden relative" id="workspace">
+        
+        <!-- Sidebar -->
+        <div class="w-80 flex-shrink-0 bg-panel border-r border-border flex flex-col z-20 shadow-2xl">
+            <!-- Sidebar Header -->
+            <div class="h-10 border-b border-border bg-void/50 flex items-center px-4 text-xs font-mono text-bronze uppercase tracking-widest">
+                <div class="w-8 text-center">#</div>
+                <div class="flex-1 pl-2">Task Name</div>
+                <div class="w-16 text-right">Dur.</div>
+            </div>
+            <!-- Sidebar Content -->
+            <div id="sidebar-content" class="flex-1 overflow-y-hidden hover:overflow-y-auto">
+                <!-- Rows injected by JS -->
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="flex-1 flex flex-col relative bg-midnight overflow-hidden" id="timeline-container">
+            <!-- Timeline Header (Dates) -->
+            <div id="timeline-header" class="h-10 bg-void/50 border-b border-border flex-shrink-0 relative overflow-hidden text-xs font-mono text-gray-500">
+                <!-- Dates injected by JS -->
+            </div>
+
+            <!-- Timeline Grid Area -->
+            <div id="timeline-scroll-area" class="flex-1 overflow-auto relative blueprint-grid cursor-grab active:cursor-grabbing">
+                <!-- Grid Lines Layer -->
+                <div id="grid-layer" class="absolute inset-0 pointer-events-none"></div>
+                
+                <!-- Dependency Lines Layer (SVG) -->
+                <svg id="dependency-layer" class="absolute top-0 left-0 pointer-events-none w-full h-full z-10 overflow-visible">
+                    <!-- Paths injected by JS -->
+                </svg>
+
+                <!-- Task Bars Layer -->
+                <div id="bars-layer" class="absolute top-0 left-0 w-full h-full z-20">
+                    <!-- Bars injected by JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="edit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel w-[500px] rounded-lg shadow-2xl p-6 relative">
+            <h2 class="font-header text-2xl text-stone mb-6 border-b border-bronze/20 pb-2">Phase Configuration</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-mono text-bronze mb-1">PHASE TITLE</label>
+                    <input type="text" id="modal-title" class="w-full bg-midnight border border-border rounded p-2 text-stone focus:border-bronze outline-none font-ui">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-mono text-bronze mb-1">DURATION (DAYS)</label>
+                        <input type="number" id="modal-duration" class="w-full bg-midnight border border-border rounded p-2 text-stone focus:border-bronze outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-mono text-bronze mb-1">PROGRESS (%)</label>
+                        <input type="range" id="modal-progress" min="0" max="100" class="w-full mt-3">
+                        <div class="text-right text-xs text-gray-400 mt-1" id="modal-progress-val">0%</div>
+                    </div>
+                </div>
+
+                 <div>
+                    <label class="block text-xs font-mono text-bronze mb-1">DEPENDS ON (ROW #)</label>
+                     <input type="text" id="modal-deps" placeholder="e.g. 1, 3" class="w-full bg-midnight border border-border rounded p-2 text-stone focus:border-bronze outline-none font-mono text-sm">
+                     <p class="text-[10px] text-gray-500 mt-1">Comma separated list of row numbers this task follows.</p>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-mono text-bronze mb-1">TYPE</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="taskType" value="task" checked class="accent-bronze">
+                            <span class="text-sm">Standard Task</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="taskType" value="milestone" class="accent-emerald-500">
+                            <span class="text-sm text-emerald-400">Milestone</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mt-8">
+                <button onclick="app.deleteTask()" class="text-alert hover:text-red-400 text-sm font-mono tracking-wide px-2 py-1 hover:bg-red-900/20 rounded transition-colors">DELETE PHASE</button>
+                <div class="flex gap-3">
+                    <button onclick="app.closeModal()" class="px-4 py-2 rounded text-gray-400 hover:text-white transition-colors">Cancel</button>
+                    <button onclick="app.saveModal()" class="bg-bronze hover:bg-bronzeDark text-midnight font-bold px-6 py-2 rounded shadow-glow transition-colors">SAVE CHANGES</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel w-[400px] rounded-lg shadow-2xl p-6">
+             <h2 class="font-header text-xl text-stone mb-4 border-b border-bronze/20 pb-2">Project Settings</h2>
+             <div>
+                <label class="block text-xs font-mono text-bronze mb-1">PROJECT ANCHOR DATE</label>
+                <input type="date" id="setting-start-date" class="w-full bg-midnight border border-border rounded p-2 text-stone focus:border-bronze outline-none font-mono">
+            </div>
+            <div class="flex justify-end mt-6 gap-3">
+                 <button onclick="document.getElementById('settings-modal').classList.add('hidden')" class="px-4 py-2 rounded text-gray-400 hover:text-white">Cancel</button>
+                 <button onclick="app.saveSettings()" class="bg-bronze hover:bg-bronzeDark text-midnight font-bold px-6 py-2 rounded">UPDATE</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
+        
+        const appInstance = initializeApp(firebaseConfig);
+        const auth = getAuth(appInstance);
+        const db = getFirestore(appInstance);
+
+        // --- Application Logic ---
+        class GanttApp {
+            constructor() {
+                // Config
+                this.ROW_HEIGHT = 48; // px
+                this.HEADER_HEIGHT = 40; // px
+                this.colWidth = 50; // px per unit
+                
+                // State
+                this.tasks = [];
+                this.projectStartDate = new Date();
+                this.viewMode = 'week'; // day, week, month
+                this.viewStartDate = new Date();
+                this.activeTaskId = null;
+                this.isDragging = false;
+                this.dragType = null; // 'move', 'resize', 'reorder'
+                this.dragStartX = 0;
+                this.dragStartY = 0;
+                this.initialItemState = null;
+                this.scrollX = 0;
+
+                // DOM Elements
+                this.els = {
+                    sidebar: document.getElementById('sidebar-content'),
+                    timelineHeader: document.getElementById('timeline-header'),
+                    timelineArea: document.getElementById('timeline-scroll-area'),
+                    barsLayer: document.getElementById('bars-layer'),
+                    svgLayer: document.getElementById('dependency-layer'),
+                    modal: document.getElementById('edit-modal'),
+                    settingsModal: document.getElementById('settings-modal'),
+                    status: document.getElementById('status-indicator'),
+                    projectId: document.getElementById('project-id-display')
+                };
+
+                // Bindings
+                this.initAuth();
+                this.setupEventListeners();
+                this.resizeObserver = new ResizeObserver(() => this.render());
+                this.resizeObserver.observe(this.els.timelineArea);
+            }
+
+            // --- Auth & Data ---
+            async initAuth() {
+                try {
+                    this.setStatus('CONNECTING...', 'text-yellow-500');
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (e) {
+                    console.error("Auth failed", e);
+                    this.setStatus('AUTH ERROR', 'text-alert');
+                }
+            }
+
+            setupDataListener(user) {
+                if (!user) return;
+                this.els.projectId.textContent = `UID: ${user.uid.substring(0,6)}...`;
+                
+                // FIXED: Added 'main' as document ID to ensure even number of path segments
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'st_mary_project', 'main');
+                
+                onSnapshot(docRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.data();
+                        // Deserialize dates
+                        this.projectStartDate = new Date(data.projectStartDate);
+                        this.tasks = data.tasks.map(t => ({
+                            ...t,
+                            startDate: new Date(t.startDate),
+                            endDate: new Date(t.endDate)
+                        }));
+                        this.setStatus('SYSTEM ONLINE', 'text-emerald-500');
+                        this.render();
+                    } else {
+                        // Seed Data
+                        this.seedData(docRef);
+                    }
+                }, (error) => {
+                    console.error("Sync error", error);
+                    this.setStatus('OFFLINE', 'text-alert');
+                });
+            }
+
+            async seedData(ref) {
+                this.setStatus('SEEDING...', 'text-yellow-500');
+                const start = new Date();
+                start.setHours(0,0,0,0);
+                
+                const tasks = [
+                    { id: 't1', name: 'Project Kickoff', startDate: start.toISOString(), endDate: this.addDays(start, 1).toISOString(), duration: 1, progress: 100, type: 'milestone', dependencies: [] },
+                    { id: 't2', name: 'Site Survey & Scaffolding', startDate: this.addDays(start, 2).toISOString(), endDate: this.addDays(start, 12).toISOString(), duration: 10, progress: 60, type: 'task', dependencies: ['t1'] },
+                    { id: 't3', name: 'Crypt Waterproofing', startDate: this.addDays(start, 12).toISOString(), endDate: this.addDays(start, 22).toISOString(), duration: 10, progress: 0, type: 'task', dependencies: ['t2'] },
+                    { id: 't4', name: 'North Elevation Restoration', startDate: this.addDays(start, 12).toISOString(), endDate: this.addDays(start, 32).toISOString(), duration: 20, progress: 10, type: 'task', dependencies: ['t2'] },
+                    { id: 't5', name: 'Bronze Cladding Install', startDate: this.addDays(start, 32).toISOString(), endDate: this.addDays(start, 42).toISOString(), duration: 10, progress: 0, type: 'task', dependencies: ['t3', 't4'] },
+                    { id: 't6', name: 'Practical Completion', startDate: this.addDays(start, 45).toISOString(), endDate: this.addDays(start, 46).toISOString(), duration: 1, progress: 0, type: 'milestone', dependencies: ['t5'] },
+                ];
+
+                await setDoc(ref, {
+                    projectStartDate: start.toISOString(),
+                    tasks: tasks,
+                    lastUpdated: new Date().toISOString()
+                });
+            }
+
+            async saveData() {
+                if (!auth.currentUser) return;
+                this.setStatus('SYNCING...', 'text-blue-400');
+                
+                // FIXED: Added 'main' as document ID here as well
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'st_mary_project', 'main');
+                
+                try {
+                    // Serialize dates
+                    const serializedTasks = this.tasks.map(t => ({
+                        ...t,
+                        startDate: t.startDate.toISOString(),
+                        endDate: t.endDate.toISOString()
+                    }));
+
+                    await setDoc(docRef, {
+                        projectStartDate: this.projectStartDate.toISOString(),
+                        tasks: serializedTasks,
+                        lastUpdated: new Date().toISOString()
+                    });
+                    this.setStatus('SAVED', 'text-emerald-500');
+                    setTimeout(() => this.setStatus('SYSTEM ONLINE', 'text-emerald-500'), 1000);
+                } catch (e) {
+                    console.error(e);
+                    this.setStatus('SAVE ERROR', 'text-alert');
+                }
+            }
+
+            // --- Helpers ---
+            addDays(date, days) {
+                const result = new Date(date);
+                result.setDate(result.getDate() + days);
+                return result;
+            }
+
+            getDiffDays(d1, d2) {
+                const oneDay = 24 * 60 * 60 * 1000;
+                return Math.round((d1 - d2) / oneDay);
+            }
+
+            setStatus(msg, colorClass) {
+                this.els.status.textContent = msg;
+                this.els.status.className = `text-xs font-mono tracking-wider ${colorClass}`;
+            }
+
+            getColumnWidth() {
+                if (this.viewMode === 'day') return 60;
+                if (this.viewMode === 'week') return 40; // per day effectively
+                if (this.viewMode === 'month') return 20;
+                return 50;
+            }
+
+            getXForDate(date) {
+                const diff = this.getDiffDays(date, this.viewStartDate);
+                return diff * this.getColumnWidth();
+            }
+
+            getDateForX(x) {
+                const days = Math.floor(x / this.getColumnWidth());
+                return this.addDays(this.viewStartDate, days);
+            }
+
+            // --- Rendering ---
+            render() {
+                // Recalculate view start based on project start and buffer
+                this.viewStartDate = this.addDays(this.projectStartDate, -2);
+                
+                this.renderSidebar();
+                this.renderTimelineHeader();
+                this.renderTasks();
+                this.renderDependencies();
+            }
+
+            renderSidebar() {
+                this.els.sidebar.innerHTML = '';
+                this.tasks.forEach((task, index) => {
+                    const row = document.createElement('div');
+                    row.className = `h-[48px] border-b border-border flex items-center px-4 hover:bg-white/5 transition-colors cursor-pointer group ${this.activeTaskId === task.id ? 'bg-white/10' : ''}`;
+                    row.dataset.id = task.id;
+                    row.dataset.index = index;
+                    
+                    // Drag handle for reordering
+                    row.addEventListener('mousedown', (e) => this.handleRowDragStart(e, index));
+
+                    row.innerHTML = `
+                        <div class="w-8 text-bronze/50 font-mono text-xs select-none">${index + 1}</div>
+                        <div class="flex-1 pl-2 truncate text-sm text-gray-300 font-ui group-hover:text-stone">${task.name}</div>
+                        <div class="w-16 text-right font-mono text-xs text-bronze">${task.duration}d</div>
+                    `;
+                    this.els.sidebar.appendChild(row);
+                });
+            }
+
+            renderTimelineHeader() {
+                this.els.timelineHeader.innerHTML = '';
+                const width = this.els.timelineArea.clientWidth;
+                const colW = this.getColumnWidth();
+                const totalDays = Math.ceil(width / colW) + 20; // buffer
+
+                let currentDate = new Date(this.viewStartDate);
+                
+                for (let i = 0; i < totalDays; i++) {
+                    const el = document.createElement('div');
+                    el.style.position = 'absolute';
+                    el.style.left = `${i * colW}px`;
+                    el.style.width = `${colW}px`;
+                    el.style.height = '100%';
+                    el.className = 'border-r border-border/50 flex flex-col justify-end pb-1 items-center text-[10px] select-none';
+                    
+                    const d = currentDate.getDate();
+                    const m = currentDate.toLocaleString('default', { month: 'short' });
+                    const dayName = currentDate.toLocaleString('default', { weekday: 'narrow' });
+
+                    if (this.viewMode === 'month') {
+                        if (d === 1 || i === 0) el.innerHTML = `<span class="text-stone font-bold">${m}</span>`;
+                    } else if (this.viewMode === 'week') {
+                        if (currentDate.getDay() === 1) el.innerHTML = `<span class="text-stone">${d} ${m}</span>`;
+                        else el.innerHTML = `<span class="text-gray-600">${dayName}</span>`;
+                    } else {
+                         el.innerHTML = `<span class="text-gray-500 mb-1">${dayName}</span><span class="text-stone">${d}</span>`;
+                    }
+                    
+                    this.els.timelineHeader.appendChild(el);
+                    currentDate = this.addDays(currentDate, 1);
+                }
+            }
+
+            renderTasks() {
+                this.els.barsLayer.innerHTML = '';
+                // Adjust container height to match rows
+                const totalHeight = this.tasks.length * this.ROW_HEIGHT;
+                // Add padding at bottom
+                this.els.barsLayer.style.height = `${totalHeight + 100}px`; 
+
+                this.tasks.forEach((task, index) => {
+                    const startX = this.getXForDate(task.startDate);
+                    const width = task.duration * this.getColumnWidth();
+                    const top = index * this.ROW_HEIGHT + 8; // 8px padding top within row
+                    const height = this.ROW_HEIGHT - 16; // 32px height bar
+
+                    const el = document.createElement('div');
+                    el.className = 'absolute select-none group';
+                    el.style.left = `${startX}px`;
+                    el.style.top = `${top}px`;
+                    el.style.width = `${Math.max(width, 24)}px`; // min width for visibility
+                    el.style.height = `${height}px`;
+                    el.dataset.id = task.id;
+
+                    // Inner content
+                    let innerHTML = '';
+                    if (task.type === 'milestone') {
+                        // Diamond shape
+                        el.style.width = `${height}px`;
+                        el.classList.add('gantt-milestone', 'bg-bronze', 'cursor-pointer');
+                    } else {
+                        // Bar shape
+                        const progressGradient = `linear-gradient(90deg, #9A8C74 ${task.progress}%, #2A2E35 ${task.progress}%)`;
+                        el.style.background = progressGradient;
+                        el.classList.add('gantt-bar', 'rounded', 'cursor-grab', 'border', 'border-white/10');
+                        
+                        // Text label inside bar if wide enough, else outside
+                        if (width > 100) {
+                             innerHTML += `<div class="w-full h-full flex items-center px-2 text-[10px] font-bold text-midnight truncate uppercase overflow-hidden">${task.name}</div>`;
+                        } else {
+                             innerHTML += `<div class="absolute left-full ml-2 top-1 text-xs text-stone whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none drop-shadow-md">${task.name}</div>`;
+                        }
+
+                        // Resize handle
+                        innerHTML += `<div class="resize-handle absolute right-0 top-0 w-2 h-full cursor-e-resize z-10 opacity-0 group-hover:opacity-100"></div>`;
+                    }
+
+                    el.innerHTML = innerHTML;
+
+                    // Event Listeners
+                    el.addEventListener('mousedown', (e) => {
+                        if (e.target.classList.contains('resize-handle')) {
+                            this.handleTaskResizeStart(e, task);
+                        } else {
+                            this.handleTaskDragStart(e, task);
+                        }
+                    });
+
+                    el.addEventListener('dblclick', () => this.openModal(task));
+
+                    this.els.barsLayer.appendChild(el);
+                });
+            }
+
+            renderDependencies() {
+                this.els.svgLayer.innerHTML = '';
+                const colW = this.getColumnWidth();
+                
+                this.tasks.forEach((task, index) => {
+                    if (!task.dependencies || task.dependencies.length === 0) return;
+
+                    // Current task coordinates (Destination)
+                    const destX = this.getXForDate(task.startDate);
+                    const destY = (index * this.ROW_HEIGHT) + (this.ROW_HEIGHT / 2);
+
+                    task.dependencies.forEach(depId => {
+                        const parentTask = this.tasks.find(t => t.id === depId);
+                        if (!parentTask) return;
+                        const parentIndex = this.tasks.findIndex(t => t.id === depId);
+
+                        // Parent coordinates (Source)
+                        const srcX = this.getXForDate(parentTask.endDate);
+                        const srcY = (parentIndex * this.ROW_HEIGHT) + (this.ROW_HEIGHT / 2);
+
+                        // Path logic: Circuit board style
+                        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        const midX = srcX + ((destX - srcX) / 2);
+                        
+                        // Bezier curve
+                        // M srcX srcY 
+                        // C (srcX + 20) srcY, (destX - 20) destY, destX destY
+                        const d = `M ${srcX} ${srcY} 
+                                   C ${srcX + 20} ${srcY}, 
+                                     ${destX - 20} ${destY}, 
+                                     ${destX} ${destY}`;
+
+                        path.setAttribute("d", d);
+                        path.setAttribute("stroke", "#5C5242");
+                        path.setAttribute("stroke-width", "1.5");
+                        path.setAttribute("fill", "none");
+                        path.setAttribute("class", "opacity-60");
+                        
+                        // Add arrow head marker logic could be here, but keeping it clean for now
+                        this.els.svgLayer.appendChild(path);
+                    });
+                });
+            }
+
+            // --- Interactions ---
+            setupEventListeners() {
+                // Global mouse handling for drag/resize
+                window.addEventListener('mousemove', (e) => this.handleGlobalMouseMove(e));
+                window.addEventListener('mouseup', (e) => this.handleGlobalMouseUp(e));
+                
+                // Auth listener
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        this.setupDataListener(user);
+                    }
+                });
+
+                // Sync scrolls
+                this.els.timelineArea.addEventListener('scroll', (e) => {
+                    this.els.timelineHeader.scrollLeft = e.target.scrollLeft;
+                    this.scrollX = e.target.scrollLeft;
+                });
+            }
+
+            handleRowDragStart(e, index) {
+                // Simple reordering logic
+                this.isDragging = true;
+                this.dragType = 'reorder';
+                this.activeTaskId = this.tasks[index].id;
+                // Add visual feedback class to sidebar row
+            }
+
+            handleTaskDragStart(e, task) {
+                e.stopPropagation();
+                this.isDragging = true;
+                this.dragType = 'move';
+                this.activeTaskId = task.id;
+                this.dragStartX = e.clientX;
+                this.initialItemState = { 
+                    startDate: new Date(task.startDate), 
+                    endDate: new Date(task.endDate) 
+                };
+                document.body.style.cursor = 'grabbing';
+            }
+
+            handleTaskResizeStart(e, task) {
+                e.stopPropagation();
+                this.isDragging = true;
+                this.dragType = 'resize';
+                this.activeTaskId = task.id;
+                this.dragStartX = e.clientX;
+                this.initialItemState = { duration: task.duration };
+                document.body.style.cursor = 'ew-resize';
+            }
+
+            handleGlobalMouseMove(e) {
+                if (!this.isDragging) return;
+
+                const task = this.tasks.find(t => t.id === this.activeTaskId);
+                if (!task && this.dragType !== 'reorder') return;
+
+                if (this.dragType === 'move') {
+                    const deltaPixels = e.clientX - this.dragStartX;
+                    const deltaDays = Math.round(deltaPixels / this.getColumnWidth());
+                    
+                    if (deltaDays !== 0) {
+                        const newStart = this.addDays(this.initialItemState.startDate, deltaDays);
+                        const newEnd = this.addDays(this.initialItemState.endDate, deltaDays);
+                        
+                        // Prevent moving before project start? Optional. Allowing freely for now.
+                        task.startDate = newStart;
+                        task.endDate = newEnd;
+                        
+                        this.updateDependencies();
+                        this.render(); // Re-render immediately for smooth feedback
+                    }
+                } else if (this.dragType === 'resize') {
+                    const deltaPixels = e.clientX - this.dragStartX;
+                    const deltaDays = Math.round(deltaPixels / this.getColumnWidth());
+                    
+                    const newDuration = Math.max(1, this.initialItemState.duration + deltaDays);
+                    task.duration = newDuration;
+                    task.endDate = this.addDays(task.startDate, newDuration);
+                    
+                    this.updateDependencies();
+                    this.render();
+                } else if (this.dragType === 'reorder') {
+                    // Y-axis drag logic for sidebar
+                    // Calculate which row we are hovering over
+                    const sidebarRect = this.els.sidebar.getBoundingClientRect();
+                    const relativeY = e.clientY - sidebarRect.top;
+                    const hoveredIndex = Math.floor(relativeY / this.ROW_HEIGHT) - 1; // -1 for header
+                    
+                    const currentIndex = this.tasks.findIndex(t => t.id === this.activeTaskId);
+                    
+                    if (hoveredIndex >= 0 && hoveredIndex < this.tasks.length && hoveredIndex !== currentIndex) {
+                        // Swap
+                        const temp = this.tasks[currentIndex];
+                        this.tasks.splice(currentIndex, 1);
+                        this.tasks.splice(hoveredIndex, 0, temp);
+                        this.render(); // Re-render to show new order
+                    }
+                }
+            }
+
+            handleGlobalMouseUp(e) {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.dragType = null;
+                    document.body.style.cursor = 'default';
+                    this.saveData(); // Auto-save on drop
+                }
+            }
+
+            // --- Logic & Dependencies ---
+            updateDependencies() {
+                // Topological sort not strictly needed if we just iterate multiple times or use recursion
+                // Simple pass: Find tasks that depend on the active task and push them
+                
+                const processChildren = (parentId) => {
+                    const parent = this.tasks.find(t => t.id === parentId);
+                    if (!parent) return;
+
+                    // Find all children
+                    const children = this.tasks.filter(t => t.dependencies && t.dependencies.includes(parentId));
+                    
+                    children.forEach(child => {
+                        // Finish-to-Start: Child Start >= Parent End
+                        // If Child Start < Parent End, push Child
+                        if (child.startDate < parent.endDate) {
+                            const diff = this.getDiffDays(parent.endDate, child.startDate);
+                            child.startDate = this.addDays(child.startDate, diff);
+                            child.endDate = this.addDays(child.endDate, diff);
+                            processChildren(child.id); // Recursively push its children
+                        }
+                    });
+                };
+
+                if (this.activeTaskId) {
+                    processChildren(this.activeTaskId);
+                }
+            }
+
+            // --- Modals ---
+            openModal(task) {
+                this.activeTaskId = task.id;
+                document.getElementById('modal-title').value = task.name;
+                document.getElementById('modal-duration').value = task.duration;
+                document.getElementById('modal-progress').value = task.progress;
+                document.getElementById('modal-progress-val').innerText = task.progress + '%';
+                
+                // Convert dependency IDs to Row Numbers for user friendliness
+                const depRowNums = task.dependencies.map(id => this.tasks.findIndex(t => t.id === id) + 1);
+                document.getElementById('modal-deps').value = depRowNums.join(', ');
+
+                const radios = document.getElementsByName('taskType');
+                radios.forEach(r => {
+                    if (r.value === task.type) r.checked = true;
+                });
+
+                // Range listener
+                document.getElementById('modal-progress').oninput = (e) => {
+                    document.getElementById('modal-progress-val').innerText = e.target.value + '%';
+                };
+
+                this.els.modal.classList.remove('hidden');
+                this.els.modal.classList.add('flex');
+            }
+
+            closeModal() {
+                this.els.modal.classList.add('hidden');
+                this.els.modal.classList.remove('flex');
+                this.activeTaskId = null;
+            }
+
+            saveModal() {
+                const task = this.tasks.find(t => t.id === this.activeTaskId);
+                if (task) {
+                    task.name = document.getElementById('modal-title').value;
+                    const newDur = parseInt(document.getElementById('modal-duration').value) || 1;
+                    task.duration = newDur;
+                    task.endDate = this.addDays(task.startDate, newDur);
+                    task.progress = parseInt(document.getElementById('modal-progress').value);
+                    
+                    const typeRadios = document.getElementsByName('taskType');
+                    typeRadios.forEach(r => { if(r.checked) task.type = r.value; });
+
+                    // Parse deps
+                    const depStr = document.getElementById('modal-deps').value;
+                    if (depStr.trim()) {
+                        const rowNums = depStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                        // Convert row nums back to IDs
+                        task.dependencies = rowNums.map(n => {
+                            if (n > 0 && n <= this.tasks.length && this.tasks[n-1].id !== task.id) {
+                                return this.tasks[n-1].id;
+                            }
+                            return null;
+                        }).filter(id => id);
+                    } else {
+                        task.dependencies = [];
+                    }
+
+                    this.updateDependencies();
+                    this.saveData();
+                    this.render();
+                }
+                this.closeModal();
+            }
+
+            deleteTask() {
+                if (confirm('Delete this phase?')) {
+                    const idx = this.tasks.findIndex(t => t.id === this.activeTaskId);
+                    if (idx > -1) {
+                        const deletedId = this.tasks[idx].id;
+                        this.tasks.splice(idx, 1);
+                        // Clean up deps
+                        this.tasks.forEach(t => {
+                            t.dependencies = t.dependencies.filter(id => id !== deletedId);
+                        });
+                        this.saveData();
+                        this.render();
+                    }
+                    this.closeModal();
+                }
+            }
+
+            addEmptyTask() {
+                const newId = 't' + Date.now();
+                const start = this.projectStartDate;
+                const newTask = {
+                    id: newId,
+                    name: 'New Phase',
+                    startDate: start,
+                    endDate: this.addDays(start, 5),
+                    duration: 5,
+                    progress: 0,
+                    type: 'task',
+                    dependencies: []
+                };
+                this.tasks.push(newTask);
+                this.saveData();
+                this.render();
+            }
+
+            setViewMode(mode) {
+                this.viewMode = mode;
+                // update buttons style
+                ['day', 'week', 'month'].forEach(m => {
+                    const btn = document.getElementById(`btn-${m}`);
+                    if (m === mode) {
+                        btn.className = "px-3 py-1 rounded bg-bronze/20 text-bronze border border-bronze/30 shadow-glow";
+                    } else {
+                        btn.className = "px-3 py-1 rounded hover:bg-border transition-colors text-gray-400";
+                    }
+                });
+                this.render();
+            }
+            
+            openSettings() {
+                const modal = document.getElementById('settings-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                // Format date for input type=date (YYYY-MM-DD)
+                const yyyy = this.projectStartDate.getFullYear();
+                const mm = String(this.projectStartDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(this.projectStartDate.getDate()).padStart(2, '0');
+                document.getElementById('setting-start-date').value = `${yyyy}-${mm}-${dd}`;
+            }
+            
+            saveSettings() {
+                const val = document.getElementById('setting-start-date').value;
+                if(val) {
+                    this.projectStartDate = new Date(val);
+                    this.saveData();
+                    this.render();
+                }
+                document.getElementById('settings-modal').classList.add('hidden');
+            }
+        }
+
+        // Initialize
+        const app = new GanttApp();
+        window.app = app; // Expose for HTML event handlers
+    </script>
+</body>
+</html>
