@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KanbanFlow | Pro</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts: Inter (Standard for modern productivity apps) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Refined Palette based on modern productivity tools */
+            --bg-app: #F3F4F6;
+            --bg-surface: #FFFFFF;
+            --bg-column: #F9FAFB;
+            --border-subtle: #E5E7EB;
+            --text-primary: #111827;
+            --text-secondary: #6B7280;
+            --primary: #4F46E5; /* Indigo */
+            --primary-light: #EEF2FF;
+            
+            /* Status Colors */
+            --status-todo: #E5E7EB;
+            --status-doing: #FEF3C7;
+            --status-done: #D1FAE5;
+            --accent-todo: #6B7280;
+            --accent-doing: #D97706;
+            --accent-done: #059669;
+        }
+
+        body.dark {
+            --bg-app: #0F172A;
+            --bg-surface: #1E293B;
+            --bg-column: #1E293B; /* Slightly lighter than app bg? No, let's make surface stand out */
+            --bg-column-inner: #0f172a;
+            --border-subtle: #334155;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --primary: #6366F1;
+            --primary-light: rgba(99, 102, 241, 0.1);
+
+            --status-todo: #334155;
+            --status-doing: rgba(217, 119, 6, 0.2);
+            --status-done: rgba(5, 150, 105, 0.2);
+            --accent-todo: #94A3B8;
+            --accent-doing: #F59E0B;
+            --accent-done: #10B981;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden; /* App-like feel */
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+        /* Kanban Columns */
+        .kanban-column {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            min-width: 280px;
+            max-width: 350px;
+            flex: 1;
+        }
+        
+        .dark .kanban-column {
+            background: var(--bg-surface); /* Card look */
+        }
+
+        /* Cards */
+        .task-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .dark .task-card {
+            background: #252f42; 
+            border-color: var(--border-subtle);
+        }
+
+        .task-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+            border-color: var(--primary);
+        }
+
+        /* Dragging States */
+        .task-card.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+            border: 1px dashed var(--primary);
+            cursor: grabbing;
+        }
+
+        .kanban-list.drag-over {
+            background-color: var(--primary-light);
+            border-radius: 8px;
+        }
+
+        /* Tags */
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.025em; }
+        .tag-urgent { background: #FEE2E2; color: #991B1B; }
+        .tag-work { background: #DBEAFE; color: #1E40AF; }
+        .tag-personal { background: #F3E8FF; color: #6B21A8; }
+        
+        body.dark .tag-urgent { background: rgba(127, 29, 29, 0.3); color: #FCA5A5; }
+        body.dark .tag-work { background: rgba(30, 58, 138, 0.3); color: #93C5FD; }
+        body.dark .tag-personal { background: rgba(88, 28, 135, 0.3); color: #D8B4FE; }
+
+        /* Confetti */
+        #confetti-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 100;
+        }
+
+        /* Toast */
+        .toast {
+            transform: translateY(150%) translateX(-50%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .toast.show { transform: translateY(0) translateX(-50%); }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Header -->
+    <header class="h-16 flex items-center justify-between px-6 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] z-20 shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+                <i class="fas fa-columns text-sm"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight leading-none">KanbanFlow</h1>
+                <p class="text-[10px] text-[var(--text-secondary)] font-medium uppercase tracking-wider" id="date-display">...</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+             <div id="connection-status" class="hidden text-xs px-2 py-1 rounded bg-red-100 text-red-600 font-bold flex items-center gap-1">
+                <i class="fas fa-wifi"></i> Offline
+            </div>
+            
+            <!-- Quick Add Button (Mobile mostly, or global add) -->
+            <button id="add-btn-main" class="bg-[var(--primary)] text-white px-4 py-1.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity shadow-sm flex items-center gap-2">
+                <i class="fas fa-plus"></i> New Task
+            </button>
+
+            <button id="theme-toggle" class="w-8 h-8 rounded-md hover:bg-[var(--bg-app)] text-[var(--text-secondary)] transition-colors flex items-center justify-center">
+                <i class="fas fa-sun"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Board Area -->
+    <main class="flex-1 overflow-x-auto overflow-y-hidden p-6">
+        <div class="flex h-full gap-6 min-w-max">
+            
+            <!-- Column: To Do -->
+            <div class="kanban-column rounded-xl flex flex-col h-full shadow-sm">
+                <div class="p-4 border-b border-[var(--border-subtle)] flex items-center justify-between sticky top-0 bg-inherit rounded-t-xl z-10">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-[var(--accent-todo)]"></div>
+                        <h2 class="font-semibold text-sm">To Do</h2>
+                        <span class="bg-[var(--bg-app)] text-[var(--text-secondary)] text-xs px-2 py-0.5 rounded-full" id="count-todo">0</span>
+                    </div>
+                    <button class="text-[var(--text-secondary)] hover:text-[var(--primary)]" onclick="openAddModal('todo')"><i class="fas fa-plus"></i></button>
+                </div>
+                <div class="kanban-list flex-1 overflow-y-auto p-3 space-y-3" id="col-todo" data-status="todo">
+                    <!-- Cards -->
+                </div>
+            </div>
+
+            <!-- Column: In Progress -->
+            <div class="kanban-column rounded-xl flex flex-col h-full shadow-sm">
+                <div class="p-4 border-b border-[var(--border-subtle)] flex items-center justify-between sticky top-0 bg-inherit rounded-t-xl z-10">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-[var(--accent-doing)]"></div>
+                        <h2 class="font-semibold text-sm">Doing</h2>
+                        <span class="bg-[var(--bg-app)] text-[var(--text-secondary)] text-xs px-2 py-0.5 rounded-full" id="count-doing">0</span>
+                    </div>
+                    <button class="text-[var(--text-secondary)] hover:text-[var(--primary)]" onclick="openAddModal('doing')"><i class="fas fa-plus"></i></button>
+                </div>
+                <div class="kanban-list flex-1 overflow-y-auto p-3 space-y-3" id="col-doing" data-status="doing">
+                    <!-- Cards -->
+                </div>
+            </div>
+
+            <!-- Column: Done -->
+            <div class="kanban-column rounded-xl flex flex-col h-full shadow-sm">
+                <div class="p-4 border-b border-[var(--border-subtle)] flex items-center justify-between sticky top-0 bg-inherit rounded-t-xl z-10">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-[var(--accent-done)]"></div>
+                        <h2 class="font-semibold text-sm">Done</h2>
+                        <span class="bg-[var(--bg-app)] text-[var(--text-secondary)] text-xs px-2 py-0.5 rounded-full" id="count-done">0</span>
+                    </div>
+                    <button class="text-[var(--text-secondary)] hover:text-red-500" onclick="clearDone()"><i class="fas fa-trash-alt"></i></button>
+                </div>
+                <div class="kanban-list flex-1 overflow-y-auto p-3 space-y-3" id="col-done" data-status="done">
+                    <!-- Cards -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal for Adding Tasks -->
+    <div id="add-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 opacity-0 transition-opacity duration-200">
+        <div class="bg-[var(--bg-surface)] p-6 rounded-2xl w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200 border border-[var(--border-subtle)]" id="modal-content">
+            <h3 class="text-lg font-bold mb-4">Add New Task</h3>
+            <form id="modal-form">
+                <input type="hidden" id="modal-status" value="todo">
+                
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-[var(--text-secondary)] uppercase mb-2">Description</label>
+                    <input type="text" id="modal-input" class="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] transition-shadow text-[var(--text-primary)]" placeholder="What needs to be done?" required autocomplete="off">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-[var(--text-secondary)] uppercase mb-2">Category</label>
+                    <div class="flex gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="personal" checked class="peer sr-only">
+                            <div class="px-3 py-2 rounded-md border border-[var(--border-subtle)] text-sm peer-checked:bg-purple-100 peer-checked:text-purple-700 peer-checked:border-purple-300 dark:peer-checked:bg-purple-900 dark:peer-checked:text-purple-200 hover:bg-[var(--bg-app)]">Personal</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="work" class="peer sr-only">
+                            <div class="px-3 py-2 rounded-md border border-[var(--border-subtle)] text-sm peer-checked:bg-blue-100 peer-checked:text-blue-700 peer-checked:border-blue-300 dark:peer-checked:bg-blue-900 dark:peer-checked:text-blue-200 hover:bg-[var(--bg-app)]">Work</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="urgent" class="peer sr-only">
+                            <div class="px-3 py-2 rounded-md border border-[var(--border-subtle)] text-sm peer-checked:bg-red-100 peer-checked:text-red-700 peer-checked:border-red-300 dark:peer-checked:bg-red-900 dark:peer-checked:text-red-200 hover:bg-[var(--bg-app)]">Urgent</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Cancel</button>
+                    <button type="submit" class="bg-[var(--primary)] text-white px-6 py-2 rounded-lg text-sm font-medium hover:opacity-90 shadow-lg shadow-indigo-500/20">Create Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast fixed bottom-8 left-1/2 bg-[var(--text-primary)] text-[var(--bg-surface)] px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 z-50">
+        <span class="font-medium text-sm">Task moved to trash</span>
+        <button id="undo-btn" class="text-[var(--primary)] font-bold text-sm hover:underline">Undo</button>
+    </div>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, 
+            onSnapshot, serverTimestamp, writeBatch 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- Configuration ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "demo", projectId: "demo" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- State ---
+        let currentUser = null;
+        let todos = [];
+        let pendingDeleteId = null;
+        let deleteTimeout = null;
+
+        // --- UI Refs ---
+        const cols = {
+            todo: document.getElementById('col-todo'),
+            doing: document.getElementById('col-doing'),
+            done: document.getElementById('col-done')
+        };
+        const counts = {
+            todo: document.getElementById('count-todo'),
+            doing: document.getElementById('count-doing'),
+            done: document.getElementById('count-done')
+        };
+        const modal = document.getElementById('add-modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalInput = document.getElementById('modal-input');
+        const modalStatus = document.getElementById('modal-status');
+        const dateDisplay = document.getElementById('date-display');
+        const themeBtn = document.getElementById('theme-toggle');
+
+        // --- Init ---
+        dateDisplay.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+        // Theme
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark');
+            themeBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        themeBtn.onclick = () => {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            themeBtn.innerHTML = isDark ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        };
+
+        // --- Auth ---
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            if(user) {
+                currentUser = user;
+                const ref = collection(db, 'artifacts', appId, 'users', user.uid, 'todos');
+                onSnapshot(ref, (snap) => {
+                    todos = snap.docs.map(d => {
+                        const data = d.data();
+                        // Backward compatibility for old "completed" boolean
+                        let status = data.status;
+                        if (!status) {
+                            status = data.completed ? 'done' : 'todo';
+                        }
+                        return { id: d.id, ...data, status };
+                    });
+                    
+                    // Sort by order or createdAt
+                    todos.sort((a,b) => (a.order || 0) - (b.order || 0));
+                    renderBoard();
+                }, (err) => {
+                    document.getElementById('connection-status').classList.remove('hidden');
+                });
+            }
+        });
+
+        // --- Render ---
+        function renderBoard() {
+            // Clear cols
+            Object.values(cols).forEach(c => c.innerHTML = '');
+            
+            // Stats
+            const stats = { todo: 0, doing: 0, done: 0 };
+
+            todos.forEach(t => {
+                if(t.id === pendingDeleteId) return;
+
+                // Safety check for status
+                const status = ['todo', 'doing', 'done'].includes(t.status) ? t.status : 'todo';
+                stats[status]++;
+
+                const card = document.createElement('div');
+                card.className = 'task-card p-3 rounded-lg cursor-grab mb-3 group relative';
+                card.draggable = true;
+                card.dataset.id = t.id;
+                
+                const catLabel = t.category ? t.category.charAt(0).toUpperCase() + t.category.slice(1) : 'Personal';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="tag tag-${t.category || 'personal'}">${catLabel}</span>
+                        <button onclick="askDelete('${t.id}')" class="text-[var(--text-secondary)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <p class="text-sm font-medium leading-relaxed text-[var(--text-primary)]" 
+                       contenteditable="false" 
+                       ondblclick="editTask(this, '${t.id}')"
+                       title="Double click to edit">${escapeHtml(t.text)}</p>
+                    <div class="mt-3 flex items-center justify-between">
+                         <div class="text-[10px] text-[var(--text-secondary)] flex items-center gap-1">
+                            <i class="far fa-clock"></i>
+                            ${t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString(undefined, {month:'short', day:'numeric'}) : 'Today'}
+                        </div>
+                    </div>
+                `;
+
+                // Drag Events
+                card.addEventListener('dragstart', dragStart);
+                card.addEventListener('dragend', dragEnd);
+
+                cols[status].appendChild(card);
+            });
+
+            // Update Counts
+            Object.keys(stats).forEach(k => counts[k].textContent = stats[k]);
+        }
+
+        // --- Drag & Drop ---
+        let draggedItem = null;
+
+        function dragStart(e) {
+            draggedItem = this;
+            setTimeout(() => this.classList.add('dragging'), 0);
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function dragEnd() {
+            this.classList.remove('dragging');
+            draggedItem = null;
+            document.querySelectorAll('.kanban-list').forEach(l => l.classList.remove('drag-over'));
+        }
+
+        // Column Drop Zones
+        Object.values(cols).forEach(col => {
+            col.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                col.classList.add('drag-over');
+            });
+            
+            col.addEventListener('dragleave', () => {
+                col.classList.remove('drag-over');
+            });
+
+            col.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                col.classList.remove('drag-over');
+                
+                if (draggedItem) {
+                    const id = draggedItem.dataset.id;
+                    const newStatus = col.dataset.status;
+                    const oldStatus = todos.find(t => t.id === id)?.status;
+
+                    if (oldStatus !== newStatus) {
+                        // Optimistic Update
+                        col.appendChild(draggedItem);
+                        
+                        // Interaction
+                        if (newStatus === 'done') fireConfetti();
+
+                        // DB Update
+                        const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id);
+                        await updateDoc(ref, { 
+                            status: newStatus,
+                            completed: newStatus === 'done', // maintain backward compat
+                            movedAt: serverTimestamp() 
+                        });
+                    }
+                }
+            });
+        });
+
+
+        // --- Actions ---
+        window.openAddModal = (status) => {
+            modalStatus.value = status;
+            modal.classList.remove('hidden');
+            // Small timeout for transition
+            requestAnimationFrame(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalInput.focus();
+            });
+        };
+
+        document.getElementById('add-btn-main').onclick = () => openAddModal('todo');
+
+        window.closeModal = () => {
+            modal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.getElementById('modal-form').reset();
+            }, 200);
+        };
+
+        document.getElementById('modal-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const text = modalInput.value.trim();
+            const status = modalStatus.value;
+            const category = document.querySelector('input[name="category"]:checked').value;
+            
+            if(!text || !currentUser) return;
+            
+            closeModal();
+            
+            // Logic: New items go to top (lowest order)
+            const minOrder = todos.length ? Math.min(...todos.map(t => t.order || 0)) : 0;
+            
+            await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'todos'), {
+                text, category, status,
+                completed: status === 'done',
+                createdAt: serverTimestamp(),
+                order: minOrder - 100
+            });
+        };
+
+        window.editTask = (el, id) => {
+            el.contentEditable = true;
+            el.focus();
+            document.execCommand('selectAll', false, null);
+            el.classList.add('ring-2', 'ring-indigo-500', 'rounded', 'px-1');
+
+            const save = async () => {
+                el.contentEditable = false;
+                el.classList.remove('ring-2', 'ring-indigo-500', 'rounded', 'px-1');
+                const val = el.innerText.trim();
+                if(val) await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id), { text: val });
+                else el.innerText = todos.find(t=>t.id===id).text;
+            };
+
+            el.onblur = save;
+            el.onkeydown = (e) => { if(e.key === 'Enter') { e.preventDefault(); el.blur(); }};
+        };
+
+        window.askDelete = (id) => {
+            pendingDeleteId = id;
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            renderBoard(); // Hides it via filter
+
+            if(deleteTimeout) clearTimeout(deleteTimeout);
+            deleteTimeout = setTimeout(async () => {
+                if(pendingDeleteId === id) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id));
+                    pendingDeleteId = null;
+                    toast.classList.remove('show');
+                }
+            }, 3000);
+        };
+
+        document.getElementById('undo-btn').onclick = () => {
+            clearTimeout(deleteTimeout);
+            pendingDeleteId = null;
+            document.getElementById('toast').classList.remove('show');
+            renderBoard();
+        };
+
+        window.clearDone = async () => {
+            if(!confirm('Delete all tasks in Done column?')) return;
+            const batch = writeBatch(db);
+            todos.filter(t => t.status === 'done').forEach(t => {
+                batch.delete(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', t.id));
+            });
+            await batch.commit();
+        };
+
+        // --- Utils ---
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function fireConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const particles = Array.from({length: 60}, () => ({
+                x: window.innerWidth * 0.75, // Burst from right side generally
+                y: window.innerHeight * 0.5,
+                vx: (Math.random()-0.5)*25, vy: (Math.random()-0.8)*25,
+                color: `hsl(${Math.random()*360}, 80%, 60%)`, life: 80
+            }));
+            
+            function loop() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                let active = false;
+                particles.forEach(p => {
+                    if(p.life > 0) {
+                        active = true; p.life--;
+                        p.x += p.vx; p.y += p.vy; p.vy += 0.6;
+                        ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 6, 6);
+                    }
+                });
+                if(active) requestAnimationFrame(loop);
+            }
+            loop();
+        }
+
+        modal.addEventListener('click', (e) => {
+            if(e.target === modal) closeModal();
+        });
+
+    </script>
+</body>
+</html>
