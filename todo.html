@@ -392,22 +392,19 @@
                 const catLabel = t.category ? t.category.toUpperCase() : 'SITE';
 
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
+                    <div class="flex justify-between items-center mb-1.5">
                         <span class="text-[10px] font-mono tracking-wider px-1.5 py-0.5 rounded ${catClass}">${catLabel}</span>
-                        <button onclick="askDelete('${t.id}')" class="text-white/20 hover:text-alert opacity-0 group-hover:opacity-100 transition-all p-1 -mt-1 -mr-1">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] text-white/30 font-mono">${t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Today'}</span>
+                            <button onclick="askDelete('${t.id}')" class="text-white/20 hover:text-alert opacity-0 group-hover:opacity-100 transition-all p-1 -mr-1">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
-                    <p class="text-white/90 font-light leading-snug mb-2" 
+                    <p class="text-white/90 font-light leading-snug" 
                        contenteditable="false" 
                        ondblclick="editTask(this, '${t.id}')"
                        title="Double click to edit">${escapeHtml(t.text)}</p>
-                    <div class="flex items-center justify-between border-t border-white/5 pt-1.5">
-                         <div class="text-[10px] text-white/30 font-mono flex items-center gap-1">
-                            <i class="far fa-clock"></i>
-                            ${t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString() : 'Today'}
-                        </div>
-                    </div>
                 `;
 
                 card.addEventListener('dragstart', dragStart);
