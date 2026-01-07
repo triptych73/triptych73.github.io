@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { calculatestructure, type StaircaseInputs } from './core/physics';
 import { InputPanel } from './components/InputPanel';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -24,6 +24,35 @@ function App() {
     inputOpen: true,
     resultsOpen: true
   });
+
+  // Parse URL parameters on mount (for integration with staircase configurator)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const updates: Partial<StaircaseInputs> = {};
+
+    // Parse numeric parameters
+    const numParams: (keyof StaircaseInputs)[] = ['rise', 'going', 'width', 'thickness', 'stepCount', 'cheekHeight'];
+    numParams.forEach(key => {
+      const value = params.get(key);
+      if (value) {
+        const num = parseInt(value, 10);
+        if (!isNaN(num)) {
+          (updates as any)[key] = num;
+        }
+      }
+    });
+
+    // Parse boolean parameters
+    if (params.get('cheekVisible')) {
+      updates.cheekVisible = params.get('cheekVisible') === 'true';
+    }
+
+    // Check if we have any updates from URL
+    if (Object.keys(updates).length > 0) {
+      console.log('Loaded parameters from staircase configurator:', updates);
+      setInputs(prev => ({ ...prev, ...updates }));
+    }
+  }, []);
 
   const results = useMemo(() => calculatestructure(inputs), [inputs]);
 

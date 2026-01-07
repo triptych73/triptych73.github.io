@@ -1313,7 +1313,38 @@
             removeLevel: () => levelManager.removeLevel(),
 
             downloadOBJ: () => ExporterUtils.exportOptimizedOBJ(levelManager.levels),
-            downloadGLTF: () => ExporterUtils.exportGLTF(scene, levelManager.levels)
+            downloadGLTF: () => ExporterUtils.exportGLTF(scene, levelManager.levels),
+
+            /**
+             * Launch the Engineering Structural Analysis app with current staircase parameters
+             */
+            launchEngineering: () => {
+                const selected = levelManager.getSelectedLevel();
+                if (!selected) {
+                    alert('Please select a staircase level first');
+                    return;
+                }
+
+                const s = selected.complianceState;
+                const c = selected.config;
+
+                // Calculate total steps for the selected level
+                const totalSteps = (c.sideSteps * 2) + (c.winderSteps * 2) + s.bridgeSteps;
+
+                // Build URL with parameters for engineering app
+                const params = new URLSearchParams({
+                    rise: Math.round(s.riser).toString(),
+                    going: Math.round(s.going).toString(),
+                    width: c.flightWidth.toString(),
+                    thickness: c.steelThickness.toString(),
+                    stepCount: totalSteps.toString(),
+                    cheekVisible: c.cheekVisible.toString(),
+                    cheekHeight: c.cheekHeight.toString()
+                });
+
+                // Open engineering app in new tab with parameters
+                window.open(`./engineering-app/dist/index.html?${params.toString()}`, '_blank');
+            }
         };
 
         /**
@@ -1375,9 +1406,10 @@
         folderGlobal.add(guiProxy, 'addLevel').name('Add Level');
         folderGlobal.add(guiProxy, 'removeLevel').name('Remove Level');
 
-        const folderExport = gui.addFolder('Downloads');
+        const folderExport = gui.addFolder('Downloads & Analysis');
         folderExport.add(guiProxy, 'downloadGLTF').name('Download GLB (Blender)');
         folderExport.add(guiProxy, 'downloadOBJ').name('Download OBJ (AutoCAD)');
+        folderExport.add(guiProxy, 'launchEngineering').name('📊 Structural Analysis');
 
         const folderDims = gui.addFolder('Properties (Selected Level)');
         folderDims.add(guiProxy, 'floorHeight', 2000, 4000).name('Floor Height').onChange(onGuiChange);
