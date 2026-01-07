@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Level Staircase Configurator + Export</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #f0f0f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        #overlay {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 320px; max-height: 90vh;
+            display: flex; flex-direction: column;
+            overflow: hidden; transition: max-height 0.3s ease;
+            pointer-events: auto;
+        }
+        #overlay-header {
+            padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        #overlay-content { padding: 20px; overflow-y: auto; }
+        .minimized #overlay-content { display: none; }
+        h1 { margin: 0; font-size: 16px; color: #333; font-weight: 600; }
+        .toggle-btn { font-weight: bold; color: #666; }
+        
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px; }
+        .stat-label { color: #666; }
+        .stat-value { font-weight: bold; color: #333; }
+        .status-badge {
+            display: inline-block; padding: 6px 10px; border-radius: 4px;
+            font-size: 12px; font-weight: bold; color: white; margin-top: 10px;
+            width: 100%; text-align: center; box-sizing: border-box;
+        }
+        .status-pass { background-color: #27ae60; }
+        .status-fail { background-color: #c0392b; }
+        
+        #selection-hint {
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            font-size: 14px; color: #555; pointer-events: none;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.7); padding: 10px 0;
+        }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 24px; color: #333;
+        }
+        .level-indicator {
+            font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+            color: #3498db; font-weight: 800; margin-bottom: 10px;
+            border-bottom: 2px solid #3498db; padding-bottom: 5px;
+        }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="loading">Loading Engine...</div>
+    <div id="canvas-container"></div>
+    <div id="selection-hint">Click on a staircase to select and edit it.</div>
+
+    <div id="overlay">
+        <div id="overlay-header" onclick="toggleOverlay()">
+            <h1>Part K Configurator</h1>
+            <span class="toggle-btn">[-]</span>
+        </div>
+        <div id="overlay-content">
+            <div id="level-title" class="level-indicator">Level 1 Selected</div>
+            <h2>Geometry Specs</h2>
+            <div class="stat-row"><span class="stat-label">Floor Height:</span><span class="stat-value" id="disp-height">2600 mm</span></div>
+            <div class="stat-row"><span class="stat-label">Well Width:</span><span class="stat-value" id="disp-width">4000 mm</span></div>
+            <div class="stat-row"><span class="stat-label">Configuration:</span><span class="stat-value" id="disp-config">U-Shape</span></div>
+            <h2>Step Dimensions</h2>
+            <div class="stat-row"><span class="stat-label">Riser (R):</span><span class="stat-value" id="disp-rise">0 mm</span></div>
+            <div class="stat-row"><span class="stat-label">Going (G):</span><span class="stat-value" id="disp-going">0 mm</span></div>
+            <div class="stat-row"><span class="stat-label">Pitch:</span><span class="stat-value" id="disp-pitch">0°</span></div>
+            <h2>Compliance Check (2R+G)</h2>
+            <div class="stat-row"><span class="stat-label">Value:</span><span class="stat-value" id="disp-2rg">0 mm</span></div>
+            <div class="stat-row"><span class="stat-label">Range:</span><span class="stat-value">550 - 700</span></div>
+            <div id="status-container"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+        // ------------------------------------------------------------------
+        // EXPORT UTILS
+        // ------------------------------------------------------------------
+        const ExporterUtils = {
+            saveString(text, filename) {
+                const blob = new Blob([text], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            },
+            saveArrayBuffer(buffer, filename) {
+                const blob = new Blob([buffer], { type: 'application/octet-stream' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            },
+            
+            // CUSTOM OBJ EXPORTER FOR QUADS
+            exportOptimizedOBJ(levels) {
+                let output = "# UK Staircase Configurator - Optimized Quad OBJ\n";
+                output += "# Scale: Millimeters\n";
+                output += "# Up-Axis: Z (Rotated -90 X for AutoCAD)\n\n";
+
+                let globalVertexOffset = 1;
+
+                levels.forEach((level, lvlIdx) => {
+                    const group = level.meshGroup;
+                    const meshes = level.meshes;
+                    const lvlName = `Level_${lvlIdx + 1}`;
+                    
+                    // Iterate through known mesh components
+                    const parts = [
+                        { key: 'stair', name: 'Steel' },
+                        { key: 'cheek', name: 'Cheek' },
+                        { key: 'balustrade', name: 'Balustrade' },
+                        { key: 'landing', name: 'Landing' }
+                    ];
+
+                    parts.forEach(part => {
+                        const mesh = meshes[part.key];
+                        if (!mesh) return;
+
+                        output += `g ${lvlName}_${part.name}\n`;
+
+                        // Geometry Processing
+                        const geo = mesh.geometry;
+                        const posAttr = geo.attributes.position;
+                        const vertices = posAttr.array;
+                        
+                        // 1. Write Vertices with Rotation (Y-Up -> Z-Up)
+                        // Rotation Matrix X -90: (x, y, z) -> (x, z, -y)
+                        // Also apply World Position from the Level Group (Vertical Stacking)
+                        const worldYOffset = group.position.y;
+                        const worldXOffset = group.position.x; // Usually 0 due to centerAlign, but good to be safe
+                        const worldZOffset = group.position.z;
+
+                        // We need to apply the object's local transforms (centerAlign shifts)
+                        mesh.updateMatrixWorld();
+                        const matrix = mesh.matrixWorld; 
+
+                        for (let i = 0; i < vertices.length; i += 3) {
+                            const localVec = new THREE.Vector3(vertices[i], vertices[i+1], vertices[i+2]);
+                            
+                            // Apply full hierarchy transform (Stacking + Centering)
+                            localVec.applyMatrix4(matrix);
+
+                            // Apply AutoCAD Rotation: x, z, -y
+                            output += `v ${localVec.x.toFixed(4)} ${localVec.z.toFixed(4)} ${(-localVec.y).toFixed(4)}\n`;
+                        }
+
+                        // 2. Write Faces
+                        // If it's the Steel Stair, we specifically built it with linear Quads
+                        // 4 vertices = 1 Quad. No index reuse in the generator.
+                        if (part.key === 'stair') {
+                            const quadCount = vertices.length / 12; // 4 verts * 3 coords
+                            for (let i = 0; i < quadCount; i++) {
+                                const v = globalVertexOffset + (i * 4);
+                                // OBJ Face indices are 1-based
+                                output += `f ${v} ${v+1} ${v+2} ${v+3}\n`;
+                            }
+                            globalVertexOffset += (vertices.length / 3);
+                        } 
+                        else {
+                            // Standard Triangulated Export for other parts (Landing, Balustrade)
+                            const indices = geo.index ? geo.index.array : null;
+                            if (indices) {
+                                for (let i = 0; i < indices.length; i += 3) {
+                                    const a = globalVertexOffset + indices[i];
+                                    const b = globalVertexOffset + indices[i+1];
+                                    const c = globalVertexOffset + indices[i+2];
+                                    output += `f ${a} ${b} ${c}\n`;
+                                }
+                            } else {
+                                // Non-indexed triangles
+                                const triCount = vertices.length / 9;
+                                for (let i = 0; i < triCount; i++) {
+                                    const v = globalVertexOffset + (i * 3);
+                                    output += `f ${v} ${v+1} ${v+2}\n`;
+                                }
+                            }
+                            globalVertexOffset += (vertices.length / 3);
+                        }
+                        output += "\n";
+                    });
+                });
+
+                this.saveString(output, 'Staircase_Optimized_CAD.obj');
+            },
+
+            exportGLTF(scene, levels) {
+                const exporter = new GLTFExporter();
+                // Create a clean group for export to avoid exporting the environment/lights
+                const exportGroup = new THREE.Group();
+                levels.forEach(l => {
+                    const clone = l.meshGroup.clone();
+                    // Ensure world transforms are baked or preserved
+                    clone.position.copy(l.meshGroup.position);
+                    exportGroup.add(clone);
+                });
+
+                exporter.parse(
+                    exportGroup,
+                    (gltf) => {
+                        this.saveArrayBuffer(gltf, 'Staircase_Model.glb');
+                    },
+                    (error) => { console.error('GLTF Export Error:', error); },
+                    { binary: true }
+                );
+            }
+        };
+
+        // ------------------------------------------------------------------
+        // CLASS: Staircase
+        // ------------------------------------------------------------------
+        class Staircase {
+            constructor(scene, initialConfig = {}, id) {
+                this.scene = scene;
+                this.id = id;
+                this.isSelected = false;
+                
+                this.config = Object.assign({
+                    floorHeight: 2600,
+                    stairWellWidth: 4000,
+                    flightWidth: 1000,
+                    sideSteps: 0, 
+                    winderSteps: 3, 
+                    voidRadius: 100, 
+                    steelThickness: 10,
+                    bendRadius: 15,
+                    wireframe: false,
+                    cheekVisible: false,
+                    cheekHeight: 300,
+                    balustradeType: 'Perforated',
+                    stepUpExit: false
+                }, initialConfig);
+
+                this.complianceState = { riser: 0, going: 0, pitch: 0, valid: true, errors: [], bridgeSteps: 0 };
+
+                this.meshGroup = new THREE.Group();
+                this.meshGroup.userData = { isStaircase: true, instance: this }; 
+                this.scene.add(this.meshGroup);
+
+                this.meshes = { stair: null, cheek: null, balustrade: null, landing: null };
+                this.initMaterials();
+                this.generate();
+            }
+
+            initMaterials() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,512,512);
+                ctx.fillStyle = '#000000';
+                const pitch = 30; 
+                for(let y=0; y<532; y+=pitch) {
+                    const rowIdx = Math.floor(y/pitch);
+                    const xOffset = (rowIdx % 2 === 0) ? 0 : (pitch/2);
+                    for(let x=-pitch; x<532; x+=pitch) {
+                        ctx.beginPath(); ctx.arc(x + xOffset, y, 10, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2, 2); 
+
+                this.materials = {
+                    steel: new THREE.MeshStandardMaterial({ color: 0xeaeaea, metalness: 0.3, roughness: 0.6, side: THREE.DoubleSide, name: 'SteelMat' }),
+                    cheek: new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.2, roughness: 0.7, side: THREE.DoubleSide, name: 'CheekMat' }),
+                    glass: new THREE.MeshPhysicalMaterial({ color: 0xaaccff, metalness: 0, roughness: 0, transmission: 0.9, transparent: true, side: THREE.DoubleSide, name: 'GlassMat' }),
+                    rail: new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4, metalness: 0.5, name: 'RailMat' }),
+                    bar: new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.4, roughness: 0.5, name: 'BarMat' }),
+                    perforated: new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.5, roughness: 0.4, alphaMap: tex, transparent: true, side: THREE.DoubleSide, alphaTest: 0.5, name: 'PerfMat' }),
+                    landing: new THREE.MeshStandardMaterial({ color: 0xeeeeee, name: 'LandingMat' })
+                };
+            }
+
+            setSelection(isSelected) {
+                this.isSelected = isSelected;
+                const emissiveColor = isSelected ? 0x444444 : 0x000000;
+                if(this.meshes.stair) this.meshes.stair.material.emissive.setHex(emissiveColor);
+                if(this.meshes.cheek) this.meshes.cheek.material.emissive.setHex(emissiveColor);
+            }
+
+            updateConfig(newConfig) {
+                Object.assign(this.config, newConfig);
+                this.generate();
+            }
+
+            safeDispose(meshKey) {
+                const obj = this.meshes[meshKey];
+                if (!obj) return;
+                this.meshGroup.remove(obj);
+                if (obj.geometry) obj.geometry.dispose();
+                this.meshes[meshKey] = null;
+            }
+
+            generate() {
+                this.safeDispose('stair');
+                this.safeDispose('cheek');
+                this.safeDispose('balustrade');
+                this.safeDispose('landing');
+
+                const { config } = this;
+                const bridgeLength = config.stairWellWidth - 2 * config.flightWidth;
+                let bridgeSteps = 0, finalGoing = 250, finalRise = 180, totalSteps = 0;
+
+                // Calculation Logic
+                if (bridgeLength <= 100) {
+                    bridgeSteps = 0;
+                    totalSteps = (config.sideSteps * 2) + (config.winderSteps * 2);
+                    const effectiveRisers = totalSteps + (config.stepUpExit ? 1 : 0);
+                    finalRise = config.floorHeight / effectiveRisers;
+                    finalGoing = 600 - 2 * finalRise;
+                } else {
+                    const minSteps = Math.ceil(bridgeLength / 300);
+                    const maxSteps = Math.floor(bridgeLength / 220);
+                    let bestMetric = Infinity;
+                    for (let b = Math.max(0, minSteps - 1); b <= maxSteps + 1; b++) {
+                        if (b === 0) continue; 
+                        const g = bridgeLength / b;
+                        const tot = (config.sideSteps * 2) + (config.winderSteps * 2) + b;
+                        const effectiveRisers = tot + (config.stepUpExit ? 1 : 0);
+                        const r = config.floorHeight / effectiveRisers;
+                        const trg = 2*r + g;
+                        let error = Math.abs(trg - 625);
+                        if (r < 150 || r > 220) error += 1000;
+                        if (g < 220 || g > 300) error += 1000;
+                        if (error < bestMetric) {
+                            bestMetric = error;
+                            bridgeSteps = b;
+                            finalGoing = g;
+                            finalRise = r;
+                            totalSteps = tot;
+                        }
+                    }
+                }
+                this.validateCompliance(finalRise, finalGoing, bridgeSteps);
+
+                const steps = [];
+                const addStraight = (count, section) => { for(let i=0; i<count; i++) steps.push({ type: 'straight', going: finalGoing, rise: finalRise, section: section }); };
+                addStraight(config.sideSteps, 'start');
+                const anglePerStep = (-Math.PI / 2) / config.winderSteps;
+                for(let i=0; i<config.winderSteps; i++) steps.push({ type: 'winder', angle: anglePerStep, rise: finalRise, winderIndex: i, winderTotal: config.winderSteps, turnId: 1 });
+                addStraight(bridgeSteps, 'bridge');
+                for(let i=0; i<config.winderSteps; i++) steps.push({ type: 'winder', angle: anglePerStep, rise: finalRise, winderIndex: i, winderTotal: config.winderSteps, turnId: 2 });
+                addStraight(config.sideSteps, 'end');
+                
+                const buildResult = this.buildFoldedPlateGeometry(steps, config.flightWidth, config.steelThickness, config.bendRadius, config.voidRadius, finalGoing);
+                
+                this.meshes.stair = new THREE.Mesh(buildResult.geometry, this.materials.steel);
+                this.meshes.stair.name = 'SteelStair';
+                this.meshes.stair.castShadow = true; this.meshes.stair.receiveShadow = true;
+                this.meshes.stair.material.wireframe = config.wireframe;
+                this.meshGroup.add(this.meshes.stair);
+
+                if (config.cheekVisible) {
+                    this.meshes.cheek = this.generateCheekPitched(buildResult.leftPath, steps);
+                    if(this.meshes.cheek) {
+                        this.meshes.cheek.name = 'Cheek';
+                        this.meshGroup.add(this.meshes.cheek);
+                    }
+                }
+                
+                if (config.balustradeType !== 'None') {
+                    try {
+                        if (config.balustradeType === 'Vertical Bars (Bridge)') {
+                            this.meshes.balustrade = this.generateVerticalBars(buildResult.rightPath, steps, finalGoing);
+                        } else {
+                            this.meshes.balustrade = this.generateBalustradeSmooth(buildResult.rightPath, config.balustradeType);
+                        }
+                        if(this.meshes.balustrade) {
+                            this.meshes.balustrade.name = 'Balustrade';
+                            this.meshGroup.add(this.meshes.balustrade);
+                        }
+                    } catch(e) { console.warn("Balustrade Gen Error", e); }
+                }
+
+                let landingPos = buildResult.endPoint;
+                let landingDir = buildResult.endDir;
+                if (config.stepUpExit) {
+                    landingPos = landingPos.clone();
+                    landingPos.y += finalRise;
+                }
+                
+                this.meshes.landing = this.generateLanding(landingPos, landingDir);
+                this.meshes.landing.name = 'Landing';
+                this.meshGroup.add(this.meshes.landing);
+
+                this.centerAlign();
+                this.setSelection(this.isSelected);
+            }
+
+            centerAlign() {
+                const box = new THREE.Box3().setFromObject(this.meshGroup);
+                const center = new THREE.Vector3();
+                box.getCenter(center);
+                const shiftX = -center.x;
+                const shiftZ = -center.z;
+                this.meshGroup.children.forEach(child => {
+                    child.position.x += shiftX;
+                    child.position.z += shiftZ;
+                });
+            }
+
+            validateCompliance(rise, going, bridgeSteps) {
+                const s = this.complianceState;
+                s.errors = []; s.valid = true; s.bridgeSteps = bridgeSteps;
+                if (rise < 150) s.errors.push(`Rise too low (${rise.toFixed(1)})`);
+                if (rise > 220) s.errors.push(`Rise too high (${rise.toFixed(1)})`);
+                if (going < 220) s.errors.push(`Going too low (${going.toFixed(1)})`);
+                if (going > 300) s.errors.push(`Going too high (${going.toFixed(1)})`);
+                const trg = 2*rise + going;
+                if (trg < 550) s.errors.push(`2R+G too low (${trg.toFixed(0)})`);
+                if (trg > 700) s.errors.push(`2R+G too high (${trg.toFixed(0)})`);
+                const pitch = Math.atan(rise / going) * (180 / Math.PI);
+                if (pitch > 42) s.errors.push(`Pitch too steep (${pitch.toFixed(1)}°)`);
+                s.riser = rise; s.going = going; s.pitch = pitch;
+                if (s.errors.length > 0) s.valid = false;
+            }
+
+            buildFoldedPlateGeometry(steps, width, thickness, bendRadius, voidRadius, straightGoing) {
+                const vertices = []; const indices = []; let vIndex = 0;
+                let pos = new THREE.Vector3(0, 0, 0); 
+                let dir = new THREE.Vector3(0, 0, 1); 
+                let up = new THREE.Vector3(0, 1, 0); 
+                let left = new THREE.Vector3().crossVectors(up, dir).normalize();
+
+                const leftPath = []; const rightPath = []; 
+                const pivotDist = voidRadius + width/2;
+                const distToTurn1 = this.config.sideSteps * straightGoing;
+                const pivot1 = new THREE.Vector3(0,0,0).addScaledVector(new THREE.Vector3(0,0,1), distToTurn1).addScaledVector(new THREE.Vector3(1,0,0), -pivotDist); 
+
+                // NOTE: This addQuad function creates 4 unique vertices per quad.
+                // This is crucial for the Optimized OBJ Exporter to recover Quads easily.
+                const addQuad = (v1, v2, v3, v4) => {
+                    vertices.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z, v4.x, v4.y, v4.z);
+                    indices.push(vIndex, vIndex + 1, vIndex + 2, vIndex, vIndex + 2, vIndex + 3);
+                    vIndex += 4;
+                };
+
+                const leftPathTop = []; const rightPathTop = []; const leftPathBot = []; const rightPathBot = [];
+                let currentLeft = new THREE.Vector3().copy(pos).addScaledVector(left, width/2);
+                let currentRight = new THREE.Vector3().copy(pos).addScaledVector(left, -width/2);
+                
+                const captureProfile = (l, r, normal, type = 'generic', stepIdx = -1, direction = dir.clone()) => {
+                    const lC = l.clone(); const rC = r.clone();
+                    leftPathTop.push(lC); rightPathTop.push(rC);
+                    const off = normal.clone().multiplyScalar(-thickness);
+                    leftPathBot.push(lC.clone().add(off)); rightPathBot.push(rC.clone().add(off));
+                    leftPath.push({ pos: lC, type: type, stepIdx: stepIdx, normal: normal.clone(), dir: direction }); 
+                    rightPath.push({ pos: rC, type: type, stepIdx: stepIdx, normal: normal.clone(), dir: direction });
+                };
+                
+                captureProfile(currentLeft, currentRight, dir.clone().negate(), 'floor', -1);
+                let activePivot = null;
+
+                steps.forEach((step, i) => {
+                    const rOuter = bendRadius + thickness; const rInner = bendRadius;
+                    let riserStraightLen = step.rise - rOuter - rInner;
+                    if (i === 0) riserStraightLen = step.rise - rOuter;
+                    const cornerLeft = currentLeft.clone().addScaledVector(up, riserStraightLen);
+                    const cornerRight = currentRight.clone().addScaledVector(up, riserStraightLen);
+                    captureProfile(cornerLeft, cornerRight, dir.clone().negate(), 'riser_top', i, dir);
+
+                    const axis = new THREE.Vector3().subVectors(cornerRight, cornerLeft).normalize();
+                    const bendCenterLeft = cornerLeft.clone().addScaledVector(dir, rOuter);
+                    const bendCenterRight = cornerRight.clone().addScaledVector(dir, rOuter);
+                    const segments = 4;
+                    for(let s=1; s<=segments; s++) {
+                        const t = s / segments; const angle = t * (Math.PI / 2);
+                        const q = new THREE.Quaternion().setFromAxisAngle(axis, -angle);
+                        const radL = new THREE.Vector3().subVectors(cornerLeft, bendCenterLeft).applyQuaternion(q);
+                        const radR = new THREE.Vector3().subVectors(cornerRight, bendCenterRight).applyQuaternion(q);
+                        captureProfile(bendCenterLeft.clone().add(radL), bendCenterRight.clone().add(radR), radL.clone().normalize(), (s===segments)?'nosing':'bend', i, dir);
+                    }
+
+                    let treadStartLeft = leftPathTop[leftPathTop.length-1];
+                    let treadStartRight = rightPathTop[rightPathTop.length-1];
+                    let treadEndLeft, treadEndRight, nextDir, nextLeft;
+
+                    if (step.type === 'straight') {
+                        const flatLen = step.going - rOuter - rInner;
+                        treadEndLeft = treadStartLeft.clone().addScaledVector(dir, flatLen);
+                        treadEndRight = treadStartRight.clone().addScaledVector(dir, flatLen);
+                        nextDir = dir.clone(); nextLeft = left.clone();
+                        if (steps[i+1] && steps[i+1].type === 'winder' && steps[i+1].turnId === 2) {
+                            const center = new THREE.Vector3().addVectors(treadEndLeft, treadEndRight).multiplyScalar(0.5);
+                            activePivot = center.clone().addScaledVector(nextLeft, -pivotDist); 
+                        } else if (i === -1 || (step.type==='straight' && steps[i+1]?.turnId === 1)) {
+                            const center = new THREE.Vector3().addVectors(treadEndLeft, treadEndRight).multiplyScalar(0.5);
+                            activePivot = center.clone().addScaledVector(nextLeft, -pivotDist);
+                        }
+                    } else {
+                        if (!activePivot) if (this.config.sideSteps === 0 && step.turnId === 1) activePivot = pivot1;
+                        const fractionStart = step.winderIndex / step.winderTotal;
+                        const fractionEnd = (step.winderIndex + 1) / step.winderTotal;
+                        const crossesCorner = (fractionStart < 0.5 && fractionEnd > 0.5);
+                        const axisOfTurn = up.clone();
+                        const qRot = new THREE.Quaternion().setFromAxisAngle(axisOfTurn, step.angle);
+                        nextDir = dir.clone().applyQuaternion(qRot).normalize();
+                        nextLeft = left.clone().applyQuaternion(qRot).normalize();
+                        if (crossesCorner) {
+                            const startDeg = fractionStart * 90;
+                            const deltaTo45 = -(45 - startDeg) * (Math.PI/180);
+                            const qDelta = new THREE.Quaternion().setFromAxisAngle(axisOfTurn, deltaTo45);
+                            const midLeft = left.clone().applyQuaternion(qDelta).normalize();
+                            const distToCorner = (pivotDist + width/2) * Math.sqrt(2);
+                            const pMidOuter = activePivot.clone().add(midLeft.clone().multiplyScalar(distToCorner));
+                            const pMidInner = activePivot.clone().add(midLeft.clone().multiplyScalar(pivotDist - width/2));
+                            pMidOuter.y = treadStartLeft.y; pMidInner.y = treadStartRight.y;
+                            captureProfile(pMidOuter, pMidInner, up.clone(), 'tread_mid', i, nextDir); 
+                        }
+                        const totalAngle = Math.PI / 2;
+                        const localAngle = fractionEnd * totalAngle;
+                        const extension = (localAngle <= Math.PI/4 + 0.001) ? 1.0 / Math.cos(localAngle) : 1.0 / Math.sin(localAngle);
+                        const rOuterGeo = (pivotDist + width/2) * extension;
+                        const radialEndLeft = activePivot.clone().addScaledVector(nextLeft, rOuterGeo);
+                        const radialEndRight = activePivot.clone().addScaledVector(nextLeft, pivotDist - width/2);
+                        radialEndLeft.y = treadStartLeft.y; radialEndRight.y = treadStartRight.y;
+                        treadEndLeft = radialEndLeft.addScaledVector(nextDir, -rInner);
+                        treadEndRight = radialEndRight.addScaledVector(nextDir, -rInner);
+                    }
+
+                    captureProfile(treadEndLeft, treadEndRight, up.clone(), 'tread_end', i, nextDir);
+                    const concaveCenterLeft = treadEndLeft.clone().addScaledVector(up, rInner);
+                    const concaveCenterRight = treadEndRight.clone().addScaledVector(up, rInner);
+                    const axisConcave = new THREE.Vector3().subVectors(concaveCenterRight, concaveCenterLeft).normalize();
+                    for(let s=1; s<=segments; s++) {
+                        const t = s / segments; const angle = t * (Math.PI / 2);
+                        const nTarget = nextDir.clone().negate();
+                        const nCurr = new THREE.Vector3().copy(up).lerp(nTarget, t).normalize();
+                        const vRel = up.clone().negate().applyAxisAngle(axisConcave, angle);
+                        captureProfile(concaveCenterLeft.clone().addScaledVector(vRel, rInner), concaveCenterRight.clone().addScaledVector(vRel, rInner), nCurr, 'concave', i, nextDir);
+                    }
+                    currentLeft = leftPathTop[leftPathTop.length-1];
+                    currentRight = rightPathTop[rightPathTop.length-1];
+                    dir.copy(nextDir); left.copy(nextLeft);
+                });
+
+                const len = leftPathTop.length;
+                for(let i=0; i<len-1; i++) {
+                    addQuad(leftPathTop[i], rightPathTop[i], leftPathTop[i+1], rightPathTop[i+1]); 
+                    addQuad(rightPathBot[i+1], leftPathBot[i+1], rightPathBot[i], leftPathBot[i]);
+                    addQuad(leftPathBot[i], leftPathTop[i], leftPathBot[i+1], leftPathTop[i+1]);
+                    addQuad(rightPathTop[i], rightPathBot[i], rightPathTop[i+1], rightPathBot[i+1]);
+                }
+                addQuad(rightPathTop[0], leftPathTop[0], rightPathBot[0], leftPathBot[0]);
+                addQuad(leftPathTop[len-1], rightPathTop[len-1], leftPathBot[len-1], rightPathBot[len-1]);
+
+                const geom = new THREE.BufferGeometry();
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geom.setIndex(indices);
+                geom.computeVertexNormals();
+                const endPoint = new THREE.Vector3().addVectors(leftPathTop[len-1], rightPathTop[len-1]).multiplyScalar(0.5);
+                return { geometry: geom, leftPath: leftPath, rightPath: rightPath, endPoint: endPoint, endDir: dir };
+            }
+
+            generateCheekPitched(pathPoints, steps) {
+                let bridgeStartIndex = -1, bridgeEndIndex = -1;
+                for(let i=0; i<steps.length; i++) {
+                    if (steps[i].section === 'bridge') {
+                        if (bridgeStartIndex === -1) bridgeStartIndex = i;
+                        bridgeEndIndex = i;
+                    }
+                }
+                if (bridgeStartIndex === -1) return null; 
+                if (bridgeEndIndex < steps.length - 1) bridgeEndIndex++;
+                const nosingPoints = pathPoints.filter(p => p.type === 'nosing');
+                if (bridgeStartIndex >= nosingPoints.length || bridgeEndIndex >= nosingPoints.length) return null;
+                const pStart = nosingPoints[bridgeStartIndex].pos;
+                const pEnd = nosingPoints[bridgeEndIndex].pos;
+                const h = this.config.cheekHeight;
+                const vertices = [];
+                vertices.push(pStart.x, pStart.y + h/2, pStart.z);
+                vertices.push(pStart.x, pStart.y - h/2, pStart.z);
+                vertices.push(pEnd.x, pEnd.y + h/2, pEnd.z);
+                vertices.push(pEnd.x, pEnd.y - h/2, pEnd.z);
+                const geom = new THREE.BufferGeometry();
+                const indices = [1, 3, 0,  3, 2, 0, 0, 2, 3,  0, 3, 1];
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geom.setIndex(indices); geom.computeVertexNormals();
+                return new THREE.Mesh(geom, this.materials.cheek);
+            }
+
+            generateVerticalBars(pathPoints, steps, going) {
+                const barRadius = 6; const landingLevel = this.config.floorHeight;
+                const slabThick = 250; const barTopY = landingLevel - (slabThick/2);
+                const bridgeStepsIndices = [];
+                steps.forEach((s, i) => { if (s.section === 'bridge') bridgeStepsIndices.push(i); });
+                if (bridgeStepsIndices.length === 0) return null;
+                const bars = new THREE.Group();
+                bridgeStepsIndices.forEach(idx => {
+                    const stepPoints = pathPoints.filter(p => p.stepIdx === idx);
+                    const pNose = stepPoints.find(p => p.type === 'nosing');
+                    const pEnd = stepPoints.find(p => p.type === 'tread_end');
+                    if (pNose && pEnd) {
+                        const start = pNose.pos; const end = pEnd.pos;
+                        const dir = new THREE.Vector3().subVectors(end, start).normalize();
+                        const up = new THREE.Vector3(0,1,0);
+                        const leftVec = new THREE.Vector3().crossVectors(up, dir).normalize();
+                        const insetStart = start.clone().addScaledVector(leftVec, 40);
+                        [1/6, 0.5, 5/6].forEach(frac => {
+                            const pos = insetStart.clone().addScaledVector(dir, going * frac);
+                            const h = barTopY - pos.y;
+                            if (h > 0) {
+                                const geo = new THREE.CylinderGeometry(barRadius, barRadius, h, 8);
+                                geo.translate(0, h/2, 0);
+                                const mesh = new THREE.Mesh(geo, this.materials.bar);
+                                mesh.position.copy(pos);
+                                bars.add(mesh);
+                            }
+                        });
+                    }
+                });
+                return bars;
+            }
+
+            generateBalustradeSmooth(pathPoints, type) {
+                const points = pathPoints.filter(p => p.type === 'nosing').map(p => p.pos);
+                const fullPoints = [pathPoints[0].pos, ...points];
+                const height = 950; 
+                if (type === 'Floating Rail') {
+                    const curvePts = fullPoints.map(p => new THREE.Vector3(p.x, p.y + height, p.z));
+                    const curve = new THREE.CatmullRomCurve3(curvePts); 
+                    const tubeGeo = new THREE.TubeGeometry(curve, fullPoints.length * 4, 20, 8, false); 
+                    return new THREE.Mesh(tubeGeo, this.materials.rail);
+                }
+                const vertices = []; const indices = []; const uvs = []; let vIdx = 0;
+                for(let i=0; i<fullPoints.length-1; i++) {
+                    const p1 = fullPoints[i]; const p2 = fullPoints[i+1];
+                    vertices.push(p1.x, p1.y + 50, p1.z); 
+                    vertices.push(p2.x, p2.y + 50, p2.z); 
+                    vertices.push(p1.x, p1.y + height, p1.z); 
+                    vertices.push(p2.x, p2.y + height, p2.z); 
+                    uvs.push(i, 0, i+1, 0, i, 1, i+1, 1);
+                    indices.push(vIdx, vIdx+1, vIdx+2); indices.push(vIdx+1, vIdx+3, vIdx+2); vIdx += 4;
+                }
+                const geom = new THREE.BufferGeometry();
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+                geom.setIndex(indices); geom.computeVertexNormals();
+                let mat = this.materials.perforated;
+                if (type === 'Glass') mat = this.materials.glass;
+                if (type === 'Rails') mat = this.materials.rail;
+                const mesh = new THREE.Mesh(geom, mat);
+                const topPoints = fullPoints.map(p => new THREE.Vector3(p.x, p.y + height, p.z));
+                const curve = new THREE.CatmullRomCurve3(topPoints);
+                const tubeGeo = new THREE.TubeGeometry(curve, fullPoints.length*4, 20, 8, false); 
+                const cap = new THREE.Mesh(tubeGeo, this.materials.rail);
+                mesh.add(cap);
+                return mesh;
+            }
+
+            generateLanding(pos, dir) {
+                const thick = 250; const depth = 1200; 
+                const geo = new THREE.BoxGeometry(this.config.stairWellWidth, thick, depth);
+                const center = pos.clone().addScaledVector(dir, depth/2);
+                center.y = pos.y - thick/2;
+                const shiftVec = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), dir).normalize()
+                    .multiplyScalar(-(this.config.stairWellWidth - this.config.flightWidth)/2);
+                center.add(shiftVec);
+                const mesh = new THREE.Mesh(geo, this.materials.landing);
+                mesh.position.copy(center);
+                const angle = Math.atan2(dir.x, dir.z);
+                mesh.rotation.y = angle;
+                return mesh;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // CLASS: LevelManager
+        // ------------------------------------------------------------------
+        class LevelManager {
+            constructor(scene, onSelectionChange) {
+                this.scene = scene;
+                this.levels = [];
+                this.onSelectionChange = onSelectionChange;
+                this.selectedLevelIndex = -1;
+            }
+            addLevel() {
+                if (this.levels.length >= 4) { alert("Max 4 levels allowed"); return; }
+                let prevConfig = {};
+                if (this.levels.length > 0) prevConfig = { ...this.levels[this.levels.length - 1].config };
+                const newLevel = new Staircase(this.scene, prevConfig, this.levels.length);
+                this.levels.push(newLevel);
+                this.updateLayout();
+                this.selectLevel(this.levels.length - 1);
+            }
+            removeLevel() {
+                if (this.levels.length <= 1) return;
+                const topLevel = this.levels.pop();
+                this.scene.remove(topLevel.meshGroup);
+                this.updateLayout();
+                this.selectLevel(this.levels.length - 1);
+            }
+            updateLayout() {
+                let currentY = 0;
+                this.levels.forEach(level => {
+                    level.meshGroup.position.y = currentY;
+                    currentY += level.config.floorHeight;
+                });
+                updateEnvironment(currentY);
+            }
+            selectLevel(index) {
+                if (index < 0 || index >= this.levels.length) return;
+                this.levels.forEach(l => l.setSelection(false));
+                this.levels[index].setSelection(true);
+                this.selectedLevelIndex = index;
+                if (this.onSelectionChange) this.onSelectionChange(this.levels[index], index);
+            }
+            getSelectedLevel() {
+                if (this.selectedLevelIndex === -1) return null;
+                return this.levels[this.selectedLevelIndex];
+            }
+            checkIntersection(raycaster) {
+                const intersectable = [];
+                this.levels.forEach(l => intersectable.push(l.meshGroup));
+                const intersects = raycaster.intersectObjects(intersectable, true);
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    while (obj) {
+                        if (obj.userData && obj.userData.isStaircase) return obj.userData.instance;
+                        obj = obj.parent;
+                    }
+                }
+                return null;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // APP SETUP
+        // ------------------------------------------------------------------
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f0f0);
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 10, 20000);
+        camera.position.set(6000, 5000, 6000);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 2000, 0);
+        controls.enableDamping = true;
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(2000, 4000, 2000);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        let wallMesh, floorMesh;
+        function updateEnvironment(totalHeight) {
+            if (wallMesh) scene.remove(wallMesh);
+            if (floorMesh) scene.remove(floorMesh);
+            const depth = 5000; const wellWidth = 5000; 
+            const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x3498db, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false });
+            const wallGeo = new THREE.BoxGeometry(wellWidth, totalHeight + 1000, depth);
+            wallGeo.translate(0, (totalHeight+1000)/2, depth/2 - 1500); 
+            wallMesh = new THREE.Mesh(wallGeo, wallMaterial);
+            scene.add(wallMesh);
+            const floorGeo = new THREE.PlaneGeometry(10000, 10000);
+            floorGeo.rotateX(-Math.PI/2);
+            floorMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            floorMesh.receiveShadow = true;
+            scene.add(floorMesh);
+        }
+
+        let levelManager; 
+        const guiProxy = {
+            floorHeight: 2600, stairWellWidth: 4000, flightWidth: 1000,
+            sideSteps: 0, winderSteps: 3, voidRadius: 100, 
+            steelThickness: 10, bendRadius: 15, wireframe: false,
+            cheekVisible: false, cheekHeight: 300, balustradeType: 'Perforated', stepUpExit: false,
+            
+            addLevel: () => levelManager.addLevel(),
+            removeLevel: () => levelManager.removeLevel(),
+            
+            downloadOBJ: () => ExporterUtils.exportOptimizedOBJ(levelManager.levels),
+            downloadGLTF: () => ExporterUtils.exportGLTF(scene, levelManager.levels)
+        };
+        
+        const onGuiChange = () => {
+            const selected = levelManager.getSelectedLevel();
+            if (selected) {
+                selected.updateConfig(guiProxy);
+                levelManager.updateLayout(); 
+                updateUI(selected);
+            }
+        };
+
+        const gui = new GUI();
+        const folderGlobal = gui.addFolder('Project Controls');
+        folderGlobal.add(guiProxy, 'addLevel').name('Add Level');
+        folderGlobal.add(guiProxy, 'removeLevel').name('Remove Level');
+
+        const folderExport = gui.addFolder('Downloads');
+        folderExport.add(guiProxy, 'downloadGLTF').name('Download GLB (Blender)');
+        folderExport.add(guiProxy, 'downloadOBJ').name('Download OBJ (AutoCAD)');
+
+        const folderDims = gui.addFolder('Properties (Selected Level)');
+        folderDims.add(guiProxy, 'floorHeight', 2000, 4000).name('Floor Height').onChange(onGuiChange);
+        folderDims.add(guiProxy, 'stairWellWidth', 3500, 4500).name('Stairwell Width').onChange(onGuiChange);
+        folderDims.add(guiProxy, 'flightWidth', 800, 1200).name('Flight Width').onChange(onGuiChange);
+        
+        const folderSteps = gui.addFolder('Step Counts');
+        folderSteps.add(guiProxy, 'sideSteps', 0, 2, 1).name('Side Straight Steps').onChange(onGuiChange);
+        folderSteps.add(guiProxy, 'winderSteps', 2, 4, 1).name('Winder Steps').onChange(onGuiChange);
+        
+        const folderAcc = gui.addFolder('Accessories');
+        folderAcc.add(guiProxy, 'cheekVisible').name('Cheek (Bridge Only)').onChange(onGuiChange);
+        folderAcc.add(guiProxy, 'cheekHeight', 100, 600).name('Cheek Height').onChange(onGuiChange);
+        folderAcc.add(guiProxy, 'balustradeType', ['None', 'Perforated', 'Glass', 'Floating Rail', 'Vertical Bars (Bridge)']).name('Balustrade').onChange(onGuiChange);
+        folderAcc.add(guiProxy, 'stepUpExit').name('Exit: Step Up').onChange(onGuiChange);
+
+        const folderDetail = gui.addFolder('Detail');
+        folderDetail.add(guiProxy, 'steelThickness', 5, 20).name('Steel Thickness').onChange(onGuiChange);
+        folderDetail.add(guiProxy, 'bendRadius', 5, 50).name('Bend Radius').onChange(onGuiChange);
+        folderDetail.add(guiProxy, 'voidRadius', 50, 300).name('Void Radius').onChange(onGuiChange);
+        folderDetail.add(guiProxy, 'wireframe').onChange(onGuiChange);
+
+        levelManager = new LevelManager(scene, (selectedStair, index) => {
+            document.getElementById('level-title').innerText = `Level ${index + 1} Selected`;
+            Object.assign(guiProxy, selectedStair.config);
+            if (gui) {
+                gui.controllers.forEach(c => c.updateDisplay());
+                gui.folders.forEach(f => f.controllers.forEach(c => c.updateDisplay()));
+            }
+            updateUI(selectedStair);
+        });
+        levelManager.addLevel();
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        function onMouseClick(event) {
+            if (event.target.closest('#overlay')) return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const clickedStair = levelManager.checkIntersection(raycaster);
+            if (clickedStair) levelManager.selectLevel(clickedStair.id);
+        }
+        window.addEventListener('click', onMouseClick);
+
+        function updateUI(stair) {
+            const s = stair.complianceState;
+            const c = stair.config;
+            document.getElementById('disp-height').innerText = c.floorHeight.toFixed(0) + ' mm';
+            document.getElementById('disp-width').innerText = c.stairWellWidth.toFixed(0) + ' mm';
+            document.getElementById('disp-config').innerText = `${c.sideSteps} Str / ${c.winderSteps} Turn / ${s.bridgeSteps} Bridge`;
+            document.getElementById('disp-rise').innerText = s.riser.toFixed(1) + ' mm';
+            document.getElementById('disp-going').innerText = s.going.toFixed(1) + ' mm';
+            document.getElementById('disp-2rg').innerText = (2*s.riser + s.going).toFixed(1) + ' mm';
+            document.getElementById('disp-pitch').innerText = s.pitch.toFixed(1) + '°';
+            const container = document.getElementById('status-container');
+            container.innerHTML = '';
+            if (s.valid) {
+                const b = document.createElement('div'); b.className = 'status-badge status-pass'; b.innerText = 'COMPLIANT'; container.appendChild(b);
+            } else {
+                s.errors.forEach(err => {
+                    const b = document.createElement('div'); b.className = 'status-badge status-fail'; b.innerText = err; container.appendChild(b);
+                });
+            }
+        }
+
+        window.toggleOverlay = function() {
+            const el = document.getElementById('overlay');
+            el.classList.toggle('minimized');
+            const btn = document.querySelector('.toggle-btn');
+            btn.innerText = el.classList.contains('minimized') ? '[+]' : '[-]';
+        };
+
+        function animate() {
+            requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera);
+        }
+        document.getElementById('loading').style.display = 'none';
+        animate();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
