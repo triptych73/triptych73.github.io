@@ -1,57 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Level Staircase Configurator + Export</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #f0f0f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #canvas-container { width: 100vw; height: 100vh; display: block; }
-        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
         #overlay {
-            position: absolute; top: 20px; left: 20px;
+            position: absolute;
+            top: 20px;
+            left: 20px;
             background: rgba(255, 255, 255, 0.95);
-            padding: 0; border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            max-width: 320px; max-height: 90vh;
-            display: flex; flex-direction: column;
-            overflow: hidden; transition: max-height 0.3s ease;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 320px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
             pointer-events: auto;
         }
+
         #overlay-header {
-            padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #eee;
-            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
         }
-        #overlay-content { padding: 20px; overflow-y: auto; }
-        .minimized #overlay-content { display: none; }
-        h1 { margin: 0; font-size: 16px; color: #333; font-weight: 600; }
-        .toggle-btn { font-weight: bold; color: #666; }
-        
-        .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px; }
-        .stat-label { color: #666; }
-        .stat-value { font-weight: bold; color: #333; }
+
+        #overlay-content {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .minimized #overlay-content {
+            display: none;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .toggle-btn {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
+
         .status-badge {
-            display: inline-block; padding: 6px 10px; border-radius: 4px;
-            font-size: 12px; font-weight: bold; color: white; margin-top: 10px;
-            width: 100%; text-align: center; box-sizing: border-box;
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            margin-top: 10px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
         }
-        .status-pass { background-color: #27ae60; }
-        .status-fail { background-color: #c0392b; }
-        
+
+        .status-pass {
+            background-color: #27ae60;
+        }
+
+        .status-fail {
+            background-color: #c0392b;
+        }
+
         #selection-hint {
-            position: absolute; bottom: 30px; width: 100%; text-align: center;
-            font-size: 14px; color: #555; pointer-events: none;
-            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
-            background: rgba(255,255,255,0.7); padding: 10px 0;
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: #555;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px 0;
         }
+
         #loading {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 24px; color: #333;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #333;
         }
+
         .level-indicator {
-            font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
-            color: #3498db; font-weight: 800; margin-bottom: 10px;
-            border-bottom: 2px solid #3498db; padding-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #3498db;
+            font-weight: 800;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
         }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -64,6 +147,7 @@
         }
     </script>
 </head>
+
 <body>
 
     <div id="loading">Loading Engine...</div>
@@ -78,15 +162,22 @@
         <div id="overlay-content">
             <div id="level-title" class="level-indicator">Level 1 Selected</div>
             <h2>Geometry Specs</h2>
-            <div class="stat-row"><span class="stat-label">Floor Height:</span><span class="stat-value" id="disp-height">2600 mm</span></div>
-            <div class="stat-row"><span class="stat-label">Well Width:</span><span class="stat-value" id="disp-width">4000 mm</span></div>
-            <div class="stat-row"><span class="stat-label">Configuration:</span><span class="stat-value" id="disp-config">U-Shape</span></div>
+            <div class="stat-row"><span class="stat-label">Floor Height:</span><span class="stat-value"
+                    id="disp-height">2600 mm</span></div>
+            <div class="stat-row"><span class="stat-label">Well Width:</span><span class="stat-value"
+                    id="disp-width">4000 mm</span></div>
+            <div class="stat-row"><span class="stat-label">Configuration:</span><span class="stat-value"
+                    id="disp-config">U-Shape</span></div>
             <h2>Step Dimensions</h2>
-            <div class="stat-row"><span class="stat-label">Riser (R):</span><span class="stat-value" id="disp-rise">0 mm</span></div>
-            <div class="stat-row"><span class="stat-label">Going (G):</span><span class="stat-value" id="disp-going">0 mm</span></div>
-            <div class="stat-row"><span class="stat-label">Pitch:</span><span class="stat-value" id="disp-pitch">0°</span></div>
+            <div class="stat-row"><span class="stat-label">Riser (R):</span><span class="stat-value" id="disp-rise">0
+                    mm</span></div>
+            <div class="stat-row"><span class="stat-label">Going (G):</span><span class="stat-value" id="disp-going">0
+                    mm</span></div>
+            <div class="stat-row"><span class="stat-label">Pitch:</span><span class="stat-value"
+                    id="disp-pitch">0°</span></div>
             <h2>Compliance Check (2R+G)</h2>
-            <div class="stat-row"><span class="stat-label">Value:</span><span class="stat-value" id="disp-2rg">0 mm</span></div>
+            <div class="stat-row"><span class="stat-label">Value:</span><span class="stat-value" id="disp-2rg">0
+                    mm</span></div>
             <div class="stat-row"><span class="stat-label">Range:</span><span class="stat-value">550 - 700</span></div>
             <div id="status-container"></div>
         </div>
@@ -97,6 +188,110 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
         import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+        // ------------------------------------------------------------------
+        // CONFIGURATION CONSTANTS
+        // ------------------------------------------------------------------
+
+        /**
+         * UK Building Regulations Part K Compliance Standards
+         * These define the acceptable ranges for staircase dimensions
+         * @see https://www.gov.uk/government/publications/access-to-and-use-of-buildings-approved-document-k
+         */
+        const COMPLIANCE_STANDARDS = {
+            UK_PART_K: {
+                name: 'UK Part K (2013)',
+                rise: { min: 150, max: 220, unit: 'mm' },
+                going: { min: 220, max: 300, unit: 'mm' },
+                twoRPlusG: { min: 550, max: 700, unit: 'mm' },
+                maxPitch: 42, // degrees
+                description: 'UK Building Regulations for private stairs'
+            }
+        };
+
+        // Currently active compliance standard
+        const ACTIVE_STANDARD = COMPLIANCE_STANDARDS.UK_PART_K;
+
+        /**
+         * Geometry default values - extracted from hardcoded magic numbers
+         */
+        const GEOMETRY_DEFAULTS = {
+            balustradeHeight: 950,      // mm - height of balustrade panels
+            landingThickness: 250,      // mm - thickness of landing slab
+            landingDepth: 1200,         // mm - depth of landing platform
+            barRadius: 6,               // mm - radius of vertical bar elements
+            railRadius: 20,             // mm - radius of handrail tube
+            perfTexturePitch: 30,       // px - spacing for perforated texture
+            perfHoleRadius: 10,         // px - hole size in perforated texture
+            curveSegments: 4,           // segments for corner bends
+            tubeSegments: 8             // radial segments for tube geometry
+        };
+
+        /**
+         * Preset configurations for common staircase types
+         */
+        const PRESETS = {
+            'Standard Residential': {
+                floorHeight: 2600,
+                stairWellWidth: 4000,
+                flightWidth: 1000,
+                sideSteps: 0,
+                winderSteps: 3,
+                voidRadius: 100,
+                steelThickness: 10,
+                bendRadius: 15,
+                cheekVisible: false,
+                cheekHeight: 300,
+                balustradeType: 'Perforated',
+                stepUpExit: false
+            },
+            'Commercial': {
+                floorHeight: 3200,
+                stairWellWidth: 4500,
+                flightWidth: 1200,
+                sideSteps: 1,
+                winderSteps: 3,
+                voidRadius: 150,
+                steelThickness: 15,
+                bendRadius: 20,
+                cheekVisible: true,
+                cheekHeight: 400,
+                balustradeType: 'Glass',
+                stepUpExit: false
+            },
+            'Compact': {
+                floorHeight: 2400,
+                stairWellWidth: 3500,
+                flightWidth: 900,
+                sideSteps: 0,
+                winderSteps: 2,
+                voidRadius: 80,
+                steelThickness: 8,
+                bendRadius: 12,
+                cheekVisible: false,
+                cheekHeight: 250,
+                balustradeType: 'Floating Rail',
+                stepUpExit: true
+            },
+            'Industrial': {
+                floorHeight: 3000,
+                stairWellWidth: 4200,
+                flightWidth: 1100,
+                sideSteps: 2,
+                winderSteps: 4,
+                voidRadius: 120,
+                steelThickness: 12,
+                bendRadius: 18,
+                cheekVisible: true,
+                cheekHeight: 350,
+                balustradeType: 'Vertical Bars (Bridge)',
+                stepUpExit: false
+            }
+        };
+
+        // Debounce timer for GUI changes
+        let guiDebounceTimer = null;
+        const GUI_DEBOUNCE_MS = 50;
 
         // ------------------------------------------------------------------
         // EXPORT UTILS
@@ -116,7 +311,7 @@
                 link.download = filename;
                 link.click();
             },
-            
+
             // CUSTOM OBJ EXPORTER FOR QUADS
             exportOptimizedOBJ(levels) {
                 let output = "# UK Staircase Configurator - Optimized Quad OBJ\n";
@@ -129,7 +324,7 @@
                     const group = level.meshGroup;
                     const meshes = level.meshes;
                     const lvlName = `Level_${lvlIdx + 1}`;
-                    
+
                     // Iterate through known mesh components
                     const parts = [
                         { key: 'stair', name: 'Steel' },
@@ -148,7 +343,7 @@
                         const geo = mesh.geometry;
                         const posAttr = geo.attributes.position;
                         const vertices = posAttr.array;
-                        
+
                         // 1. Write Vertices with Rotation (Y-Up -> Z-Up)
                         // Rotation Matrix X -90: (x, y, z) -> (x, z, -y)
                         // Also apply World Position from the Level Group (Vertical Stacking)
@@ -158,11 +353,11 @@
 
                         // We need to apply the object's local transforms (centerAlign shifts)
                         mesh.updateMatrixWorld();
-                        const matrix = mesh.matrixWorld; 
+                        const matrix = mesh.matrixWorld;
 
                         for (let i = 0; i < vertices.length; i += 3) {
-                            const localVec = new THREE.Vector3(vertices[i], vertices[i+1], vertices[i+2]);
-                            
+                            const localVec = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+
                             // Apply full hierarchy transform (Stacking + Centering)
                             localVec.applyMatrix4(matrix);
 
@@ -178,18 +373,18 @@
                             for (let i = 0; i < quadCount; i++) {
                                 const v = globalVertexOffset + (i * 4);
                                 // OBJ Face indices are 1-based
-                                output += `f ${v} ${v+1} ${v+2} ${v+3}\n`;
+                                output += `f ${v} ${v + 1} ${v + 2} ${v + 3}\n`;
                             }
                             globalVertexOffset += (vertices.length / 3);
-                        } 
+                        }
                         else {
                             // Standard Triangulated Export for other parts (Landing, Balustrade)
                             const indices = geo.index ? geo.index.array : null;
                             if (indices) {
                                 for (let i = 0; i < indices.length; i += 3) {
                                     const a = globalVertexOffset + indices[i];
-                                    const b = globalVertexOffset + indices[i+1];
-                                    const c = globalVertexOffset + indices[i+2];
+                                    const b = globalVertexOffset + indices[i + 1];
+                                    const c = globalVertexOffset + indices[i + 2];
                                     output += `f ${a} ${b} ${c}\n`;
                                 }
                             } else {
@@ -197,7 +392,7 @@
                                 const triCount = vertices.length / 9;
                                 for (let i = 0; i < triCount; i++) {
                                     const v = globalVertexOffset + (i * 3);
-                                    output += `f ${v} ${v+1} ${v+2}\n`;
+                                    output += `f ${v} ${v + 1} ${v + 2}\n`;
                                 }
                             }
                             globalVertexOffset += (vertices.length / 3);
@@ -234,19 +429,49 @@
         // ------------------------------------------------------------------
         // CLASS: Staircase
         // ------------------------------------------------------------------
+
+        /**
+         * Staircase - Represents a single staircase level with folded plate geometry
+         * 
+         * @class
+         * @description Generates and manages 3D geometry for a folded steel plate staircase
+         * compliant with UK Building Regulations Part K. Supports U-shape configurations
+         * with straight runs, winder turns, and optional accessories.
+         * 
+         * @example
+         * const stair = new Staircase(scene, { floorHeight: 2800 }, 0);
+         * stair.updateConfig({ balustradeType: 'Glass' });
+         */
         class Staircase {
+            /**
+             * Create a new Staircase instance
+             * @param {THREE.Scene} scene - The Three.js scene to add the staircase to
+             * @param {Object} initialConfig - Initial configuration options
+             * @param {number} initialConfig.floorHeight - Floor-to-floor height in mm (default: 2600)
+             * @param {number} initialConfig.stairWellWidth - Total stairwell width in mm (default: 4000)
+             * @param {number} initialConfig.flightWidth - Width of each flight in mm (default: 1000)
+             * @param {number} initialConfig.sideSteps - Number of straight steps before/after turns (default: 0)
+             * @param {number} initialConfig.winderSteps - Number of winder steps per turn (default: 3)
+             * @param {number} initialConfig.voidRadius - Central void radius in mm (default: 100)
+             * @param {number} initialConfig.steelThickness - Steel plate thickness in mm (default: 10)
+             * @param {number} initialConfig.bendRadius - Bend radius at corners in mm (default: 15)
+             * @param {string} initialConfig.balustradeType - Type of balustrade (default: 'Perforated')
+             * @param {number} id - Unique identifier for this staircase level
+             */
             constructor(scene, initialConfig = {}, id) {
                 this.scene = scene;
                 this.id = id;
                 this.isSelected = false;
-                
+                /** @type {string|null} - Stores any generation errors for UI display */
+                this.lastError = null;
+
                 this.config = Object.assign({
                     floorHeight: 2600,
                     stairWellWidth: 4000,
                     flightWidth: 1000,
-                    sideSteps: 0, 
-                    winderSteps: 3, 
-                    voidRadius: 100, 
+                    sideSteps: 0,
+                    winderSteps: 3,
+                    voidRadius: 100,
                     steelThickness: 10,
                     bendRadius: 15,
                     wireframe: false,
@@ -259,7 +484,7 @@
                 this.complianceState = { riser: 0, going: 0, pitch: 0, valid: true, errors: [], bridgeSteps: 0 };
 
                 this.meshGroup = new THREE.Group();
-                this.meshGroup.userData = { isStaircase: true, instance: this }; 
+                this.meshGroup.userData = { isStaircase: true, instance: this };
                 this.scene.add(this.meshGroup);
 
                 this.meshes = { stair: null, cheek: null, balustrade: null, landing: null };
@@ -271,18 +496,21 @@
                 const canvas = document.createElement('canvas');
                 canvas.width = 512; canvas.height = 512;
                 const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,512,512);
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 512, 512);
                 ctx.fillStyle = '#000000';
-                const pitch = 30; 
-                for(let y=0; y<532; y+=pitch) {
-                    const rowIdx = Math.floor(y/pitch);
-                    const xOffset = (rowIdx % 2 === 0) ? 0 : (pitch/2);
-                    for(let x=-pitch; x<532; x+=pitch) {
-                        ctx.beginPath(); ctx.arc(x + xOffset, y, 10, 0, Math.PI*2); ctx.fill();
+                const pitch = GEOMETRY_DEFAULTS.perfTexturePitch;
+                for (let y = 0; y < 532; y += pitch) {
+                    const rowIdx = Math.floor(y / pitch);
+                    const xOffset = (rowIdx % 2 === 0) ? 0 : (pitch / 2);
+                    for (let x = -pitch; x < 532; x += pitch) {
+                        ctx.beginPath(); ctx.arc(x + xOffset, y, GEOMETRY_DEFAULTS.perfHoleRadius, 0, Math.PI * 2); ctx.fill();
                     }
                 }
                 const tex = new THREE.CanvasTexture(canvas);
-                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2, 2); 
+                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2, 2);
+
+                // Store reference to texture for proper disposal
+                this._perfTexture = tex;
 
                 this.materials = {
                     steel: new THREE.MeshStandardMaterial({ color: 0xeaeaea, metalness: 0.3, roughness: 0.6, side: THREE.DoubleSide, name: 'SteelMat' }),
@@ -298,20 +526,75 @@
             setSelection(isSelected) {
                 this.isSelected = isSelected;
                 const emissiveColor = isSelected ? 0x444444 : 0x000000;
-                if(this.meshes.stair) this.meshes.stair.material.emissive.setHex(emissiveColor);
-                if(this.meshes.cheek) this.meshes.cheek.material.emissive.setHex(emissiveColor);
+                if (this.meshes.stair) this.meshes.stair.material.emissive.setHex(emissiveColor);
+                if (this.meshes.cheek) this.meshes.cheek.material.emissive.setHex(emissiveColor);
             }
 
+            /**
+             * Update staircase configuration and regenerate geometry
+             * @param {Object} newConfig - Partial configuration to merge
+             */
             updateConfig(newConfig) {
+                // Input validation - prevent invalid parameter combinations
+                if (newConfig.flightWidth && newConfig.stairWellWidth) {
+                    if (newConfig.flightWidth > newConfig.stairWellWidth / 2) {
+                        newConfig.flightWidth = Math.floor(newConfig.stairWellWidth / 2);
+                    }
+                } else if (newConfig.flightWidth && this.config.stairWellWidth) {
+                    if (newConfig.flightWidth > this.config.stairWellWidth / 2) {
+                        newConfig.flightWidth = Math.floor(this.config.stairWellWidth / 2);
+                    }
+                }
+
+                if (newConfig.voidRadius && newConfig.flightWidth) {
+                    if (newConfig.voidRadius > newConfig.flightWidth / 2) {
+                        newConfig.voidRadius = Math.floor(newConfig.flightWidth / 2);
+                    }
+                } else if (newConfig.voidRadius && this.config.flightWidth) {
+                    if (newConfig.voidRadius > this.config.flightWidth / 2) {
+                        newConfig.voidRadius = Math.floor(this.config.flightWidth / 2);
+                    }
+                }
+
                 Object.assign(this.config, newConfig);
                 this.generate();
             }
 
+            /**
+             * Safely dispose of a mesh and its resources to prevent memory leaks
+             * @param {string} meshKey - Key in this.meshes to dispose ('stair', 'cheek', 'balustrade', 'landing')
+             */
             safeDispose(meshKey) {
                 const obj = this.meshes[meshKey];
                 if (!obj) return;
+
                 this.meshGroup.remove(obj);
-                if (obj.geometry) obj.geometry.dispose();
+
+                // Handle groups (balustrade may contain multiple children)
+                if (obj.isGroup) {
+                    obj.traverse((child) => {
+                        if (child.geometry) {
+                            child.geometry.dispose();
+                        }
+                        // Dispose of any non-shared materials with textures
+                        if (child.material && child.material.map) {
+                            child.material.map.dispose();
+                        }
+                    });
+                } else {
+                    // Single mesh
+                    if (obj.geometry) {
+                        obj.geometry.dispose();
+                    }
+                }
+
+                // Dispose child meshes (e.g., handrail added to balustrade panel)
+                if (obj.children && obj.children.length > 0) {
+                    obj.children.forEach(child => {
+                        if (child.geometry) child.geometry.dispose();
+                    });
+                }
+
                 this.meshes[meshKey] = null;
             }
 
@@ -324,50 +607,75 @@
                 const { config } = this;
                 const bridgeLength = config.stairWellWidth - 2 * config.flightWidth;
                 let bridgeSteps = 0, finalGoing = 250, finalRise = 180, totalSteps = 0;
+                let configurationWarning = null;
 
                 // Calculation Logic
                 if (bridgeLength <= 100) {
+                    // No bridge section needed - direct U-turn
                     bridgeSteps = 0;
                     totalSteps = (config.sideSteps * 2) + (config.winderSteps * 2);
                     const effectiveRisers = totalSteps + (config.stepUpExit ? 1 : 0);
                     finalRise = config.floorHeight / effectiveRisers;
                     finalGoing = 600 - 2 * finalRise;
+                } else if (bridgeLength > 100 && bridgeLength < 220) {
+                    // Edge case: Bridge too short for valid steps
+                    // Force a single bridge step and accept non-optimal going
+                    configurationWarning = `Bridge length (${bridgeLength.toFixed(0)}mm) is sub-optimal. Consider adjusting stairwell or flight width.`;
+                    bridgeSteps = 1;
+                    finalGoing = bridgeLength; // Will likely fail compliance
+                    totalSteps = (config.sideSteps * 2) + (config.winderSteps * 2) + bridgeSteps;
+                    const effectiveRisers = totalSteps + (config.stepUpExit ? 1 : 0);
+                    finalRise = config.floorHeight / effectiveRisers;
                 } else {
+                    // Standard calculation - find optimal bridge steps
                     const minSteps = Math.ceil(bridgeLength / 300);
                     const maxSteps = Math.floor(bridgeLength / 220);
                     let bestMetric = Infinity;
-                    for (let b = Math.max(0, minSteps - 1); b <= maxSteps + 1; b++) {
-                        if (b === 0) continue; 
+                    let foundValid = false;
+
+                    for (let b = Math.max(1, minSteps - 1); b <= maxSteps + 1; b++) {
                         const g = bridgeLength / b;
                         const tot = (config.sideSteps * 2) + (config.winderSteps * 2) + b;
                         const effectiveRisers = tot + (config.stepUpExit ? 1 : 0);
                         const r = config.floorHeight / effectiveRisers;
-                        const trg = 2*r + g;
+                        const trg = 2 * r + g;
                         let error = Math.abs(trg - 625);
-                        if (r < 150 || r > 220) error += 1000;
-                        if (g < 220 || g > 300) error += 1000;
+                        if (r < ACTIVE_STANDARD.rise.min || r > ACTIVE_STANDARD.rise.max) error += 1000;
+                        if (g < ACTIVE_STANDARD.going.min || g > ACTIVE_STANDARD.going.max) error += 1000;
                         if (error < bestMetric) {
                             bestMetric = error;
                             bridgeSteps = b;
                             finalGoing = g;
                             finalRise = r;
                             totalSteps = tot;
+                            if (error < 1000) foundValid = true;
                         }
                     }
+
+                    // If no compliant configuration was found, warn the user
+                    if (!foundValid) {
+                        configurationWarning = 'No fully compliant configuration found. Adjust floor height or stairwell dimensions.';
+                    }
                 }
+
+                // Store warning for UI display if present
+                if (configurationWarning) {
+                    this.lastError = configurationWarning;
+                }
+
                 this.validateCompliance(finalRise, finalGoing, bridgeSteps);
 
                 const steps = [];
-                const addStraight = (count, section) => { for(let i=0; i<count; i++) steps.push({ type: 'straight', going: finalGoing, rise: finalRise, section: section }); };
+                const addStraight = (count, section) => { for (let i = 0; i < count; i++) steps.push({ type: 'straight', going: finalGoing, rise: finalRise, section: section }); };
                 addStraight(config.sideSteps, 'start');
                 const anglePerStep = (-Math.PI / 2) / config.winderSteps;
-                for(let i=0; i<config.winderSteps; i++) steps.push({ type: 'winder', angle: anglePerStep, rise: finalRise, winderIndex: i, winderTotal: config.winderSteps, turnId: 1 });
+                for (let i = 0; i < config.winderSteps; i++) steps.push({ type: 'winder', angle: anglePerStep, rise: finalRise, winderIndex: i, winderTotal: config.winderSteps, turnId: 1 });
                 addStraight(bridgeSteps, 'bridge');
-                for(let i=0; i<config.winderSteps; i++) steps.push({ type: 'winder', angle: anglePerStep, rise: finalRise, winderIndex: i, winderTotal: config.winderSteps, turnId: 2 });
+                for (let i = 0; i < config.winderSteps; i++) steps.push({ type: 'winder', angle: anglePerStep, rise: finalRise, winderIndex: i, winderTotal: config.winderSteps, turnId: 2 });
                 addStraight(config.sideSteps, 'end');
-                
+
                 const buildResult = this.buildFoldedPlateGeometry(steps, config.flightWidth, config.steelThickness, config.bendRadius, config.voidRadius, finalGoing);
-                
+
                 this.meshes.stair = new THREE.Mesh(buildResult.geometry, this.materials.steel);
                 this.meshes.stair.name = 'SteelStair';
                 this.meshes.stair.castShadow = true; this.meshes.stair.receiveShadow = true;
@@ -376,12 +684,15 @@
 
                 if (config.cheekVisible) {
                     this.meshes.cheek = this.generateCheekPitched(buildResult.leftPath, steps);
-                    if(this.meshes.cheek) {
+                    if (this.meshes.cheek) {
                         this.meshes.cheek.name = 'Cheek';
                         this.meshGroup.add(this.meshes.cheek);
                     }
                 }
-                
+
+                // Clear any previous generation errors
+                this.lastError = null;
+
                 if (config.balustradeType !== 'None') {
                     try {
                         if (config.balustradeType === 'Vertical Bars (Bridge)') {
@@ -389,11 +700,15 @@
                         } else {
                             this.meshes.balustrade = this.generateBalustradeSmooth(buildResult.rightPath, config.balustradeType);
                         }
-                        if(this.meshes.balustrade) {
+                        if (this.meshes.balustrade) {
                             this.meshes.balustrade.name = 'Balustrade';
                             this.meshGroup.add(this.meshes.balustrade);
                         }
-                    } catch(e) { console.warn("Balustrade Gen Error", e); }
+                    } catch (e) {
+                        console.warn("Balustrade Gen Error", e);
+                        // Store error for UI display
+                        this.lastError = `Balustrade generation failed: ${e.message || 'Unknown error'}`;
+                    }
                 }
 
                 let landingPos = buildResult.endPoint;
@@ -402,7 +717,7 @@
                     landingPos = landingPos.clone();
                     landingPos.y += finalRise;
                 }
-                
+
                 this.meshes.landing = this.generateLanding(landingPos, landingDir);
                 this.meshes.landing.name = 'Landing';
                 this.meshGroup.add(this.meshes.landing);
@@ -423,33 +738,88 @@
                 });
             }
 
+            /**
+             * Validate staircase dimensions against building regulations
+             * @param {number} rise - Calculated riser height in mm
+             * @param {number} going - Calculated going depth in mm
+             * @param {number} bridgeSteps - Number of bridge steps calculated
+             */
             validateCompliance(rise, going, bridgeSteps) {
                 const s = this.complianceState;
-                s.errors = []; s.valid = true; s.bridgeSteps = bridgeSteps;
-                if (rise < 150) s.errors.push(`Rise too low (${rise.toFixed(1)})`);
-                if (rise > 220) s.errors.push(`Rise too high (${rise.toFixed(1)})`);
-                if (going < 220) s.errors.push(`Going too low (${going.toFixed(1)})`);
-                if (going > 300) s.errors.push(`Going too high (${going.toFixed(1)})`);
-                const trg = 2*rise + going;
-                if (trg < 550) s.errors.push(`2R+G too low (${trg.toFixed(0)})`);
-                if (trg > 700) s.errors.push(`2R+G too high (${trg.toFixed(0)})`);
+                const std = ACTIVE_STANDARD;
+
+                s.errors = [];
+                s.valid = true;
+                s.bridgeSteps = bridgeSteps;
+
+                // Rise validation
+                if (rise < std.rise.min) {
+                    s.errors.push(`Rise too low (${rise.toFixed(1)}mm < ${std.rise.min}mm)`);
+                }
+                if (rise > std.rise.max) {
+                    s.errors.push(`Rise too high (${rise.toFixed(1)}mm > ${std.rise.max}mm)`);
+                }
+
+                // Going validation
+                if (going < std.going.min) {
+                    s.errors.push(`Going too low (${going.toFixed(1)}mm < ${std.going.min}mm)`);
+                }
+                if (going > std.going.max) {
+                    s.errors.push(`Going too high (${going.toFixed(1)}mm > ${std.going.max}mm)`);
+                }
+
+                // 2R+G formula validation
+                const trg = 2 * rise + going;
+                if (trg < std.twoRPlusG.min) {
+                    s.errors.push(`2R+G too low (${trg.toFixed(0)}mm < ${std.twoRPlusG.min}mm)`);
+                }
+                if (trg > std.twoRPlusG.max) {
+                    s.errors.push(`2R+G too high (${trg.toFixed(0)}mm > ${std.twoRPlusG.max}mm)`);
+                }
+
+                // Pitch validation
                 const pitch = Math.atan(rise / going) * (180 / Math.PI);
-                if (pitch > 42) s.errors.push(`Pitch too steep (${pitch.toFixed(1)}°)`);
-                s.riser = rise; s.going = going; s.pitch = pitch;
+                if (pitch > std.maxPitch) {
+                    s.errors.push(`Pitch too steep (${pitch.toFixed(1)}° > ${std.maxPitch}°)`);
+                }
+
+                s.riser = rise;
+                s.going = going;
+                s.pitch = pitch;
                 if (s.errors.length > 0) s.valid = false;
             }
 
+            /**
+             * Build the folded steel plate geometry for the staircase
+             * 
+             * This is the core geometry generator that creates the characteristic folded
+             * plate appearance. It traces a path through all steps, generating vertices
+             * for the top and bottom surfaces of the steel plate.
+             * 
+             * @param {Array} steps - Array of step configurations with type, rise, going
+             * @param {number} width - Flight width in mm
+             * @param {number} thickness - Steel plate thickness in mm
+             * @param {number} bendRadius - Radius for convex bends (nosings) in mm
+             * @param {number} voidRadius - Central void radius in mm
+             * @param {number} straightGoing - Going dimension for straight steps in mm
+             * @returns {Object} Result containing:
+             *   - geometry: THREE.BufferGeometry of the stair
+             *   - leftPath: Array of path points along left edge
+             *   - rightPath: Array of path points along right edge
+             *   - endPoint: THREE.Vector3 position at stair end
+             *   - endDir: THREE.Vector3 direction at stair end
+             */
             buildFoldedPlateGeometry(steps, width, thickness, bendRadius, voidRadius, straightGoing) {
                 const vertices = []; const indices = []; let vIndex = 0;
-                let pos = new THREE.Vector3(0, 0, 0); 
-                let dir = new THREE.Vector3(0, 0, 1); 
-                let up = new THREE.Vector3(0, 1, 0); 
+                let pos = new THREE.Vector3(0, 0, 0);
+                let dir = new THREE.Vector3(0, 0, 1);
+                let up = new THREE.Vector3(0, 1, 0);
                 let left = new THREE.Vector3().crossVectors(up, dir).normalize();
 
-                const leftPath = []; const rightPath = []; 
-                const pivotDist = voidRadius + width/2;
+                const leftPath = []; const rightPath = [];
+                const pivotDist = voidRadius + width / 2;
                 const distToTurn1 = this.config.sideSteps * straightGoing;
-                const pivot1 = new THREE.Vector3(0,0,0).addScaledVector(new THREE.Vector3(0,0,1), distToTurn1).addScaledVector(new THREE.Vector3(1,0,0), -pivotDist); 
+                const pivot1 = new THREE.Vector3(0, 0, 0).addScaledVector(new THREE.Vector3(0, 0, 1), distToTurn1).addScaledVector(new THREE.Vector3(1, 0, 0), -pivotDist);
 
                 // NOTE: This addQuad function creates 4 unique vertices per quad.
                 // This is crucial for the Optimized OBJ Exporter to recover Quads easily.
@@ -460,18 +830,18 @@
                 };
 
                 const leftPathTop = []; const rightPathTop = []; const leftPathBot = []; const rightPathBot = [];
-                let currentLeft = new THREE.Vector3().copy(pos).addScaledVector(left, width/2);
-                let currentRight = new THREE.Vector3().copy(pos).addScaledVector(left, -width/2);
-                
+                let currentLeft = new THREE.Vector3().copy(pos).addScaledVector(left, width / 2);
+                let currentRight = new THREE.Vector3().copy(pos).addScaledVector(left, -width / 2);
+
                 const captureProfile = (l, r, normal, type = 'generic', stepIdx = -1, direction = dir.clone()) => {
                     const lC = l.clone(); const rC = r.clone();
                     leftPathTop.push(lC); rightPathTop.push(rC);
                     const off = normal.clone().multiplyScalar(-thickness);
                     leftPathBot.push(lC.clone().add(off)); rightPathBot.push(rC.clone().add(off));
-                    leftPath.push({ pos: lC, type: type, stepIdx: stepIdx, normal: normal.clone(), dir: direction }); 
+                    leftPath.push({ pos: lC, type: type, stepIdx: stepIdx, normal: normal.clone(), dir: direction });
                     rightPath.push({ pos: rC, type: type, stepIdx: stepIdx, normal: normal.clone(), dir: direction });
                 };
-                
+
                 captureProfile(currentLeft, currentRight, dir.clone().negate(), 'floor', -1);
                 let activePivot = null;
 
@@ -487,16 +857,16 @@
                     const bendCenterLeft = cornerLeft.clone().addScaledVector(dir, rOuter);
                     const bendCenterRight = cornerRight.clone().addScaledVector(dir, rOuter);
                     const segments = 4;
-                    for(let s=1; s<=segments; s++) {
+                    for (let s = 1; s <= segments; s++) {
                         const t = s / segments; const angle = t * (Math.PI / 2);
                         const q = new THREE.Quaternion().setFromAxisAngle(axis, -angle);
                         const radL = new THREE.Vector3().subVectors(cornerLeft, bendCenterLeft).applyQuaternion(q);
                         const radR = new THREE.Vector3().subVectors(cornerRight, bendCenterRight).applyQuaternion(q);
-                        captureProfile(bendCenterLeft.clone().add(radL), bendCenterRight.clone().add(radR), radL.clone().normalize(), (s===segments)?'nosing':'bend', i, dir);
+                        captureProfile(bendCenterLeft.clone().add(radL), bendCenterRight.clone().add(radR), radL.clone().normalize(), (s === segments) ? 'nosing' : 'bend', i, dir);
                     }
 
-                    let treadStartLeft = leftPathTop[leftPathTop.length-1];
-                    let treadStartRight = rightPathTop[rightPathTop.length-1];
+                    let treadStartLeft = leftPathTop[leftPathTop.length - 1];
+                    let treadStartRight = rightPathTop[rightPathTop.length - 1];
                     let treadEndLeft, treadEndRight, nextDir, nextLeft;
 
                     if (step.type === 'straight') {
@@ -504,10 +874,10 @@
                         treadEndLeft = treadStartLeft.clone().addScaledVector(dir, flatLen);
                         treadEndRight = treadStartRight.clone().addScaledVector(dir, flatLen);
                         nextDir = dir.clone(); nextLeft = left.clone();
-                        if (steps[i+1] && steps[i+1].type === 'winder' && steps[i+1].turnId === 2) {
+                        if (steps[i + 1] && steps[i + 1].type === 'winder' && steps[i + 1].turnId === 2) {
                             const center = new THREE.Vector3().addVectors(treadEndLeft, treadEndRight).multiplyScalar(0.5);
-                            activePivot = center.clone().addScaledVector(nextLeft, -pivotDist); 
-                        } else if (i === -1 || (step.type==='straight' && steps[i+1]?.turnId === 1)) {
+                            activePivot = center.clone().addScaledVector(nextLeft, -pivotDist);
+                        } else if (i === -1 || (step.type === 'straight' && steps[i + 1]?.turnId === 1)) {
                             const center = new THREE.Vector3().addVectors(treadEndLeft, treadEndRight).multiplyScalar(0.5);
                             activePivot = center.clone().addScaledVector(nextLeft, -pivotDist);
                         }
@@ -522,21 +892,21 @@
                         nextLeft = left.clone().applyQuaternion(qRot).normalize();
                         if (crossesCorner) {
                             const startDeg = fractionStart * 90;
-                            const deltaTo45 = -(45 - startDeg) * (Math.PI/180);
+                            const deltaTo45 = -(45 - startDeg) * (Math.PI / 180);
                             const qDelta = new THREE.Quaternion().setFromAxisAngle(axisOfTurn, deltaTo45);
                             const midLeft = left.clone().applyQuaternion(qDelta).normalize();
-                            const distToCorner = (pivotDist + width/2) * Math.sqrt(2);
+                            const distToCorner = (pivotDist + width / 2) * Math.sqrt(2);
                             const pMidOuter = activePivot.clone().add(midLeft.clone().multiplyScalar(distToCorner));
-                            const pMidInner = activePivot.clone().add(midLeft.clone().multiplyScalar(pivotDist - width/2));
+                            const pMidInner = activePivot.clone().add(midLeft.clone().multiplyScalar(pivotDist - width / 2));
                             pMidOuter.y = treadStartLeft.y; pMidInner.y = treadStartRight.y;
-                            captureProfile(pMidOuter, pMidInner, up.clone(), 'tread_mid', i, nextDir); 
+                            captureProfile(pMidOuter, pMidInner, up.clone(), 'tread_mid', i, nextDir);
                         }
                         const totalAngle = Math.PI / 2;
                         const localAngle = fractionEnd * totalAngle;
-                        const extension = (localAngle <= Math.PI/4 + 0.001) ? 1.0 / Math.cos(localAngle) : 1.0 / Math.sin(localAngle);
-                        const rOuterGeo = (pivotDist + width/2) * extension;
+                        const extension = (localAngle <= Math.PI / 4 + 0.001) ? 1.0 / Math.cos(localAngle) : 1.0 / Math.sin(localAngle);
+                        const rOuterGeo = (pivotDist + width / 2) * extension;
                         const radialEndLeft = activePivot.clone().addScaledVector(nextLeft, rOuterGeo);
-                        const radialEndRight = activePivot.clone().addScaledVector(nextLeft, pivotDist - width/2);
+                        const radialEndRight = activePivot.clone().addScaledVector(nextLeft, pivotDist - width / 2);
                         radialEndLeft.y = treadStartLeft.y; radialEndRight.y = treadStartRight.y;
                         treadEndLeft = radialEndLeft.addScaledVector(nextDir, -rInner);
                         treadEndRight = radialEndRight.addScaledVector(nextDir, -rInner);
@@ -546,45 +916,45 @@
                     const concaveCenterLeft = treadEndLeft.clone().addScaledVector(up, rInner);
                     const concaveCenterRight = treadEndRight.clone().addScaledVector(up, rInner);
                     const axisConcave = new THREE.Vector3().subVectors(concaveCenterRight, concaveCenterLeft).normalize();
-                    for(let s=1; s<=segments; s++) {
+                    for (let s = 1; s <= segments; s++) {
                         const t = s / segments; const angle = t * (Math.PI / 2);
                         const nTarget = nextDir.clone().negate();
                         const nCurr = new THREE.Vector3().copy(up).lerp(nTarget, t).normalize();
                         const vRel = up.clone().negate().applyAxisAngle(axisConcave, angle);
                         captureProfile(concaveCenterLeft.clone().addScaledVector(vRel, rInner), concaveCenterRight.clone().addScaledVector(vRel, rInner), nCurr, 'concave', i, nextDir);
                     }
-                    currentLeft = leftPathTop[leftPathTop.length-1];
-                    currentRight = rightPathTop[rightPathTop.length-1];
+                    currentLeft = leftPathTop[leftPathTop.length - 1];
+                    currentRight = rightPathTop[rightPathTop.length - 1];
                     dir.copy(nextDir); left.copy(nextLeft);
                 });
 
                 const len = leftPathTop.length;
-                for(let i=0; i<len-1; i++) {
-                    addQuad(leftPathTop[i], rightPathTop[i], leftPathTop[i+1], rightPathTop[i+1]); 
-                    addQuad(rightPathBot[i+1], leftPathBot[i+1], rightPathBot[i], leftPathBot[i]);
-                    addQuad(leftPathBot[i], leftPathTop[i], leftPathBot[i+1], leftPathTop[i+1]);
-                    addQuad(rightPathTop[i], rightPathBot[i], rightPathTop[i+1], rightPathBot[i+1]);
+                for (let i = 0; i < len - 1; i++) {
+                    addQuad(leftPathTop[i], rightPathTop[i], leftPathTop[i + 1], rightPathTop[i + 1]);
+                    addQuad(rightPathBot[i + 1], leftPathBot[i + 1], rightPathBot[i], leftPathBot[i]);
+                    addQuad(leftPathBot[i], leftPathTop[i], leftPathBot[i + 1], leftPathTop[i + 1]);
+                    addQuad(rightPathTop[i], rightPathBot[i], rightPathTop[i + 1], rightPathBot[i + 1]);
                 }
                 addQuad(rightPathTop[0], leftPathTop[0], rightPathBot[0], leftPathBot[0]);
-                addQuad(leftPathTop[len-1], rightPathTop[len-1], leftPathBot[len-1], rightPathBot[len-1]);
+                addQuad(leftPathTop[len - 1], rightPathTop[len - 1], leftPathBot[len - 1], rightPathBot[len - 1]);
 
                 const geom = new THREE.BufferGeometry();
                 geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
                 geom.setIndex(indices);
                 geom.computeVertexNormals();
-                const endPoint = new THREE.Vector3().addVectors(leftPathTop[len-1], rightPathTop[len-1]).multiplyScalar(0.5);
+                const endPoint = new THREE.Vector3().addVectors(leftPathTop[len - 1], rightPathTop[len - 1]).multiplyScalar(0.5);
                 return { geometry: geom, leftPath: leftPath, rightPath: rightPath, endPoint: endPoint, endDir: dir };
             }
 
             generateCheekPitched(pathPoints, steps) {
                 let bridgeStartIndex = -1, bridgeEndIndex = -1;
-                for(let i=0; i<steps.length; i++) {
+                for (let i = 0; i < steps.length; i++) {
                     if (steps[i].section === 'bridge') {
                         if (bridgeStartIndex === -1) bridgeStartIndex = i;
                         bridgeEndIndex = i;
                     }
                 }
-                if (bridgeStartIndex === -1) return null; 
+                if (bridgeStartIndex === -1) return null;
                 if (bridgeEndIndex < steps.length - 1) bridgeEndIndex++;
                 const nosingPoints = pathPoints.filter(p => p.type === 'nosing');
                 if (bridgeStartIndex >= nosingPoints.length || bridgeEndIndex >= nosingPoints.length) return null;
@@ -592,20 +962,29 @@
                 const pEnd = nosingPoints[bridgeEndIndex].pos;
                 const h = this.config.cheekHeight;
                 const vertices = [];
-                vertices.push(pStart.x, pStart.y + h/2, pStart.z);
-                vertices.push(pStart.x, pStart.y - h/2, pStart.z);
-                vertices.push(pEnd.x, pEnd.y + h/2, pEnd.z);
-                vertices.push(pEnd.x, pEnd.y - h/2, pEnd.z);
+                vertices.push(pStart.x, pStart.y + h / 2, pStart.z);
+                vertices.push(pStart.x, pStart.y - h / 2, pStart.z);
+                vertices.push(pEnd.x, pEnd.y + h / 2, pEnd.z);
+                vertices.push(pEnd.x, pEnd.y - h / 2, pEnd.z);
                 const geom = new THREE.BufferGeometry();
-                const indices = [1, 3, 0,  3, 2, 0, 0, 2, 3,  0, 3, 1];
+                const indices = [1, 3, 0, 3, 2, 0, 0, 2, 3, 0, 3, 1];
                 geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
                 geom.setIndex(indices); geom.computeVertexNormals();
                 return new THREE.Mesh(geom, this.materials.cheek);
             }
 
+            /**
+             * Generate vertical bar balustrade elements for bridge section
+             * @param {Array} pathPoints - Path points from geometry builder
+             * @param {Array} steps - Step configuration array
+             * @param {number} going - Step going dimension
+             * @returns {THREE.Group|null} Group containing bar meshes or null if no bridge
+             */
             generateVerticalBars(pathPoints, steps, going) {
-                const barRadius = 6; const landingLevel = this.config.floorHeight;
-                const slabThick = 250; const barTopY = landingLevel - (slabThick/2);
+                const barRadius = GEOMETRY_DEFAULTS.barRadius;
+                const landingLevel = this.config.floorHeight;
+                const slabThick = GEOMETRY_DEFAULTS.landingThickness;
+                const barTopY = landingLevel - (slabThick / 2);
                 const bridgeStepsIndices = [];
                 steps.forEach((s, i) => { if (s.section === 'bridge') bridgeStepsIndices.push(i); });
                 if (bridgeStepsIndices.length === 0) return null;
@@ -617,15 +996,15 @@
                     if (pNose && pEnd) {
                         const start = pNose.pos; const end = pEnd.pos;
                         const dir = new THREE.Vector3().subVectors(end, start).normalize();
-                        const up = new THREE.Vector3(0,1,0);
+                        const up = new THREE.Vector3(0, 1, 0);
                         const leftVec = new THREE.Vector3().crossVectors(up, dir).normalize();
                         const insetStart = start.clone().addScaledVector(leftVec, 40);
-                        [1/6, 0.5, 5/6].forEach(frac => {
+                        [1 / 6, 0.5, 5 / 6].forEach(frac => {
                             const pos = insetStart.clone().addScaledVector(dir, going * frac);
                             const h = barTopY - pos.y;
                             if (h > 0) {
                                 const geo = new THREE.CylinderGeometry(barRadius, barRadius, h, 8);
-                                geo.translate(0, h/2, 0);
+                                geo.translate(0, h / 2, 0);
                                 const mesh = new THREE.Mesh(geo, this.materials.bar);
                                 mesh.position.copy(pos);
                                 bars.add(mesh);
@@ -636,25 +1015,31 @@
                 return bars;
             }
 
+            /**
+             * Generate smooth balustrade panel with handrail
+             * @param {Array} pathPoints - Path points from geometry builder
+             * @param {string} type - Balustrade type ('Glass', 'Perforated', 'Floating Rail', etc.)
+             * @returns {THREE.Mesh} Balustrade mesh with child handrail
+             */
             generateBalustradeSmooth(pathPoints, type) {
                 const points = pathPoints.filter(p => p.type === 'nosing').map(p => p.pos);
                 const fullPoints = [pathPoints[0].pos, ...points];
-                const height = 950; 
+                const height = GEOMETRY_DEFAULTS.balustradeHeight;
                 if (type === 'Floating Rail') {
                     const curvePts = fullPoints.map(p => new THREE.Vector3(p.x, p.y + height, p.z));
-                    const curve = new THREE.CatmullRomCurve3(curvePts); 
-                    const tubeGeo = new THREE.TubeGeometry(curve, fullPoints.length * 4, 20, 8, false); 
+                    const curve = new THREE.CatmullRomCurve3(curvePts);
+                    const tubeGeo = new THREE.TubeGeometry(curve, fullPoints.length * 4, GEOMETRY_DEFAULTS.railRadius, GEOMETRY_DEFAULTS.tubeSegments, false);
                     return new THREE.Mesh(tubeGeo, this.materials.rail);
                 }
                 const vertices = []; const indices = []; const uvs = []; let vIdx = 0;
-                for(let i=0; i<fullPoints.length-1; i++) {
-                    const p1 = fullPoints[i]; const p2 = fullPoints[i+1];
-                    vertices.push(p1.x, p1.y + 50, p1.z); 
-                    vertices.push(p2.x, p2.y + 50, p2.z); 
-                    vertices.push(p1.x, p1.y + height, p1.z); 
-                    vertices.push(p2.x, p2.y + height, p2.z); 
-                    uvs.push(i, 0, i+1, 0, i, 1, i+1, 1);
-                    indices.push(vIdx, vIdx+1, vIdx+2); indices.push(vIdx+1, vIdx+3, vIdx+2); vIdx += 4;
+                for (let i = 0; i < fullPoints.length - 1; i++) {
+                    const p1 = fullPoints[i]; const p2 = fullPoints[i + 1];
+                    vertices.push(p1.x, p1.y + 50, p1.z);
+                    vertices.push(p2.x, p2.y + 50, p2.z);
+                    vertices.push(p1.x, p1.y + height, p1.z);
+                    vertices.push(p2.x, p2.y + height, p2.z);
+                    uvs.push(i, 0, i + 1, 0, i, 1, i + 1, 1);
+                    indices.push(vIdx, vIdx + 1, vIdx + 2); indices.push(vIdx + 1, vIdx + 3, vIdx + 2); vIdx += 4;
                 }
                 const geom = new THREE.BufferGeometry();
                 geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
@@ -666,19 +1051,26 @@
                 const mesh = new THREE.Mesh(geom, mat);
                 const topPoints = fullPoints.map(p => new THREE.Vector3(p.x, p.y + height, p.z));
                 const curve = new THREE.CatmullRomCurve3(topPoints);
-                const tubeGeo = new THREE.TubeGeometry(curve, fullPoints.length*4, 20, 8, false); 
+                const tubeGeo = new THREE.TubeGeometry(curve, fullPoints.length * 4, 20, 8, false);
                 const cap = new THREE.Mesh(tubeGeo, this.materials.rail);
                 mesh.add(cap);
                 return mesh;
             }
 
+            /**
+             * Generate landing platform at the top of the staircase
+             * @param {THREE.Vector3} pos - Position at the end of the stair
+             * @param {THREE.Vector3} dir - Direction the stair was traveling
+             * @returns {THREE.Mesh} Landing platform mesh
+             */
             generateLanding(pos, dir) {
-                const thick = 250; const depth = 1200; 
+                const thick = GEOMETRY_DEFAULTS.landingThickness;
+                const depth = GEOMETRY_DEFAULTS.landingDepth;
                 const geo = new THREE.BoxGeometry(this.config.stairWellWidth, thick, depth);
-                const center = pos.clone().addScaledVector(dir, depth/2);
-                center.y = pos.y - thick/2;
-                const shiftVec = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), dir).normalize()
-                    .multiplyScalar(-(this.config.stairWellWidth - this.config.flightWidth)/2);
+                const center = pos.clone().addScaledVector(dir, depth / 2);
+                center.y = pos.y - thick / 2;
+                const shiftVec = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), dir).normalize()
+                    .multiplyScalar(-(this.config.stairWellWidth - this.config.flightWidth) / 2);
                 center.add(shiftVec);
                 const mesh = new THREE.Mesh(geo, this.materials.landing);
                 mesh.position.copy(center);
@@ -754,7 +1146,7 @@
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f0f0);
-        
+
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 10, 20000);
         camera.position.set(6000, 5000, 6000);
 
@@ -782,43 +1174,91 @@
         function updateEnvironment(totalHeight) {
             if (wallMesh) scene.remove(wallMesh);
             if (floorMesh) scene.remove(floorMesh);
-            const depth = 5000; const wellWidth = 5000; 
+            const depth = 5000; const wellWidth = 5000;
             const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x3498db, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false });
             const wallGeo = new THREE.BoxGeometry(wellWidth, totalHeight + 1000, depth);
-            wallGeo.translate(0, (totalHeight+1000)/2, depth/2 - 1500); 
+            wallGeo.translate(0, (totalHeight + 1000) / 2, depth / 2 - 1500);
             wallMesh = new THREE.Mesh(wallGeo, wallMaterial);
             scene.add(wallMesh);
             const floorGeo = new THREE.PlaneGeometry(10000, 10000);
-            floorGeo.rotateX(-Math.PI/2);
+            floorGeo.rotateX(-Math.PI / 2);
             floorMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0xffffff }));
             floorMesh.receiveShadow = true;
             scene.add(floorMesh);
         }
 
-        let levelManager; 
+        let levelManager;
         const guiProxy = {
             floorHeight: 2600, stairWellWidth: 4000, flightWidth: 1000,
-            sideSteps: 0, winderSteps: 3, voidRadius: 100, 
+            sideSteps: 0, winderSteps: 3, voidRadius: 100,
             steelThickness: 10, bendRadius: 15, wireframe: false,
             cheekVisible: false, cheekHeight: 300, balustradeType: 'Perforated', stepUpExit: false,
-            
+
+            // Preset selector
+            preset: 'Standard Residential',
+
             addLevel: () => levelManager.addLevel(),
             removeLevel: () => levelManager.removeLevel(),
-            
+
             downloadOBJ: () => ExporterUtils.exportOptimizedOBJ(levelManager.levels),
             downloadGLTF: () => ExporterUtils.exportGLTF(scene, levelManager.levels)
         };
-        
-        const onGuiChange = () => {
-            const selected = levelManager.getSelectedLevel();
+
+        /**
+         * Apply a preset configuration to the current level
+         * @param {string} presetName - Name of the preset to apply
+         */
+        const applyPreset = (presetName) => {
+            const preset = PRESETS[presetName];
+            if (!preset) return;
+
+            Object.assign(guiProxy, preset);
+            guiProxy.preset = presetName;
+
+            // Update GUI display
+            if (gui) {
+                gui.controllers.forEach(c => c.updateDisplay());
+                gui.folders.forEach(f => f.controllers.forEach(c => c.updateDisplay()));
+            }
+
+            // Apply to selected level
+            const selected = levelManager?.getSelectedLevel();
             if (selected) {
-                selected.updateConfig(guiProxy);
-                levelManager.updateLayout(); 
+                selected.updateConfig(preset);
+                levelManager.updateLayout();
                 updateUI(selected);
             }
         };
 
+        /**
+         * Debounced GUI change handler - prevents excessive regeneration during slider drags
+         */
+        const onGuiChange = () => {
+            // Clear any pending update
+            if (guiDebounceTimer) {
+                clearTimeout(guiDebounceTimer);
+            }
+
+            // Schedule update with debounce delay
+            guiDebounceTimer = setTimeout(() => {
+                const selected = levelManager.getSelectedLevel();
+                if (selected) {
+                    selected.updateConfig(guiProxy);
+                    levelManager.updateLayout();
+                    updateUI(selected);
+                }
+                guiDebounceTimer = null;
+            }, GUI_DEBOUNCE_MS);
+        };
+
         const gui = new GUI();
+
+        // Presets folder - at the top for easy access
+        const folderPresets = gui.addFolder('Quick Presets');
+        folderPresets.add(guiProxy, 'preset', Object.keys(PRESETS))
+            .name('Load Preset')
+            .onChange(applyPreset);
+
         const folderGlobal = gui.addFolder('Project Controls');
         folderGlobal.add(guiProxy, 'addLevel').name('Add Level');
         folderGlobal.add(guiProxy, 'removeLevel').name('Remove Level');
@@ -831,11 +1271,11 @@
         folderDims.add(guiProxy, 'floorHeight', 2000, 4000).name('Floor Height').onChange(onGuiChange);
         folderDims.add(guiProxy, 'stairWellWidth', 3500, 4500).name('Stairwell Width').onChange(onGuiChange);
         folderDims.add(guiProxy, 'flightWidth', 800, 1200).name('Flight Width').onChange(onGuiChange);
-        
+
         const folderSteps = gui.addFolder('Step Counts');
         folderSteps.add(guiProxy, 'sideSteps', 0, 2, 1).name('Side Straight Steps').onChange(onGuiChange);
         folderSteps.add(guiProxy, 'winderSteps', 2, 4, 1).name('Winder Steps').onChange(onGuiChange);
-        
+
         const folderAcc = gui.addFolder('Accessories');
         folderAcc.add(guiProxy, 'cheekVisible').name('Cheek (Bridge Only)').onChange(onGuiChange);
         folderAcc.add(guiProxy, 'cheekHeight', 100, 600).name('Cheek Height').onChange(onGuiChange);
@@ -871,6 +1311,10 @@
         }
         window.addEventListener('click', onMouseClick);
 
+        /**
+         * Update the UI overlay with current staircase stats and compliance status
+         * @param {Staircase} stair - The staircase instance to display
+         */
         function updateUI(stair) {
             const s = stair.complianceState;
             const c = stair.config;
@@ -879,20 +1323,38 @@
             document.getElementById('disp-config').innerText = `${c.sideSteps} Str / ${c.winderSteps} Turn / ${s.bridgeSteps} Bridge`;
             document.getElementById('disp-rise').innerText = s.riser.toFixed(1) + ' mm';
             document.getElementById('disp-going').innerText = s.going.toFixed(1) + ' mm';
-            document.getElementById('disp-2rg').innerText = (2*s.riser + s.going).toFixed(1) + ' mm';
+            document.getElementById('disp-2rg').innerText = (2 * s.riser + s.going).toFixed(1) + ' mm';
             document.getElementById('disp-pitch').innerText = s.pitch.toFixed(1) + '°';
+
             const container = document.getElementById('status-container');
             container.innerHTML = '';
+
+            // Show compliance status
             if (s.valid) {
-                const b = document.createElement('div'); b.className = 'status-badge status-pass'; b.innerText = 'COMPLIANT'; container.appendChild(b);
+                const b = document.createElement('div');
+                b.className = 'status-badge status-pass';
+                b.innerText = 'COMPLIANT';
+                container.appendChild(b);
             } else {
                 s.errors.forEach(err => {
-                    const b = document.createElement('div'); b.className = 'status-badge status-fail'; b.innerText = err; container.appendChild(b);
+                    const b = document.createElement('div');
+                    b.className = 'status-badge status-fail';
+                    b.innerText = err;
+                    container.appendChild(b);
                 });
+            }
+
+            // Show any generation errors (e.g., balustrade failed)
+            if (stair.lastError) {
+                const warningBadge = document.createElement('div');
+                warningBadge.className = 'status-badge';
+                warningBadge.style.backgroundColor = '#f39c12'; // Orange warning color
+                warningBadge.innerText = stair.lastError;
+                container.appendChild(warningBadge);
             }
         }
 
-        window.toggleOverlay = function() {
+        window.toggleOverlay = function () {
             const el = document.getElementById('overlay');
             el.classList.toggle('minimized');
             const btn = document.querySelector('.toggle-btn');
@@ -910,4 +1372,5 @@
         });
     </script>
 </body>
+
 </html>
