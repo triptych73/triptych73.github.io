@@ -116,7 +116,8 @@ export function generateFoldedPlateModel(inputs: StaircaseInputs): { nodes: Node
             E: E,
             A: A,
             I: I,
-            w: distLoad
+            w: distLoad,
+            h: h // Thickness for plate stress calc
         });
     }
 
@@ -170,8 +171,9 @@ export function generateFoldedPlateModel(inputs: StaircaseInputs): { nodes: Node
                 E: E,
                 A: A_str,
                 I: I_str,
-                w: 0 // Assume stringer carries no direct load, just stiffness? 
+                w: 0, // Assume stringer carries no direct load, just stiffness? 
                 // Or add its self-weight?
+                h: stringerH // Depth of stringer
             });
 
             prevNodeId = currNodeId;

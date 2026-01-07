@@ -23,6 +23,7 @@ export interface Element {
     I: number; // Inertia
     // Distributed load (global Y) - simplistic for now
     w: number;
+    h: number; // Depth of section (for stress calc)
 }
 
 export interface SolverResult {
@@ -30,6 +31,7 @@ export interface SolverResult {
     reactions: Map<number, { rx: number, ry: number, m: number }>;
     maxDeflection: number;
     maxMoment: number;
+    maxStress: number;
 }
 
 export class FrameSolver2D {
@@ -201,6 +203,7 @@ export class FrameSolver2D {
 
         // 5. Calculate Member Forces
         let maxMoment = 0;
+        let maxStress = 0;
 
         this.elements.forEach(el => {
             const n1 = this.nodes.find(n => n.id === el.node1)!;
@@ -242,7 +245,7 @@ export class FrameSolver2D {
             const d_local = T.multiply(D_global);
 
             // Local Stiffness k_local
-            const { E, I, A } = el;
+            const { E, I, A, h } = el; // Ensure h is used
             const k1 = (E * A) / L;
             const k2 = (12 * E * I) / Math.pow(L, 3);
             const k3 = (6 * E * I) / Math.pow(L, 2);
@@ -276,16 +279,26 @@ export class FrameSolver2D {
 
             const totalM1 = Math.abs(m1 + fem1);
             const totalM2 = Math.abs(m2 + fem2);
+            const elMaxM = Math.max(totalM1, totalM2);
 
-            // Check max
-            maxMoment = Math.max(maxMoment, totalM1, totalM2);
+            // Check max moment
+            maxMoment = Math.max(maxMoment, elMaxM);
+
+            // Calculate Stress for this element
+            // Sigma = M * y / I
+            // y = h / 2
+            if (h > 0 && I > 0) {
+                const stress = (elMaxM * (h / 2)) / I;
+                maxStress = Math.max(maxStress, stress);
+            }
         });
 
         return {
             displacements,
             reactions: new Map(),
             maxDeflection,
-            maxMoment
+            maxMoment,
+            maxStress
         };
     }
 }
