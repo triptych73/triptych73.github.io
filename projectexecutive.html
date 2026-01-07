@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>St Mary Somerset | Project Executive</title>
+    <title>St Mary Somerset | Construction Portal</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap"
         rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,9 +21,12 @@
                         'portland': '#F5F5F0',
                         'midnight': '#0F1115',
                         'bronze': '#9A8C74',
+                        'bronze-dark': '#5c5240',
                         'alert': '#ef4444',
                         'warning': '#f59e0b',
                         'success': '#10b981',
+                        'surface': '#1A1D23',
+                        'surface-light': '#252932'
                     },
                     fontFamily: {
                         'serif': ['Cinzel', 'serif'],
@@ -43,11 +46,11 @@
             cursor: default;
         }
 
-        /* Blueprint Grid Effect */
+        /* Blueprint Grid Effect - Subtle */
         .bg-grid-pattern {
             background-size: 40px 40px;
-            background-image: linear-gradient(to right, rgba(154, 140, 116, 0.05) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(154, 140, 116, 0.05) 1px, transparent 1px);
+            background-image: linear-gradient(to right, rgba(154, 140, 116, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(154, 140, 116, 0.03) 1px, transparent 1px);
         }
 
         /* Custom Scrollbar */
@@ -67,337 +70,343 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #9A8C74;
         }
+
+        .glass-panel {
+            background: rgba(26, 29, 35, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
     </style>
 </head>
 
-<body class="text-portland selection:bg-bronze selection:text-white min-h-screen bg-grid-pattern flex flex-col">
+<body
+    class="text-portland selection:bg-bronze selection:text-white min-h-screen bg-grid-pattern flex flex-col font-sans">
 
+    <!-- Navbar -->
     <nav
-        class="sticky top-0 w-full border-b border-white/10 bg-midnight/95 backdrop-blur-md z-50 px-6 py-3 flex justify-between items-center text-[10px] tracking-widest uppercase font-mono">
+        class="sticky top-0 w-full border-b border-white/5 bg-midnight/95 backdrop-blur-md z-50 px-6 py-3 flex justify-between items-center text-[11px] tracking-widest uppercase font-mono">
         <div class="flex items-center gap-4 text-bronze">
-            <span>Project ID: SMS-1694</span>
+            <span class="font-bold">SMS-1694</span>
             <span class="text-white/20">|</span>
-            <span class="text-success flex items-center gap-2">
-                <div class="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></div> Site Active
-            </span>
+            <span class="text-portland/80">Construction Portal</span>
         </div>
-        <div class="text-white/40">
-            Phase: <span class="text-portland">Fit-out & Restoration</span>
-        </div>
-        <div>
-            <a href="index.html" class="hover:text-bronze transition-colors">Exit Console</a>
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 bg-success rounded-full"></div>
+                <span class="text-white/40">Site Open</span>
+            </div>
+            <div class="text-white/40">
+                Phase: <span class="text-portland">Fit-out</span>
+            </div>
+            <a href="index.html" class="hover:text-bronze transition-colors ml-4 text-white/20 hover:text-white/60">Log
+                Out</a>
         </div>
     </nav>
 
-    <header class="pt-16 pb-12 px-6 md:px-12 max-w-[1600px] mx-auto w-full">
-        <div class="flex flex-col md:flex-row justify-between items-end border-b border-white/10 pb-8">
-            <div class="space-y-4">
-                <span
-                    class="inline-block px-3 py-1 border border-bronze/30 text-[9px] font-sans tracking-[0.2em] text-bronze uppercase">
-                    Developer Access Level
-                </span>
-                <h1 class="font-serif text-3xl md:text-5xl lg:text-6xl text-portland">
-                    Development<br>Control
+    <!-- Header -->
+    <header class="pt-12 pb-8 px-6 md:px-12 max-w-[1600px] mx-auto w-full">
+        <div class="flex flex-col md:flex-row justify-between items-end border-b border-white/10 pb-6">
+            <div>
+                <h1 class="font-serif text-3xl md:text-4xl lg:text-5xl text-portland tracking-tight mb-2">
+                    St Mary Somerset
                 </h1>
+                <p class="text-white/40 font-mono text-xs uppercase tracking-widest">Restoration & Redevelopment Project
+                </p>
             </div>
 
-            <div class="mt-8 md:mt-0 flex gap-8 text-right">
-                <div>
-                    <p class="font-mono text-[9px] text-white/40 uppercase mb-1">Target Completion</p>
-                    <p class="font-serif text-xl">Q4 2026</p>
-                </div>
-                <div>
-                    <p class="font-mono text-[9px] text-white/40 uppercase mb-1">Days to PC</p>
-                    <p class="font-serif text-xl text-bronze">412</p>
+            <div class="mt-8 md:mt-0 flex gap-8 items-end">
+                <div class="text-right">
+                    <p class="font-mono text-[10px] text-white/40 uppercase mb-1">Completion Status</p>
+                    <div class="flex items-baseline gap-2 justify-end">
+                        <span class="font-serif text-3xl text-bronze">70%</span>
+                        <span class="text-xs text-white/30 hidden sm:inline-block">/ Target Q4 2026</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="w-48 h-1.5 bg-white/10 mt-2 rounded-full overflow-hidden ml-auto">
+                        <div class="h-full bg-gradient-to-r from-bronze-dark to-bronze w-[70%]"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </header>
 
+    <!-- Main Content -->
     <main
-        class="px-6 md:px-12 pb-20 max-w-[1600px] mx-auto w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        class="px-6 md:px-12 pb-20 max-w-[1600px] mx-auto w-full grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 
-        <div
-            class="col-span-1 group bg-white/[0.02] border border-white/5 hover:border-bronze/40 transition-all duration-300 flex flex-col">
-            <div class="p-6 border-b border-white/5 bg-white/[0.02]">
-                <h2 class="font-serif text-lg text-bronze">Design Bureau</h2>
-                <p class="font-sans text-[10px] text-white/40 mt-1 uppercase tracking-wider">Architects & Consultants
-                </p>
-            </div>
-            <div class="p-6 flex-grow space-y-4">
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Construction
-                            Drawing Pack</span>
-                        <span class="font-mono text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-white/50">Rev F</span>
-                    </div>
-                    <div class="h-0.5 w-full bg-white/10">
-                        <div class="h-full w-3/4 bg-white/30"></div>
-                    </div>
-                </a>
+        <!-- COL 1: Outstanding Works & Critical Path -->
+        <div class="lg:col-span-1 xl:col-span-1 space-y-6">
 
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">BIM
-                            Model Viewer</span>
-                        <span class="font-mono text-[9px] text-success">LIVE</span>
-                    </div>
-                </a>
+            <!-- Outstanding Works -->
+            <div class="glass-panel rounded-lg p-6 flex flex-col h-auto">
+                <h2 class="font-serif text-lg text-bronze mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                        </path>
+                    </svg>
+                    Outstanding Works
+                </h2>
+                <div class="space-y-4 font-sans text-sm text-white/80">
 
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">RFI
-                            Tracker</span>
-                        <span class="font-mono text-[9px] text-warning">4 PENDING</span>
+                    <div class="group">
+                        <div class="flex items-start gap-3">
+                            <div
+                                class="mt-1 w-4 h-4 border border-white/20 rounded flex items-center justify-center flex-shrink-0 group-hover:border-bronze transition-colors">
+                            </div>
+                            <span class="group-hover:text-white transition-colors">Internal Stairs (4 Sets)</span>
+                        </div>
                     </div>
-                </a>
-            </div>
-        </div>
 
-        <div
-            class="col-span-1 group bg-white/[0.02] border border-white/5 hover:border-bronze/40 transition-all duration-300 flex flex-col">
-            <div class="p-6 border-b border-white/5 bg-white/[0.02]">
-                <h2 class="font-serif text-lg text-bronze">Site Logistics</h2>
-                <p class="font-sans text-[10px] text-white/40 mt-1 uppercase tracking-wider">Main Contractor</p>
-            </div>
-            <div class="p-6 flex-grow space-y-4">
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Daily
-                            Site Diary</span>
-                        <span class="font-mono text-[9px] text-white/50">LOGGED</span>
+                    <div class="group">
+                        <div class="flex items-start gap-3">
+                            <div
+                                class="mt-1 w-4 h-4 border border-white/20 rounded flex items-center justify-center flex-shrink-0 group-hover:border-bronze transition-colors">
+                            </div>
+                            <span class="group-hover:text-white transition-colors">Mezzanine Level</span>
+                        </div>
                     </div>
-                </a>
 
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">CCTV:
-                            Hoist & Perimeter</span>
-                        <span class="font-mono text-[9px] text-success">REC</span>
+                    <div class="group">
+                        <div class="flex items-start gap-3">
+                            <div
+                                class="mt-1 w-4 h-4 border border-white/20 rounded flex items-center justify-center flex-shrink-0 group-hover:border-bronze transition-colors">
+                            </div>
+                            <span class="group-hover:text-white transition-colors">Retractable Roof Stairs &
+                                Light</span>
+                        </div>
                     </div>
-                    <div class="w-full h-16 bg-black mt-2 border border-white/10 relative overflow-hidden">
-                        <img src="assets/images/0001.jpg" class="w-full h-full object-cover opacity-50 grayscale"
-                            alt="CCTV">
-                        <div class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                    </div>
-                </a>
 
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">H&S
-                            / RAMS Repository</span>
-                        <span class="font-mono text-[9px] text-white/50">DOCS</span>
+                    <div class="group">
+                        <div class="flex items-start gap-3">
+                            <div
+                                class="mt-1 w-4 h-4 border border-white/20 rounded flex items-center justify-center flex-shrink-0 group-hover:border-bronze transition-colors">
+                            </div>
+                            <span class="group-hover:text-white transition-colors">M&E Fitout (Bathrooms)</span>
+                        </div>
                     </div>
-                </a>
-            </div>
-        </div>
 
-        <div
-            class="col-span-1 group bg-white/[0.02] border border-white/5 hover:border-bronze/40 transition-all duration-300 flex flex-col">
-            <div class="p-6 border-b border-white/5 bg-white/[0.02]">
-                <h2 class="font-serif text-lg text-bronze">Heritage (Grade I)</h2>
-                <p class="font-sans text-[10px] text-white/40 mt-1 uppercase tracking-wider">Restoration & Monitoring
-                </p>
-            </div>
-            <div class="p-6 flex-grow space-y-4">
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Structural
-                            Vibration Logs</span>
-                        <span class="font-mono text-[9px] text-success">STABLE</span>
+                    <div class="group">
+                        <div class="flex items-start gap-3">
+                            <div
+                                class="mt-1 w-4 h-4 border border-white/20 rounded flex items-center justify-center flex-shrink-0 group-hover:border-bronze transition-colors">
+                            </div>
+                            <span class="group-hover:text-white transition-colors">Finishes & Decoration</span>
+                        </div>
                     </div>
-                    <div class="flex gap-0.5 h-4 items-end opacity-50">
-                        <div class="w-1 bg-bronze h-[20%]"></div>
-                        <div class="w-1 bg-bronze h-[40%]"></div>
-                        <div class="w-1 bg-bronze h-[30%]"></div>
-                        <div class="w-1 bg-bronze h-[60%]"></div>
-                        <div class="w-1 bg-bronze h-[20%]"></div>
-                        <div class="w-1 bg-bronze h-[10%]"></div>
-                    </div>
-                </a>
 
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Stonemasonry
-                            Schedule</span>
-                        <span class="font-mono text-[9px] text-white/50">WEEK 42</span>
-                    </div>
-                </a>
-
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Historic
-                            England Approvals</span>
-                        <span class="font-mono text-[9px] text-white/50">PDF</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <div
-            class="col-span-1 group bg-white/[0.02] border border-white/5 hover:border-bronze/40 transition-all duration-300 flex flex-col relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-bronze/10 to-transparent"></div>
-
-            <div class="p-6 border-b border-white/5 bg-white/[0.02]">
-                <h2 class="font-serif text-lg text-bronze">M&E Engineering</h2>
-                <p class="font-sans text-[10px] text-white/40 mt-1 uppercase tracking-wider">Systems & Utilities</p>
-            </div>
-            <div class="p-6 flex-grow space-y-5">
-
-                <a href="engineering.html"
-                    class="block group/item p-3 border border-bronze/30 bg-bronze/5 hover:bg-bronze/10 transition-all">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="font-sans text-xs font-semibold text-bronze uppercase tracking-widest">Active
-                            Tool</span>
-                        <svg class="w-3 h-3 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="2"
-                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                    </div>
-                    <div class="font-serif text-sm text-white">Shutter & Vent Control</div>
-                    <div class="font-mono text-[9px] text-white/50 mt-1">Status: Commissioning Mode</div>
-                </a>
-
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Utility
-                            Connections (UKPN)</span>
-                        <span class="font-mono text-[9px] text-warning">WAITING</span>
-                    </div>
-                </a>
-
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">MVHR
-                            Schematics</span>
-                        <span class="font-mono text-[9px] text-white/50">DWG</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <div
-            class="col-span-1 md:col-span-2 lg:col-span-1 group bg-white/[0.02] border border-white/5 hover:border-bronze/40 transition-all duration-300 flex flex-col">
-            <div class="p-6 border-b border-white/5 bg-white/[0.02]">
-                <h2 class="font-serif text-lg text-bronze">Commercial</h2>
-                <p class="font-sans text-[10px] text-white/40 mt-1 uppercase tracking-wider">QS & Legal</p>
-            </div>
-            <div class="p-6 flex-grow space-y-4">
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Valuation
-                            #14</span>
-                        <span class="font-mono text-[9px] text-white/50">APPROVED</span>
-                    </div>
-                    <div class="w-full bg-white/10 h-1.5 mt-2">
-                        <div class="bg-success h-full" style="width: 100%"></div>
-                    </div>
-                </a>
-
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Section
-                            106 Obligations</span>
-                        <span class="font-mono text-[9px] text-white/50">VIEW</span>
-                    </div>
-                </a>
-
-                <a href="#" class="block group/item">
-                    <div class="flex justify-between items-center mb-1">
-                        <span
-                            class="font-sans text-xs text-white/80 group-hover/item:text-bronze transition-colors">Cost
-                            Report (Monthly)</span>
-                        <span class="font-mono text-[9px] text-white/50">PDF</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <div
-            class="col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-3 group bg-white/[0.02] border border-white/5 hover:border-bronze/40 transition-all duration-300 flex flex-col">
-            <div class="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-                <div>
-                    <h2 class="font-serif text-lg text-bronze">Master Programme</h2>
-                    <p class="font-sans text-[10px] text-white/40 mt-1 uppercase tracking-wider">Critical Path</p>
-                </div>
-                <div class="hidden md:flex gap-4 font-mono text-[9px] text-white/40">
-                    <span class="flex items-center gap-2">
-                        <div class="w-2 h-2 bg-white/20"></div> Planned
-                    </span>
-                    <span class="flex items-center gap-2">
-                        <div class="w-2 h-2 bg-bronze"></div> Actual
-                    </span>
                 </div>
             </div>
 
-            <div class="p-6 flex-grow flex flex-col justify-center">
-                <div class="space-y-6 relative">
-                    <div class="absolute top-0 bottom-0 left-[60%] border-l border-dashed border-white/20 z-10">
-                        <span class="absolute -top-4 -left-3 font-mono text-[9px] text-white/40">TODAY</span>
-                    </div>
+            <!-- Critical Path Focus -->
+            <div class="glass-panel rounded-lg p-6 border-l-2 border-l-warning">
+                <h3 class="font-mono text-xs uppercase tracking-widest text-warning mb-2">Critical Path</h3>
+                <h2 class="font-serif text-xl text-portland mb-1">Building Control</h2>
+                <p class="text-xs text-white/50 mb-4">Sign-offs required for mezzanine structural steel.</p>
+                <button disabled
+                    class="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-xs font-mono uppercase tracking-widest text-white/60 transition-all rounded">
+                    Open Portal (Coming Soon)
+                </button>
+            </div>
+        </div>
 
-                    <div class="group/gantt">
-                        <div class="flex justify-between font-sans text-[10px] mb-1 opacity-70">
-                            <span>Envelope Restoration</span>
-                            <span>95%</span>
-                        </div>
-                        <div class="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full bg-bronze w-[95%]"></div>
-                        </div>
-                    </div>
+        <!-- COL 2 & 3: Active Tools & Docs -->
+        <div class="lg:col-span-2 xl:col-span-2 space-y-6">
 
-                    <div class="group/gantt">
-                        <div class="flex justify-between font-sans text-[10px] mb-1 opacity-70">
-                            <span>Mechanical Fit-out</span>
-                            <span>60%</span>
-                        </div>
-                        <div class="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full bg-bronze w-[60%]"></div>
-                        </div>
-                    </div>
+            <!-- Active Tools Grid -->
+            <div>
+                <h3 class="font-mono text-[10px] uppercase tracking-widest text-white/40 mb-3 ml-1">Project Tools</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                    <div class="group/gantt">
-                        <div class="flex justify-between font-sans text-[10px] mb-1 opacity-70">
-                            <span>Internal Finishes (Lvl 3-5)</span>
-                            <span>15%</span>
+                    <!-- Tool 1 -->
+                    <a href="staircase.html"
+                        class="glass-panel p-5 rounded-lg group hover:bg-white/[0.04] transition-all relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <svg class="w-12 h-12 text-bronze" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                    d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                            </svg>
                         </div>
-                        <div class="h-2 w-full bg-white/5 rounded-full overflow-hidden relative">
-                            <div class="h-full bg-white/20 w-[40%] absolute top-0 left-[15%]"></div>
-                            <div class="h-full bg-bronze w-[15%] relative z-10"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-8 flex justify-end gap-6 items-center">
-                    <a href="#"
-                        class="font-sans text-[10px] text-white/40 hover:text-white transition-colors uppercase tracking-widest">
-                        Download .mpp
+                        <div class="font-mono text-[10px] text-bronze mb-1">DESIGN</div>
+                        <h3 class="font-serif text-lg text-white mb-2 group-hover:text-bronze transition-colors">
+                            Staircase Calculator</h3>
+                        <p class="text-xs text-white/40">Geometry solver for internal stairs.</p>
                     </a>
 
+                    <!-- Tool 2 -->
+                    <a href="engineering.html"
+                        class="glass-panel p-5 rounded-lg group hover:bg-white/[0.04] transition-all relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <svg class="w-12 h-12 text-bronze" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="font-mono text-[10px] text-bronze mb-1">ENGINEERING</div>
+                        <h3 class="font-serif text-lg text-white mb-2 group-hover:text-bronze transition-colors">
+                            Structural Solver</h3>
+                        <p class="text-xs text-white/40">Beam deflection and stress analysis.</p>
+                    </a>
+
+                    <!-- Tool 3 -->
                     <a href="gantt/index.html"
-                        class="group flex items-center gap-2 font-sans text-xs uppercase tracking-widest text-bronze border-b border-bronze pb-0.5 hover:text-white hover:border-white transition-all">
-                        <span>View Interactive Schedule</span>
-                        <svg class="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="1.5"
-                                d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                        </svg>
+                        class="glass-panel p-5 rounded-lg group hover:bg-white/[0.04] transition-all relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <svg class="w-12 h-12 text-bronze" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="font-mono text-[10px] text-bronze mb-1">PLANNING</div>
+                        <h3 class="font-serif text-lg text-white mb-2 group-hover:text-bronze transition-colors">Master
+                            Programme</h3>
+                        <p class="text-xs text-white/40">Interactive Gantt chart sequence.</p>
                     </a>
+
+                    <!-- Tool 4 -->
+                    <a href="shutters.html"
+                        class="glass-panel p-5 rounded-lg group hover:bg-white/[0.04] transition-all relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <svg class="w-12 h-12 text-bronze" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="font-mono text-[10px] text-bronze mb-1">SITE CONTROL</div>
+                        <h3 class="font-serif text-lg text-white mb-2 group-hover:text-bronze transition-colors">Shutter
+                            Control</h3>
+                        <p class="text-xs text-white/40">Remote operation of screens/vents.</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Documentation Placeholders -->
+            <div>
+                <h3 class="font-mono text-[10px] uppercase tracking-widest text-white/40 mb-3 ml-1 mt-6">Documentation &
+                    Records</h3>
+                <div class="glass-panel rounded-lg p-0 divide-y divide-white/5">
+
+                    <div class="p-4 flex items-center justify-between group hover:bg-white/[0.02]">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-white/5 rounded text-white/40 group-hover:text-bronze transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-white/90">Construction Drawings</h4>
+                                <p class="text-[10px] text-white/40">Rev F Pack - Approved</p>
+                            </div>
+                        </div>
+                        <button
+                            class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-colors text-white/60">View
+                            Files</button>
+                    </div>
+
+                    <div class="p-4 flex items-center justify-between group hover:bg-white/[0.02]">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-white/5 rounded text-white/40 group-hover:text-bronze transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-white/90">Financial Tracker</h4>
+                                <p class="text-[10px] text-white/40">Valuations & Variations</p>
+                            </div>
+                        </div>
+                        <button
+                            class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-colors text-white/60">Restricted</button>
+                    </div>
+
+                    <div class="p-4 flex items-center justify-between group hover:bg-white/[0.02]">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-white/5 rounded text-white/40 group-hover:text-bronze transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-white/90">Procurement Schedule</h4>
+                                <p class="text-[10px] text-white/40">Long lead items</p>
+                            </div>
+                        </div>
+                        <button
+                            class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-colors text-white/60">View
+                            List</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- COL 4: Site Diary / Log -->
+        <div class="lg:col-span-1 xl:col-span-1">
+            <div class="glass-panel rounded-lg flex flex-col h-[600px] lg:h-full max-h-[800px]">
+                <div class="p-5 border-b border-white/5 bg-white/[0.02]">
+                    <h3 class="font-serif text-lg text-bronze">Site Log</h3>
+                    <p class="font-sans text-[10px] text-white/40 uppercase tracking-widest mt-1">Milestones & Events
+                    </p>
+                </div>
+
+                <div class="p-4 overflow-y-auto flex-grow space-y-6 custom-scrollbar">
+
+                    <!-- New Entry Input Hint -->
+                    <div
+                        class="border border-dashed border-white/20 rounded-lg p-3 text-center cursor-pointer hover:border-bronze/50 hover:bg-white/[0.02] transition-colors group">
+                        <span class="text-xs text-white/40 group-hover:text-bronze">+ Add Log Entry</span>
+                    </div>
+
+                    <!-- Entry -->
+                    <div class="relative pl-4 border-l border-white/10">
+                        <div class="absolute -left-1 top-0 w-2 h-2 bg-success rounded-full"></div>
+                        <div class="text-[10px] text-white/30 font-mono mb-1">JAN 05, 2026</div>
+                        <h4 class="text-sm text-white/90 font-medium">Utilities Connected</h4>
+                        <p class="text-xs text-white/50 mt-1">UKPN & Water mains live. Metering installed.</p>
+                    </div>
+
+                    <!-- Entry -->
+                    <div class="relative pl-4 border-l border-white/10">
+                        <div class="absolute -left-1 top-0 w-2 h-2 bg-bronze rounded-full"></div>
+                        <div class="text-[10px] text-white/30 font-mono mb-1">NOV 22, 2025</div>
+                        <h4 class="text-sm text-white/90 font-medium">Extension Structure Complete</h4>
+                        <p class="text-xs text-white/50 mt-1">Brickwork to coping level signed off.</p>
+                    </div>
+
+                    <!-- Entry -->
+                    <div class="relative pl-4 border-l border-white/10">
+                        <div class="absolute -left-1 top-0 w-2 h-2 bg-white/20 rounded-full"></div>
+                        <div class="text-[10px] text-white/30 font-mono mb-1">OCT 15, 2025</div>
+                        <h4 class="text-sm text-white/90 font-medium">M&E Backbone Installed</h4>
+                        <p class="text-xs text-white/50 mt-1">First fix containment and primary pipe runs.</p>
+                    </div>
+
+                    <!-- Entry -->
+                    <div class="relative pl-4 border-l border-white/10">
+                        <div class="absolute -left-1 top-0 w-2 h-2 bg-white/20 rounded-full"></div>
+                        <div class="text-[10px] text-white/30 font-mono mb-1">SEP 01, 2025</div>
+                        <h4 class="text-sm text-white/90 font-medium">Phase 2 Commenced</h4>
+                        <p class="text-xs text-white/50 mt-1">Fit-out works initiated.</p>
+                    </div>
+
                 </div>
             </div>
         </div>
 
     </main>
+
+    <footer class="text-center py-8 text-[10px] text-white/20 font-mono uppercase tracking-widest">
+        St Mary Somerset | Project ID: SMS-1694 | System V2.1
+    </footer>
+
 </body>
 
 </html>
