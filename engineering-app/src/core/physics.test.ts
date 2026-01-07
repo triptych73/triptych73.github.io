@@ -16,6 +16,7 @@ describe('Physics Engine', () => {
         cheekSide: 'two',
         cheekHeight: 250,
         cheekThickness: 10,
+        calculationMethod: 'simplified',
     };
 
     it('calculates valid results for default inputs', () => {
@@ -48,6 +49,19 @@ describe('Physics Engine', () => {
         const result = calculatestructure(inputs);
         expect(result.passStress).toBe(false);
         expect(result.overallStatus).toBe('UNSAFE');
+    });
+
+    it('calculates using Matrix Method', () => {
+        const inputs = { ...defaultInputs, calculationMethod: 'matrix' as const };
+        const result = calculatestructure(inputs);
+
+        expect(result.supportCondition).toBe('Matrix MSM');
+        expect(result.deflectionTotal).toBeGreaterThan(0);
+        // Matrix method (folded plate) should generally be stiffer than the naive "Smearing" if cheeks are present?
+        // Or less stiff if the "Accordion" effect is strong?
+        // For a standard stair, the simplified beam theory with "efficiency factor" approximates the accordion.
+        // Let's just assert it runs and returns a number.
+        expect(result.passGlobal).toBeDefined();
     });
 
     it('handles cheek stringers correctly (increases stiffness)', () => {

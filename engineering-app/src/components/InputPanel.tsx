@@ -36,6 +36,22 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
 
                 {isOpen && (
                     <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                        {/* Method Toggle */}
+                        <div className="mb-4 bg-gray-800 p-1 rounded-lg flex text-xs font-bold text-center">
+                            <div
+                                className={`flex-1 py-1.5 rounded cursor-pointer transition-colors ${inputs.calculationMethod === 'simplified' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                onClick={() => setInputs(prev => ({ ...prev, calculationMethod: 'simplified' }))}
+                            >
+                                Simplified
+                            </div>
+                            <div
+                                className={`flex-1 py-1.5 rounded cursor-pointer transition-colors ${inputs.calculationMethod === 'matrix' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                onClick={() => setInputs(prev => ({ ...prev, calculationMethod: 'matrix' }))}
+                            >
+                                Matrix (FEM)
+                            </div>
+                        </div>
+
                         {/* Material & Load */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>

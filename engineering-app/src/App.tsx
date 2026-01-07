@@ -17,6 +17,7 @@ function App() {
     cheekSide: 'two',
     cheekHeight: 250,
     cheekThickness: 10,
+    calculationMethod: 'simplified',
   });
 
   const [uiState, setUiState] = useState({
