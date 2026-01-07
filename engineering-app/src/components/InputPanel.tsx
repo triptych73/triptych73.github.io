@@ -13,8 +13,6 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
     // Helper to handle number inputs safely
     const handleNum = (field: keyof StaircaseInputs, value: string) => {
         const num = value === '' ? 0 : parseFloat(value);
-        // We cast to any to update dynamic key, but in reality we should be safer. 
-        // For this port, it's acceptable.
         setInputs(prev => ({ ...prev, [field]: num }));
     };
 
@@ -24,40 +22,40 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
 
     return (
         <div className="w-full">
-            <div className="bg-gray-900/90 backdrop-blur text-white rounded-xl shadow-2xl border border-gray-700 pointer-events-auto transition-all">
+            <div className={`bg-panel/95 backdrop-blur text-stone rounded-lg shadow-2xl border border-border pointer-events-auto transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-90'}`}>
 
                 <div
-                    className="p-4 border-b border-gray-700 flex justify-between items-center cursor-pointer select-none"
+                    className="p-3 border-b border-border flex justify-between items-center cursor-pointer select-none bg-void/50 hover:bg-void transition-colors rounded-t-lg"
                     onClick={toggleOpen}
                 >
-                    <h2 className="text-lg font-bold text-blue-400">Design Inputs</h2>
-                    <span className={`transition transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                    <h2 className="text-sm font-header font-bold text-bronze tracking-widest uppercase">Design Inputs</h2>
+                    <span className={`transition-transform duration-300 text-bronze ${isOpen ? 'rotate-180' : ''}`}>▼</span>
                 </div>
 
                 {isOpen && (
-                    <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                    <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto font-ui text-sm">
                         {/* Method Toggle */}
-                        <div className="mb-4 bg-gray-800 p-1 rounded-lg flex text-xs font-bold text-center">
+                        <div className="mb-4 bg-void p-1 rounded border border-border flex text-xs font-bold text-center tracking-wide">
                             <div
-                                className={`flex-1 py-1.5 rounded cursor-pointer transition-colors ${inputs.calculationMethod === 'simplified' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                className={`flex-1 py-1.5 rounded cursor-pointer transition-colors ${inputs.calculationMethod === 'simplified' ? 'bg-bronze/20 text-bronze border border-bronze/30 shadow-[0_0_10px_rgba(154,140,116,0.2)]' : 'text-gray-500 hover:text-stone'}`}
                                 onClick={() => setInputs(prev => ({ ...prev, calculationMethod: 'simplified' }))}
                             >
-                                Simplified
+                                SIMPLIFIED
                             </div>
                             <div
-                                className={`flex-1 py-1.5 rounded cursor-pointer transition-colors ${inputs.calculationMethod === 'matrix' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                className={`flex-1 py-1.5 rounded cursor-pointer transition-colors ${inputs.calculationMethod === 'matrix' ? 'bg-bronze/20 text-bronze border border-bronze/30 shadow-[0_0_10px_rgba(154,140,116,0.2)]' : 'text-gray-500 hover:text-stone'}`}
                                 onClick={() => setInputs(prev => ({ ...prev, calculationMethod: 'matrix' }))}
                             >
-                                Matrix (FEM)
+                                MATRIX (FEM)
                             </div>
                         </div>
 
                         {/* Material & Load */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-xs text-gray-400">Grade</label>
+                                <label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1 block">Grade</label>
                                 <select
-                                    className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600 focus:border-blue-500 outline-none"
+                                    className="w-full bg-void rounded px-2 py-1.5 text-sm border border-border focus:border-bronze focus:ring-1 focus:ring-bronze outline-none text-stone font-mono"
                                     value={inputs.steelGrade}
                                     onChange={(e) => handleChange('steelGrade', e.target.value)}
                                 >
@@ -66,9 +64,9 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs text-gray-400">Load</label>
+                                <label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1 block">Load</label>
                                 <select
-                                    className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600 focus:border-blue-500 outline-none"
+                                    className="w-full bg-void rounded px-2 py-1.5 text-sm border border-border focus:border-bronze focus:ring-1 focus:ring-bronze outline-none text-stone font-mono"
                                     value={inputs.liveLoadType}
                                     onChange={(e) => handleChange('liveLoadType', e.target.value)}
                                 >
@@ -80,13 +78,13 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
 
                         {/* Steps */}
                         <div>
-                            <label className="text-xs text-gray-400 flex justify-between">
+                            <label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1 flex justify-between">
                                 <span>Steps</span>
-                                <span>{inputs.stepCount}</span>
+                                <span className="text-bronze font-mono">{inputs.stepCount}</span>
                             </label>
                             <input
                                 type="range" min="3" max="25"
-                                className="w-full accent-blue-500"
+                                className="w-full accent-bronze cursor-pointer"
                                 value={inputs.stepCount}
                                 onChange={(e) => handleChange('stepCount', parseInt(e.target.value))}
                             />
@@ -95,17 +93,19 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
                         {/* Geometry */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-xs text-gray-400">Rise (mm)</label>
+                                <label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1 block">Rise (mm)</label>
                                 <input
-                                    type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600"
+                                    type="number"
+                                    className="w-full bg-void rounded px-2 py-1.5 text-sm border border-border focus:border-bronze focus:ring-1 focus:ring-bronze outline-none text-stone font-mono"
                                     value={inputs.rise || ''}
                                     onChange={(e) => handleNum('rise', e.target.value)}
                                 />
                             </div>
                             <div>
-                                <label className="text-xs text-gray-400">Going (mm)</label>
+                                <label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1 block">Going (mm)</label>
                                 <input
-                                    type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600"
+                                    type="number"
+                                    className="w-full bg-void rounded px-2 py-1.5 text-sm border border-border focus:border-bronze focus:ring-1 focus:ring-bronze outline-none text-stone font-mono"
                                     value={inputs.going || ''}
                                     onChange={(e) => handleNum('going', e.target.value)}
                                 />
@@ -114,17 +114,19 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-xs text-gray-400">Width (mm)</label>
+                                <label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1 block">Width (mm)</label>
                                 <input
-                                    type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600"
+                                    type="number"
+                                    className="w-full bg-void rounded px-2 py-1.5 text-sm border border-border focus:border-bronze focus:ring-1 focus:ring-bronze outline-none text-stone font-mono"
                                     value={inputs.width || ''}
                                     onChange={(e) => handleNum('width', e.target.value)}
                                 />
                             </div>
                             <div>
-                                <label className="text-xs text-gray-400">Thick (mm)</label>
+                                <label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1 block">Thick (mm)</label>
                                 <input
-                                    type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600"
+                                    type="number"
+                                    className="w-full bg-void rounded px-2 py-1.5 text-sm border border-border focus:border-bronze focus:ring-1 focus:ring-bronze outline-none text-stone font-mono"
                                     value={inputs.thickness || ''}
                                     onChange={(e) => handleNum('thickness', e.target.value)}
                                 />
@@ -132,32 +134,37 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
                         </div>
 
                         {/* Stringers */}
-                        <div className="pt-4 border-t border-gray-700">
-                            <label className="flex items-center text-sm font-bold text-gray-300 mb-2 cursor-pointer">
+                        <div className="pt-4 border-t border-border">
+                            <label className="flex items-center text-sm font-bold text-stone mb-3 cursor-pointer select-none group">
                                 <input
-                                    type="checkbox" className="mr-2 accent-blue-500"
+                                    type="checkbox"
+                                    className="mr-2 accent-bronze w-4 h-4 cursor-pointer"
                                     checked={inputs.cheekVisible}
                                     onChange={(e) => handleChange('cheekVisible', e.target.checked)}
                                 />
-                                Add Stringers
+                                <span className="group-hover:text-bronze transition-colors">Add Stringers</span>
                             </label>
 
                             {inputs.cheekVisible && (
-                                <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-700 animate-in fade-in slide-in-from-left-2">
-                                    <select
-                                        className="bg-gray-800 rounded p-1 text-sm border border-gray-600"
-                                        value={inputs.cheekSide}
-                                        onChange={(e) => handleChange('cheekSide', e.target.value)}
-                                    >
-                                        <option value="one">One Side</option>
-                                        <option value="two">Two Sides</option>
-                                    </select>
-                                    <input
-                                        type="number" placeholder="Height"
-                                        className="bg-gray-800 rounded p-1 text-sm border border-gray-600"
-                                        value={inputs.cheekHeight || ''}
-                                        onChange={(e) => handleNum('cheekHeight', e.target.value)}
-                                    />
+                                <div className="grid grid-cols-2 gap-3 pl-3 border-l-2 border-bronze/30 animate-in fade-in slide-in-from-left-2">
+                                    <div>
+                                        <select
+                                            className="w-full bg-void rounded px-2 py-1.5 text-xs border border-border focus:border-bronze focus:ring-1 focus:ring-bronze outline-none text-stone font-mono"
+                                            value={inputs.cheekSide}
+                                            onChange={(e) => handleChange('cheekSide', e.target.value)}
+                                        >
+                                            <option value="one">One Side</option>
+                                            <option value="two">Two Sides</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <input
+                                            type="number" placeholder="Height"
+                                            className="w-full bg-void rounded px-2 py-1.5 text-xs border border-border focus:border-bronze focus:ring-1 focus:ring-bronze outline-none text-stone font-mono"
+                                            value={inputs.cheekHeight || ''}
+                                            onChange={(e) => handleNum('cheekHeight', e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                             )}
                         </div>

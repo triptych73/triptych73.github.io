@@ -1,12 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  --color-gray-950: #030712;
+  /* Matching staircase/gantt app palette */
+  --color-midnight: #0F1115;
+  --color-void: #050505;
+  --color-panel: #16191D;
+  --color-border: #2A2E35;
+  --color-stone: #F5F5F0;
+  --color-bronze: #9A8C74;
+  --color-bronze-dark: #5C5242;
+  --color-emerald: #10B981;
+  --color-alert: #EF4444;
+
+  --font-header: "Cinzel", serif;
+  --font-ui: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 }
 
 body {
-  background-color: #111;
-  color: white;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--color-midnight);
+  color: var(--color-stone);
+  font-family: var(--font-ui);
   overflow: hidden;
+}
+
+/* Custom Scrollbar for panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-bronze);
 }
