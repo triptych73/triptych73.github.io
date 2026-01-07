@@ -21,7 +21,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
     };
 
     return (
-        <div className="w-full">
+        <div className="w-full" onPointerDown={(e) => e.stopPropagation()}>
             <div className={`bg-panel/95 backdrop-blur text-stone rounded-lg shadow-2xl border border-border pointer-events-auto transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-90'}`}>
 
                 <div

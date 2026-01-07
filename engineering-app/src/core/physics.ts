@@ -244,8 +244,10 @@ export function calculatestructure(inputs: StaircaseInputs): StaircaseResults {
             frequency: frequency,
             overallStatus: overallStatus,
             span: stepCount * going,
-            inertia: 0, // Complex to define for folded plate
-            totalLoad: 0,
+            // Use local check inertia as a proxy for the rigid property, or simplified beam I, to show something useful
+            inertia: (Math.max(300, width) * Math.pow(thickness, 3)) / 12,
+            // Calculate total global load for consistent reporting
+            totalLoad: (CONSTANTS.LOCAL_POINT_LOAD * stepCount * going) / 1000 + (steelMassKg * 9.81), // Rough approx matching simplified
             report: report.build()
         };
     }
