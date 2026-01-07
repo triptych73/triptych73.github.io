@@ -1317,6 +1317,7 @@
 
             /**
              * Launch the Engineering Structural Analysis app with current staircase parameters
+             * Note: Engineering app analyzes a straight flight, so we pass only bridge steps
              */
             launchEngineering: () => {
                 const selected = levelManager.getSelectedLevel();
@@ -1328,17 +1329,24 @@
                 const s = selected.complianceState;
                 const c = selected.config;
 
-                // Calculate total steps for the selected level
-                const totalSteps = (c.sideSteps * 2) + (c.winderSteps * 2) + s.bridgeSteps;
+                // Only pass bridge steps - engineering app analyzes straight flight only
+                const bridgeSteps = s.bridgeSteps;
+
+                if (bridgeSteps === 0) {
+                    alert('No bridge section to analyze. The engineering app requires a straight bridge section.');
+                    return;
+                }
 
                 // Build URL with parameters for engineering app
+                // When cheeks are visible in staircase app, use 'one' side in engineering app
                 const params = new URLSearchParams({
                     rise: Math.round(s.riser).toString(),
                     going: Math.round(s.going).toString(),
                     width: c.flightWidth.toString(),
                     thickness: c.steelThickness.toString(),
-                    stepCount: totalSteps.toString(),
+                    stepCount: bridgeSteps.toString(),
                     cheekVisible: c.cheekVisible.toString(),
+                    cheekSide: 'one',  // Staircase app has single cheek on bridge
                     cheekHeight: c.cheekHeight.toString()
                 });
 

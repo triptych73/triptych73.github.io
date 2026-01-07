@@ -47,6 +47,12 @@ function App() {
       updates.cheekVisible = params.get('cheekVisible') === 'true';
     }
 
+    // Parse cheekSide parameter ('one' or 'two')
+    const cheekSide = params.get('cheekSide');
+    if (cheekSide === 'one' || cheekSide === 'two') {
+      updates.cheekSide = cheekSide;
+    }
+
     // Check if we have any updates from URL
     if (Object.keys(updates).length > 0) {
       console.log('Loaded parameters from staircase configurator:', updates);
