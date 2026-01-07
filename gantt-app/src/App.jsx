@@ -149,7 +149,8 @@ function App() {
       startX,
       originalDate: new Date(task.startDate),
       originalDuration: task.duration,
-      type: isResize ? 'resize' : 'move'
+      type: isResize ? 'resize' : 'move',
+      snapshot: [...tasks] // Capture state before drag
     });
 
     e.preventDefault();
@@ -198,6 +199,14 @@ function App() {
 
       if (modifiedTask) {
         const cascadedTasks = cascadeMoves(modifiedTask, tasks);
+
+        // Check if anything actually changed from the snapshot
+        // Simple length check or JSON compare (optimization)
+        // For safety, we always push if we reached this stage (drag start implies intent)
+
+        setHistory(prev => [...prev, dragState.snapshot]);
+        setFuture([]);
+
         setTasks(cascadedTasks);
         persistData(cascadedTasks);
       }
