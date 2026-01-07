@@ -292,8 +292,17 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // --- Configuration ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "demo", projectId: "demo" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
+        // --- Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcezJRuEx8vsThQKhi8Az_XdL_XSM6u8g",
+            authDomain: "st-mary-somerset.firebaseapp.com",
+            projectId: "st-mary-somerset",
+            storageBucket: "st-mary-somerset.firebasestorage.app",
+            messagingSenderId: "924281338278",
+            appId: "1:924281338278:web:82023a592a670e7d97f767"
+        };
+        // Internal ID for Firestore data path structure
+        const appId = 'site-tasks';
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -493,13 +502,20 @@
 
             const minOrder = todos.length ? Math.min(...todos.map(t => t.order || 0)) : 0;
 
-            await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'todos'), {
-                text, category, status,
-                completed: status === 'done',
-                createdAt: serverTimestamp(),
-                order: minOrder - 100
-            });
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'todos'), {
+                    text, category, status,
+                    completed: status === 'done',
+                    createdAt: serverTimestamp(),
+                    order: minOrder - 100
+                });
+                closeModal();
+            } catch (err) {
+                console.error("Error adding task:", err);
+                alert("Failed to add task. \n\nReason: " + err.message + "\n\nCheck console for details.");
+            }
         };
+
 
         window.editTask = (el, id) => {
             el.contentEditable = true;
