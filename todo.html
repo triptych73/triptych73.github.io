@@ -415,7 +415,7 @@
             Object.keys(stats).forEach(k => counts[k].textContent = stats[k]);
         }
 
-        // --- Drag & Drop ---
+        // --- Drag & Drop & Reordering ---
         let draggedItem = null;
 
         function dragStart(e) {
@@ -430,10 +430,34 @@
             document.querySelectorAll('.kanban-list').forEach(l => l.classList.remove('drag-over'));
         }
 
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
         Object.values(cols).forEach(col => {
             col.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 col.classList.add('drag-over');
+
+                const afterElement = getDragAfterElement(col, e.clientY);
+                const draggable = document.querySelector('.dragging');
+                if (!draggable) return;
+
+                if (afterElement == null) {
+                    col.appendChild(draggable);
+                } else {
+                    col.insertBefore(draggable, afterElement);
+                }
             });
 
             col.addEventListener('dragleave', () => {
@@ -444,22 +468,60 @@
                 e.preventDefault();
                 col.classList.remove('drag-over');
 
-                if (draggedItem) {
-                    const id = draggedItem.dataset.id;
-                    const newStatus = col.dataset.status;
-                    const oldStatus = todos.find(t => t.id === id)?.status;
+                if (!draggedItem) return;
 
-                    if (oldStatus !== newStatus) {
-                        col.appendChild(draggedItem);
-                        if (newStatus === 'done') fireConfetti();
+                const id = draggedItem.dataset.id;
+                const newStatus = col.dataset.status;
+                const task = todos.find(t => t.id === id);
 
-                        const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id);
-                        await updateDoc(ref, {
-                            status: newStatus,
-                            completed: newStatus === 'done',
-                            movedAt: serverTimestamp()
-                        });
-                    }
+                // Calculate new order
+                const siblings = [...col.querySelectorAll('.task-card')];
+                const index = siblings.indexOf(draggedItem);
+
+                let newOrder;
+                if (siblings.length === 1) {
+                    // Only item in list
+                    newOrder = 0;
+                } else if (index === 0) {
+                    // Top of list
+                    const nextId = siblings[1].dataset.id;
+                    const nextOrder = todos.find(t => t.id === nextId)?.order || 0;
+                    newOrder = nextOrder - 100;
+                } else if (index === siblings.length - 1) {
+                    // Bottom of list
+                    const prevId = siblings[index - 1].dataset.id;
+                    const prevOrder = todos.find(t => t.id === prevId)?.order || 0;
+                    newOrder = prevOrder + 100;
+                } else {
+                    // Between two items
+                    const prevId = siblings[index - 1].dataset.id;
+                    const nextId = siblings[index + 1].dataset.id;
+                    const prevOrder = todos.find(t => t.id === prevId)?.order || 0;
+                    const nextOrder = todos.find(t => t.id === nextId)?.order || 0;
+                    newOrder = (prevOrder + nextOrder) / 2;
+                }
+
+                // Optimistic Update
+                if (task) {
+                    task.status = newStatus;
+                    task.order = newOrder;
+                }
+
+                // Fire confetti if moved to done
+                if (newStatus === 'done' && task && !task.completed) {
+                    fireConfetti();
+                }
+
+                try {
+                    const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id);
+                    await updateDoc(ref, {
+                        status: newStatus,
+                        completed: newStatus === 'done',
+                        order: newOrder
+                    });
+                } catch (err) {
+                    console.error("Move failed", err);
+                    alert("Failed to save move: " + err.message);
                 }
             });
         });
