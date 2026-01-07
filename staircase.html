@@ -4,13 +4,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Level Staircase Configurator + Export</title>
+    <title>Part K Staircase Configurator</title>
+
+    <!-- Google Fonts - matching gantt app -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
     <style>
+        /* === Color Palette (matching gantt app) === */
+        :root {
+            --midnight: #0F1115;
+            --void: #050505;
+            --panel: #16191D;
+            --border: #2A2E35;
+            --stone: #F5F5F0;
+            --bronze: #9A8C74;
+            --bronze-dark: #5C5242;
+            --emerald: #10B981;
+            --alert: #EF4444;
+            --glass: rgba(255, 255, 255, 0.05);
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #f0f0f0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--midnight);
+            font-family: 'Inter', sans-serif;
+            color: var(--stone);
         }
 
         #canvas-container {
@@ -19,15 +44,17 @@
             display: block;
         }
 
+        /* === Info Overlay Panel === */
         #overlay {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--panel);
+            border: 1px solid var(--border);
             padding: 0;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            max-width: 320px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            max-width: 300px;
             max-height: 90vh;
             display: flex;
             flex-direction: column;
@@ -37,17 +64,21 @@
         }
 
         #overlay-header {
-            padding: 15px 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #eee;
+            padding: 12px 16px;
+            background: var(--void);
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
         }
 
+        #overlay-header:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
         #overlay-content {
-            padding: 20px;
+            padding: 12px 16px;
             overflow-y: auto;
         }
 
@@ -57,84 +88,136 @@
 
         h1 {
             margin: 0;
-            font-size: 16px;
-            color: #333;
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            color: var(--stone);
             font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 10px;
+            color: var(--bronze);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin: 12px 0 6px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border);
         }
 
         .toggle-btn {
-            font-weight: bold;
-            color: #666;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--gray-500);
+            font-size: 12px;
         }
 
         .stat-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 4px;
-            font-size: 13px;
+            margin-bottom: 3px;
+            font-size: 12px;
         }
 
         .stat-label {
-            color: #666;
+            color: var(--gray-400);
         }
 
         .stat-value {
-            font-weight: bold;
-            color: #333;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--stone);
+            font-size: 11px;
         }
 
         .status-badge {
             display: inline-block;
             padding: 6px 10px;
             border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-            margin-top: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--midnight);
+            margin-top: 8px;
             width: 100%;
             text-align: center;
             box-sizing: border-box;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .status-pass {
-            background-color: #27ae60;
+            background-color: var(--emerald);
         }
 
         .status-fail {
-            background-color: #c0392b;
+            background-color: var(--alert);
+            color: white;
         }
 
+        /* === Selection Hint === */
         #selection-hint {
             position: absolute;
-            bottom: 30px;
-            width: 100%;
-            text-align: center;
-            font-size: 14px;
-            color: #555;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: var(--gray-400);
             pointer-events: none;
-            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-            background: rgba(255, 255, 255, 0.7);
-            padding: 10px 0;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
         }
 
+        /* === Loading Screen === */
         #loading {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
-            color: #333;
+            font-size: 16px;
+            color: var(--bronze);
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
         }
 
+        /* === Level Indicator === */
         .level-indicator {
-            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #3498db;
-            font-weight: 800;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 5px;
+            letter-spacing: 0.1em;
+            color: var(--bronze);
+            font-weight: 500;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--bronze);
+        }
+
+        /* === Custom lil-gui styling to match dark theme === */
+        .lil-gui {
+            --background-color: var(--panel) !important;
+            --text-color: var(--stone) !important;
+            --title-background-color: var(--void) !important;
+            --title-text-color: var(--stone) !important;
+            --widget-color: var(--border) !important;
+            --hover-color: rgba(255, 255, 255, 0.05) !important;
+            --focus-color: var(--bronze) !important;
+            --number-color: var(--bronze) !important;
+            --string-color: var(--bronze) !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        .lil-gui .title {
+            font-family: 'Inter', sans-serif !important;
+            font-size: 11px !important;
+            letter-spacing: 0.05em !important;
+            text-transform: uppercase !important;
         }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -1145,7 +1228,9 @@
         // ------------------------------------------------------------------
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf0f0f0);
+
+        // Dark theme background matching gantt app midnight color
+        scene.background = new THREE.Color(0x0F1115);
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 10, 20000);
         camera.position.set(6000, 5000, 6000);
@@ -1155,34 +1240,61 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Enable tone mapping for better contrast in dark scenes
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
         container.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 2000, 0);
         controls.enableDamping = true;
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Enhanced lighting for dark theme - maintain good stair visibility
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+
+        // Main directional light with warm tint
+        const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.0);
         dirLight.position.set(2000, 4000, 2000);
         dirLight.castShadow = true;
         dirLight.shadow.mapSize.width = 2048;
         dirLight.shadow.mapSize.height = 2048;
         scene.add(dirLight);
 
+        // Secondary fill light from opposite side
+        const fillLight = new THREE.DirectionalLight(0x9A8C74, 0.3); // Bronze tint
+        fillLight.position.set(-2000, 2000, -2000);
+        scene.add(fillLight);
+
         let wallMesh, floorMesh;
         function updateEnvironment(totalHeight) {
             if (wallMesh) scene.remove(wallMesh);
             if (floorMesh) scene.remove(floorMesh);
-            const depth = 5000; const wellWidth = 5000;
-            const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x3498db, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false });
+
+            const depth = 5000;
+            const wellWidth = 5000;
+
+            // Subtle bronze-tinted wall hints for context
+            const wallMaterial = new THREE.MeshBasicMaterial({
+                color: 0x9A8C74, // Bronze color
+                transparent: true,
+                opacity: 0.03,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
             const wallGeo = new THREE.BoxGeometry(wellWidth, totalHeight + 1000, depth);
             wallGeo.translate(0, (totalHeight + 1000) / 2, depth / 2 - 1500);
             wallMesh = new THREE.Mesh(wallGeo, wallMaterial);
             scene.add(wallMesh);
+
+            // Dark floor matching the void color
             const floorGeo = new THREE.PlaneGeometry(10000, 10000);
             floorGeo.rotateX(-Math.PI / 2);
-            floorMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            floorMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({
+                color: 0x16191D,  // Panel color - slightly lighter than background
+                roughness: 0.9,
+                metalness: 0.1
+            }));
             floorMesh.receiveShadow = true;
             scene.add(floorMesh);
         }
