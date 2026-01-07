@@ -118,21 +118,35 @@ export function calculatestructure(inputs: StaircaseInputs): StaircaseResults {
         // f = 18 / sqrt(delta_mm) (General approx for footfall)
         const frequency = deflectionTotal > 0 ? 18 / Math.sqrt(deflectionTotal) : 0;
 
-        // 3. Local Checks (Copied from Simplified)
-        // Tread Bounciness (Local Plate stiffness)
-        // This is not captured by Frame Solver (global). Need to check standard plate formula.
-        const plateDeflection = (CONSTANTS.LOCAL_POINT_LOAD * 1000 * Math.pow(width, 3)) / (48 * CONSTANTS.E_MODULUS * ((1000 * Math.pow(thickness, 3)) / 12));
-        // Note: Assuming width is span of tread? No, width is the stair width. 
-        // Wait, "Local Deflection" is typically the tread bending between strings (if 2 strings).
-        // If no strings, the whole stair bends globally. 
-        // Let's assume standard local check logic is valid for 2-stringer case.
-        // For cantilever (no cheeks), local check is different.
-        // Let's reuse the simple logic for now as a "Local Quality" check.
+        // 3. Local Checks (Reusing Simplified Method Logic for consistency)
+        // The Matrix Solver solves the 2D Global Frame. The "Local" check is for the 3D plate behavior
+        // of a single tread, which is not captured by the 2D solver.
+        // Therefore, the Simplified Heuristic is the correct approach here too.
+
+        const effective_width = Math.max(300, width);
+        const I_longitudinal = (effective_width * Math.pow(thickness, 3)) / 12;
+        const def_longitudinal = (CONSTANTS.LOCAL_POINT_LOAD * Math.pow(going, 3)) / (192 * CONSTANTS.E_MODULUS * (I_longitudinal || 1));
+
+        let def_transverse = 0;
+        const I_transverse = (going * Math.pow(thickness, 3)) / 12;
+        let supportCondition = 'Matrix MSM'; // Default
+
+        if (!cheekVisible) {
+            def_transverse = 1e6; // Infinite
+        } else if (cheekSide === 'one') {
+            const a = width / 2;
+            def_transverse = (CONSTANTS.LOCAL_POINT_LOAD * Math.pow(a, 3)) / (3 * CONSTANTS.E_MODULUS * (I_transverse || 1));
+        } else { // Two cheeks
+            def_transverse = (CONSTANTS.LOCAL_POINT_LOAD * Math.pow(width, 3)) / (192 * CONSTANTS.E_MODULUS * (I_transverse || 1));
+        }
+
+        const plateDeflection = 1 / ((1 / (def_transverse || 1e9)) + (1 / (def_longitudinal || 1e9)));
         const passLocal = plateDeflection <= CONSTANTS.LOCAL_DEFLECTION_LIMIT;
 
         // 4. Slenderness / Buckling
-        // b/t ratio
-        const isBucklingSafe = (width / thickness) <= 50; // Simple check
+        // Use Riser height for b/t ratio (compression element width)
+        const slendernessRatio = rise / thickness;
+        const isBucklingSafe = slendernessRatio <= CONSTANTS.SLENDERNESS_LIMIT;
 
         return {
             deflectionTotal: deflectionTotal,
@@ -144,8 +158,8 @@ export function calculatestructure(inputs: StaircaseInputs): StaircaseResults {
             passStress: stress <= (steelGrade === 'S275' ? CONSTANTS.YIELD_S275 : CONSTANTS.YIELD_S355),
             localDeflection: plateDeflection,
             passLocal: passLocal,
-            supportCondition: 'Matrix MSM',
-            slendernessRatio: width / thickness, // Not really right but keeps UI happy
+            supportCondition: supportCondition,
+            slendernessRatio: slendernessRatio,
             passSlenderness: isBucklingSafe,
             reactionForce: (steelMassKg * 9.81) / 1000, // Approx
             steelMassKg: steelMassKg,
