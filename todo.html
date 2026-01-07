@@ -379,7 +379,7 @@
                 stats[status]++;
 
                 const card = document.createElement('div');
-                card.className = 'task-card p-4 rounded cursor-grab mb-3 group relative text-sm';
+                card.className = 'task-card p-3 rounded cursor-grab mb-2 group relative text-sm';
                 card.draggable = true;
                 card.dataset.id = t.id;
 
@@ -392,17 +392,17 @@
                 const catLabel = t.category ? t.category.toUpperCase() : 'SITE';
 
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <span class="text-[10px] font-mono tracking-wider px-2 py-0.5 rounded ${catClass}">${catLabel}</span>
-                        <button onclick="askDelete('${t.id}')" class="text-white/20 hover:text-alert opacity-0 group-hover:opacity-100 transition-all p-1">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-mono tracking-wider px-1.5 py-0.5 rounded ${catClass}">${catLabel}</span>
+                        <button onclick="askDelete('${t.id}')" class="text-white/20 hover:text-alert opacity-0 group-hover:opacity-100 transition-all p-1 -mt-1 -mr-1">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <p class="text-white/90 font-light leading-relaxed mb-3" 
+                    <p class="text-white/90 font-light leading-snug mb-2" 
                        contenteditable="false" 
                        ondblclick="editTask(this, '${t.id}')"
                        title="Double click to edit">${escapeHtml(t.text)}</p>
-                    <div class="flex items-center justify-between border-t border-white/5 pt-2">
+                    <div class="flex items-center justify-between border-t border-white/5 pt-1.5">
                          <div class="text-[10px] text-white/30 font-mono flex items-center gap-1">
                             <i class="far fa-clock"></i>
                             ${t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString() : 'Today'}
