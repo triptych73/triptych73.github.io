@@ -94,14 +94,22 @@ export function calculatestructure(inputs: StaircaseInputs): StaircaseResults {
         const deflectionTotal = matrixDeflection;
         const globalLimit = (stepCount * going) / 360;
 
+        // Stress Calculation
+        // Stress = M / Z
+        // M is maxMoment (N-mm)
+        // Z = Elastic Section Modulus = b*h^2 / 6
+        // b = width, h = thickness
+        const Z = (width * Math.pow(thickness, 2)) / 6;
+        const stress = res.maxMoment / Z; // MPa (N/mm^2)
+
         return {
             deflectionTotal: deflectionTotal,
             deflectionBeam: deflectionTotal * 0.2, // Dummy split
             deflectionSag: deflectionTotal * 0.8, // Matrix captures "Sag" naturally
             globalLimit,
             passGlobal: deflectionTotal <= globalLimit,
-            stress: 0, // TODO: Extract moment from elements
-            passStress: true,
+            stress: stress,
+            passStress: stress <= (steelGrade === 'S275' ? CONSTANTS.YIELD_S275 : CONSTANTS.YIELD_S355),
             localDeflection: 0, // Matrix is global. Local check remains separate.
             passLocal: true,
             supportCondition: 'Matrix MSM',

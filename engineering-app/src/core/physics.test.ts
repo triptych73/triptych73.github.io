@@ -57,6 +57,7 @@ describe('Physics Engine', () => {
 
         expect(result.supportCondition).toBe('Matrix MSM');
         expect(result.deflectionTotal).toBeGreaterThan(0);
+        expect(result.stress).toBeGreaterThan(0);
         // Matrix method (folded plate) should generally be stiffer than the naive "Smearing" if cheeks are present?
         // Or less stiff if the "Accordion" effect is strong?
         // For a standard stair, the simplified beam theory with "efficiency factor" approximates the accordion.

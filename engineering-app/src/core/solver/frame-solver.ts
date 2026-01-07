@@ -29,6 +29,7 @@ export interface SolverResult {
     displacements: Map<number, { u: number, v: number, r: number }>;
     reactions: Map<number, { rx: number, ry: number, m: number }>;
     maxDeflection: number;
+    maxMoment: number;
 }
 
 export class FrameSolver2D {
@@ -198,16 +199,93 @@ export class FrameSolver2D {
             if (def > maxDeflection) maxDeflection = def;
         });
 
-        // Calculate Reactions (R = K_original * d - F_applied)
-        // Simplified: The penalty method messes up K, so we can't easily retrieve reactions 
-        // without keeping a copy of original K. 
-        // For this app, we only strictly need deflections for "Bounciness" check. 
-        // We can skip reactions for now or implement later.
+        // 5. Calculate Member Forces
+        let maxMoment = 0;
+
+        this.elements.forEach(el => {
+            const n1 = this.nodes.find(n => n.id === el.node1)!;
+            const n2 = this.nodes.find(n => n.id === el.node2)!;
+
+            // Global Displacements (6x1)
+            // Indices in displacementsVec
+            const idx1 = this.nodes.indexOf(n1) * 3;
+            const idx2 = this.nodes.indexOf(n2) * 3;
+
+            const u1 = displacementsVec[idx1];
+            const v1 = displacementsVec[idx1 + 1];
+            const r1 = displacementsVec[idx1 + 2];
+            const u2 = displacementsVec[idx2];
+            const v2 = displacementsVec[idx2 + 1];
+            const r2 = displacementsVec[idx2 + 2];
+
+            const D_global = new Matrix(6, 1);
+            D_global.set(0, 0, u1); D_global.set(1, 0, v1); D_global.set(2, 0, r1);
+            D_global.set(3, 0, u2); D_global.set(4, 0, v2); D_global.set(5, 0, r2);
+
+            // Geometry
+            const dx = n2.x - n1.x;
+            const dy = n2.y - n1.y;
+            const L = Math.sqrt(dx * dx + dy * dy);
+            const c = dx / L;
+            const s = dy / L;
+
+            // Transformation T (6x6)
+            const T = Matrix.zeros(6, 6);
+            T.set(0, 0, c); T.set(0, 1, s);
+            T.set(1, 0, -s); T.set(1, 1, c);
+            T.set(2, 2, 1);
+            T.set(3, 3, c); T.set(3, 4, s);
+            T.set(4, 3, -s); T.set(4, 4, c);
+            T.set(5, 5, 1);
+
+            // Local Displacements d_local = T * D_global
+            const d_local = T.multiply(D_global);
+
+            // Local Stiffness k_local
+            const { E, I, A } = el;
+            const k1 = (E * A) / L;
+            const k2 = (12 * E * I) / Math.pow(L, 3);
+            const k3 = (6 * E * I) / Math.pow(L, 2);
+            const k4 = (4 * E * I) / L;
+            const k5 = (2 * E * I) / L;
+
+            const kLocal = Matrix.zeros(6, 6);
+            kLocal.set(0, 0, k1); kLocal.set(0, 3, -k1);
+            kLocal.set(3, 0, -k1); kLocal.set(3, 3, k1);
+            kLocal.set(1, 1, k2); kLocal.set(1, 2, k3); kLocal.set(1, 4, -k2); kLocal.set(1, 5, k3);
+            kLocal.set(2, 1, k3); kLocal.set(2, 2, k4); kLocal.set(2, 4, -k3); kLocal.set(2, 5, k5);
+            kLocal.set(4, 1, -k2); kLocal.set(4, 2, -k3); kLocal.set(4, 4, k2); kLocal.set(4, 5, -k3);
+            kLocal.set(5, 1, k3); kLocal.set(5, 2, k5); kLocal.set(5, 4, -k3); kLocal.set(5, 5, k4);
+
+            // Force Vector f_local = k_local * d_local (6x1)
+            // f = [fx1, fy1, m1, fx2, fy2, m2]
+            const f_local = kLocal.multiply(d_local);
+
+            // Extract Moments
+            const m1 = f_local.get(2, 0); // Start Node Moment
+            const m2 = f_local.get(5, 0); // End Node Moment
+
+            // FEM Correction for distributed load
+            let fem1 = 0;
+            let fem2 = 0;
+            if (el.w !== 0) {
+                // w is N/mm along the member
+                fem1 = (el.w * L * L) / 12;
+                fem2 = -(el.w * L * L) / 12;
+            }
+
+            const totalM1 = Math.abs(m1 + fem1);
+            const totalM2 = Math.abs(m2 + fem2);
+
+            // Check max
+            maxMoment = Math.max(maxMoment, totalM1, totalM2);
+        });
 
         return {
             displacements,
             reactions: new Map(),
-            maxDeflection
+            maxDeflection,
+            maxMoment
         };
     }
 }
