@@ -74,6 +74,20 @@ interface ResultsPanelProps {
 }
 
 export const ResultsPanel: React.FC<ResultsPanelProps> = ({ results, isOpen, toggleOpen, steelGrade }) => {
+    const handleDownload = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent toggling the panel
+        if (!results.report) return;
+        const blob = new Blob([results.report], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `staircase-calcs-${new Date().toISOString().slice(0, 10)}.md`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="w-full">
             <div className="bg-gray-900/90 backdrop-blur text-white rounded-xl shadow-2xl border border-gray-700 pointer-events-auto">
@@ -81,12 +95,21 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ results, isOpen, tog
                     className={`p-4 border-b border-gray-700 flex justify-between items-center cursor-pointer select-none ${results.overallStatus === 'SAFE' ? 'bg-green-900/20' : 'bg-red-900/20'}`}
                     onClick={toggleOpen}
                 >
-                    <h2 className="text-lg font-bold flex items-center">
-                        <span className={`mr-2 px-2 py-0.5 rounded text-sm ${results.overallStatus === 'SAFE' ? 'bg-green-600' : 'bg-red-600'}`}>
-                            {results.overallStatus}
-                        </span>
-                        Matrix
-                    </h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold flex items-center">
+                            <span className={`mr-2 px-2 py-0.5 rounded text-sm ${results.overallStatus === 'SAFE' ? 'bg-green-600' : 'bg-red-600'}`}>
+                                {results.overallStatus}
+                            </span>
+                            Matrix
+                        </h2>
+                        <button
+                            onClick={handleDownload}
+                            className="bg-gray-700 hover:bg-gray-600 text-xs px-2 py-1 rounded border border-gray-500 transition-colors"
+                            title="Download Workings Report"
+                        >
+                            ⇩ Workings
+                        </button>
+                    </div>
                     <span className={`transition transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
                 </div>
 
