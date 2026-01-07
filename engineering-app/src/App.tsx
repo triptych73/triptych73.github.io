@@ -30,20 +30,26 @@ function App() {
     <div className="relative w-screen h-screen bg-[#1a1a1a] overflow-hidden">
       <Visualizer inputs={inputs} results={results} />
 
-      {/* UI Panels */}
-      <InputPanel
-        inputs={inputs}
-        setInputs={setInputs}
-        isOpen={uiState.inputOpen}
-        toggleOpen={() => setUiState(p => ({ ...p, inputOpen: !p.inputOpen }))}
-      />
+      {/* UI Layer */}
+      <div className="absolute inset-0 z-10 p-4 flex flex-col md:flex-row justify-between items-start pointer-events-none gap-4">
+        <div className="pointer-events-auto w-full md:w-96">
+          <InputPanel
+            inputs={inputs}
+            setInputs={setInputs}
+            isOpen={uiState.inputOpen}
+            toggleOpen={() => setUiState(p => ({ ...p, inputOpen: !p.inputOpen }))}
+          />
+        </div>
 
-      <ResultsPanel
-        results={results}
-        isOpen={uiState.resultsOpen}
-        toggleOpen={() => setUiState(p => ({ ...p, resultsOpen: !p.resultsOpen }))}
-        steelGrade={inputs.steelGrade}
-      />
+        <div className="pointer-events-auto w-full md:w-96">
+          <ResultsPanel
+            results={results}
+            isOpen={uiState.resultsOpen}
+            toggleOpen={() => setUiState(p => ({ ...p, resultsOpen: !p.resultsOpen }))}
+            steelGrade={inputs.steelGrade}
+          />
+        </div>
+      </div>
     </div>
   );
 }

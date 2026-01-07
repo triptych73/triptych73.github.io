@@ -75,7 +75,7 @@ interface ResultsPanelProps {
 
 export const ResultsPanel: React.FC<ResultsPanelProps> = ({ results, isOpen, toggleOpen, steelGrade }) => {
     return (
-        <div className="absolute top-0 right-0 p-4 z-10 w-full md:w-96 pointer-events-none">
+        <div className="w-full">
             <div className="bg-gray-900/90 backdrop-blur text-white rounded-xl shadow-2xl border border-gray-700 pointer-events-auto">
                 <div
                     className={`p-4 border-b border-gray-700 flex justify-between items-center cursor-pointer select-none ${results.overallStatus === 'SAFE' ? 'bg-green-900/20' : 'bg-red-900/20'}`}

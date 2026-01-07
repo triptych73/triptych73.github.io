@@ -23,7 +23,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, setInputs, isOpe
     };
 
     return (
-        <div className="absolute top-0 left-0 p-4 z-10 w-full md:w-96 pointer-events-none">
+        <div className="w-full">
             <div className="bg-gray-900/90 backdrop-blur text-white rounded-xl shadow-2xl border border-gray-700 pointer-events-auto transition-all">
 
                 <div
