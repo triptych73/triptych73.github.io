@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Drawings Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a89dc;
+            --secondary-color: #5cb85c;
+            --background-color: #f9f9f9;
+            --border-color: #ddd;
+            --text-color: #333;
+            --highlight-color: #e6f0ff;
+            --nav-width: 300px;
+            --header-height: 60px;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            overflow-x: hidden;
+        }
+        
+        header {
+            height: var(--header-height);
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+        }
+        
+        .header-title {
+            font-size: 24px;
+            font-weight: 500;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn {
+            cursor: pointer;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--primary-color);
+            color: white;
+            transition: background-color 0.2s, opacity 0.2s;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-outline:hover {
+            background-color: var(--highlight-color);
+        }
+        
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        
+        .btn-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+        }
+        
+        .btn-icon {
+            background-color: transparent;
+            color: var(--primary-color);
+            font-size: 18px;
+        }
+        
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .main-container {
+            display: flex;
+            margin-top: var(--header-height);
+            min-height: calc(100vh - var(--header-height));
+        }
+        
+        .nav-pane {
+            width: var(--nav-width);
+            background-color: #fff;
+            border-right: 1px solid var(--border-color);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            height: calc(100vh - var(--header-height));
+            transform: translateX(0);
+            position: relative;
+        }
+        
+        .nav-pane.collapsed {
+            transform: translateX(calc(-1 * var(--nav-width) + 30px));
+        }
+        
+        .nav-toggle {
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 50px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 0 25px 25px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 5;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        .building-selector {
+            display: flex;
+            padding: 20px;
+        }
+        
+        .building-image-container {
+            border: 1px solid var(--border-color);
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+        
+        .building-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .floor-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .floor-region {
+            flex: 1;
+            border: 1px solid transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: transparent;
+            transition: all 0.2s;
+        }
+        
+        .floor-region:hover {
+            background-color: rgba(74, 137, 220, 0.2);
+            color: white;
+            text-shadow: 0 0 3px #000;
+        }
+        
+        .floor-region.active {
+            background-color: rgba(74, 137, 220, 0.3);
+            color: white;
+            text-shadow: 0 0 3px #000;
+            font-weight: bold;
+        }
+        
+        .tabs-container {
+            padding: 10px;
+        }
+        
+        .room-type-tabs {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .room-type-tab {
+            padding: 8px;
+            text-align: center;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .room-type-tab:hover:not(.disabled) {
+            background-color: #e0e0e0;
+        }
+        
+        .room-type-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .room-type-tab.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .orientation-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .orientation-tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 14px;
+        }
+        
+        .orientation-tab:hover:not(.disabled) {
+            background-color: #e0e0e0;
+        }
+        
+        .orientation-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .orientation-tab.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .stage-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stage-tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 14px;
+        }
+        
+        .stage-tab:hover:not(.disabled) {
+            background-color: #e0e0e0;
+        }
+        
+        .stage-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .stage-tab.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .nav-footer {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .drawing-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .drawing-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .drawing-title {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .drawing-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .drawing-viewer {
+            width: 100%;
+            height: calc(100vh - 180px);
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .drawing-image {
+            max-width: 100%;
+            max-height: 100%;
+            transform-origin: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .drawing-image.panning {
+            cursor: grabbing;
+        }
+        
+        .url-form {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .url-form-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+        
+        .url-form-group {
+            margin-bottom: 15px;
+        }
+        
+        .url-form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .url-form-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .url-form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 15px 25px;
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .nav-pane {
+                width: 100%;
+                height: auto;
+                max-height: 50vh;
+                transform: translateY(0);
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            
+            .nav-pane.collapsed {
+                transform: translateY(calc(-100% + 30px));
+            }
+            
+            .nav-toggle {
+                top: auto;
+                right: 50%;
+                bottom: -15px;
+                transform: translateX(50%) rotate(90deg);
+                border-radius: 0 0 25px 25px;
+            }
+            
+            .building-image-container {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-title">Building Drawings Viewer</div>
+        <div class="header-actions">
+            <button id="manageDrawingsBtn" class="btn btn-outline">Manage Drawings</button>
+            <button id="importCsvBtn" class="btn">Import CSV</button>
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+        </div>
+    </header>
+    
+    <div class="main-container">
+        <div id="navPane" class="nav-pane">
+            <div class="nav-toggle" id="navToggle">
+                <span id="navToggleIcon">◀</span>
+            </div>
+            
+            <div class="building-selector">
+                <div class="building-image-container">
+                    <img src="https://lh3.googleusercontent.com/d/1y6gN-tZwoUIkpJc78vni6v4URxniYtSS" alt="Building" class="building-image">
+                    <div class="floor-overlay" id="floorOverlay"></div>
+                </div>
+            </div>
+            
+            <div class="tabs-container">
+                <div id="roomTypeTabs" class="room-type-tabs"></div>
+                <div id="orientationTabs" class="orientation-tabs"></div>
+                <div id="stageTabs" class="stage-tabs"></div>
+            </div>
+            
+            <div class="nav-footer">
+                <button id="saveBtn" class="btn btn-secondary">Save CSV</button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div id="drawingContainer" class="drawing-container hidden">
+                <div class="drawing-header">
+                    <div id="drawingTitle" class="drawing-title"></div>
+                    <div class="drawing-controls">
+                        <button id="zoomInBtn" class="btn btn-circle btn-icon">+</button>
+                        <button id="zoomOutBtn" class="btn btn-circle btn-icon">-</button>
+                        <button id="panBtn" class="btn btn-circle btn-icon">✋</button>
+                        <button id="changeUrlBtn" class="btn btn-small">Change URL</button>
+                    </div>
+                </div>
+                
+                <div class="drawing-viewer">
+                    <img id="drawingImage" class="drawing-image" alt="Drawing">
+                </div>
+            </div>
+            
+            <div id="urlForm" class="url-form">
+                <div class="url-form-title">Set Drawing URL</div>
+                
+                <div class="url-form-group">
+                    <div class="url-form-label">Key:</div>
+                    <div id="drawingKey"></div>
+                </div>
+                
+                <div class="url-form-group">
+                    <div class="url-form-label">Description:</div>
+                    <div id="drawingDescription"></div>
+                </div>
+                
+                <div class="url-form-group">
+                    <label for="urlInput" class="url-form-label">Drawing URL:</label>
+                    <input type="text" id="urlInput" class="url-form-input" placeholder="Enter URL to the drawing image">
+                </div>
+                
+                <div class="url-form-actions">
+                    <button id="saveUrlBtn" class="btn btn-secondary">Save URL</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="loading" class="loading hidden">
+        <div class="loading-spinner"></div>
+        <div>Loading...</div>
+    </div>
+    
+    <div id="notification" class="notification">
+        <div id="notificationMessage"></div>
+    </div>
+    
+    <script>
+        // Constants
+        const floors = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+        const rooms = ['1', '2', '3'];
+        const types = [
+            { code: 'G', name: 'GA', hasOrientations: false },
+            { code: 'E', name: 'Elevation', hasOrientations: true },
+            { code: 'S', name: 'Section', hasOrientations: true },
+            { code: 'I', name: 'ICP', hasOrientations: false }
+        ];
+        const orientations = [
+            { code: 'N', name: 'North' },
+            { code: 'E', name: 'East' },
+            { code: 'S', name: 'South' },
+            { code: 'W', name: 'West' },
+            { code: 'Default', name: 'Default' }
+        ];
+        const stages = [
+            { code: 'O', name: 'Original' },
+            { code: 'D', name: 'Demolition' },
+            { code: 'P', name: 'Planning Approved' },
+            { code: 'A', name: 'Planning Amended' }
+        ];
+        
+        // State
+        let csvData = [];
+        let urlData = [];
+        let activeFloor = '01';
+        let activeRoom = '1';
+        let activeType = 'G';
+        let activeOrientation = 'Default';
+        let activeStage = null;
+        let currentScale = 1;
+        let isPanning = false;
+        let startPanX = 0;
+        let startPanY = 0;
+        let translateX = 0;
+        let translateY = 0;
+        
+        // DOM Elements
+        const navPane = document.getElementById('navPane');
+        const navToggle = document.getElementById('navToggle');
+        const navToggleIcon = document.getElementById('navToggleIcon');
+        const floorOverlay = document.getElementById('floorOverlay');
+        const roomTypeTabs = document.getElementById('roomTypeTabs');
+        const orientationTabs = document.getElementById('orientationTabs');
+        const stageTabs = document.getElementById('stageTabs');
+        const drawingContainer = document.getElementById('drawingContainer');
+        const drawingTitle = document.getElementById('drawingTitle');
+        const drawingImage = document.getElementById('drawingImage');
+        const urlForm = document.getElementById('urlForm');
+        const drawingKey = document.getElementById('drawingKey');
+        const drawingDescription = document.getElementById('drawingDescription');
+        const urlInput = document.getElementById('urlInput');
+        const saveUrlBtn = document.getElementById('saveUrlBtn');
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const panBtn = document.getElementById('panBtn');
+        const changeUrlBtn = document.getElementById('changeUrlBtn');
+        const manageDrawingsBtn = document.getElementById('manageDrawingsBtn');
+        const importCsvBtn = document.getElementById('importCsvBtn');
+        const csvFileInput = document.getElementById('csvFileInput');
+        const saveBtn = document.getElementById('saveBtn');
+        const loadingEl = document.getElementById('loading');
+        const notification = document.getElementById('notification');
+        const notificationMessage = document.getElementById('notificationMessage');
+        
+        // Initialize
+        function init() {
+            generateEmptyCsvData();
+            setupEventListeners();
+            renderFloorRegions();
+            renderRoomTypeTabs();
+            renderOrientationTabs();
+            renderStageTabs();
+            
+            // Try to load CSV from localStorage
+            const savedCsv = localStorage.getItem('buildingDrawingsData');
+            if (savedCsv) {
+                try {
+                    const savedData = JSON.parse(savedCsv);
+                    csvData = savedData.csvData || csvData;
+                    urlData = savedData.urlData || urlData;
+                    updateUI();
+                    showNotification('Data loaded from local storage');
+                } catch (e) {
+                    console.error('Error loading data from localStorage:', e);
+                }
+            }
+        }
+        
+        // Generate empty CSV data with all permutations
+        function generateEmptyCsvData() {
+            csvData = [];
+            urlData = [];
+            
+            floors.forEach(floor => {
+                rooms.forEach(room => {
+                    types.forEach(type => {
+                        if (type.hasOrientations) {
+                            // For types with orientations (Elevation, Section)
+                            orientations.slice(0, 4).forEach(orientation => {
+                                stages.forEach(stage => {
+                                    const key = `${floor}-${room}-${type.code}-${orientation.code}-${stage.code}`;
+                                    // Set all to 0 initially
+                                    csvData.push([key, 0]);
+                                    urlData.push([key, '']);
+                                });
+                            });
+                        } else {
+                            // For types without orientations (GA, ICP)
+                            stages.forEach(stage => {
+                                const key = `${floor}-${room}-${type.code}-Default-${stage.code}`;
+                                // Set all to 0 initially
+                                csvData.push([key, 0]);
+                                urlData.push([key, '']);
+                            });
+                        }
+                    });
+                });
+            });
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Navigation toggle
+            navToggle.addEventListener('click', toggleNavPane);
+            
+            // Zoom and pan controls
+            zoomInBtn.addEventListener('click', zoomIn);
+            zoomOutBtn.addEventListener('click', zoomOut);
+            panBtn.addEventListener('click', togglePan);
+            changeUrlBtn.addEventListener('click', showUrlForm);
+            
+            // Drawing image panning
+            drawingImage.addEventListener('mousedown', startPan);
+            document.addEventListener('mousemove', pan);
+            document.addEventListener('mouseup', endPan);
+            
+            // URL form
+            saveUrlBtn.addEventListener('click', saveDrawingUrl);
+            
+            // CSV management
+            manageDrawingsBtn.addEventListener('click', openDrawingManager);
+            importCsvBtn.addEventListener('click', () => csvFileInput.click());
+            csvFileInput.addEventListener('change', importCsv);
+            saveBtn.addEventListener('click', saveCsv);
+        }
+        
+        // Render the floor regions on the building image
+        function renderFloorRegions() {
+            floorOverlay.innerHTML = '';
+            
+            floors.slice().reverse().forEach(floor => {
+                const floorDiv = document.createElement('div');
+                floorDiv.className = `floor-region ${floor === activeFloor ? 'active' : ''}`;
+                floorDiv.dataset.floor = floor;
+                floorDiv.textContent = `Floor ${floor}`;
+                
+                floorDiv.addEventListener('click', () => {
+                    setActiveFloor(floor);
+                });
+                
+                floorOverlay.appendChild(floorDiv);
+            });
+        }
+        
+        // Set active floor and update UI
+        function setActiveFloor(floor) {
+            activeFloor = floor;
+            activeRoom = '1';
+            activeType = 'G';
+            activeOrientation = 'Default';
+            activeStage = null;
+            
+            document.querySelectorAll('.floor-region').forEach(el => {
+                el.classList.toggle('active', el.dataset.floor === floor);
+            });
+            
+            renderRoomTypeTabs();
+            renderOrientationTabs();
+            renderStageTabs();
+            updateDrawingView();
+        }
+        
+        // Render room-type tabs
+        function renderRoomTypeTabs() {
+            roomTypeTabs.innerHTML = '';
+            
+            rooms.forEach(room => {
+                types.forEach(type => {
+                    const hasDrawing = hasAnyDrawingForRoomType(activeFloor, room, type.code);
+                    
+                    const tabDiv = document.createElement('div');
+                    tabDiv.className = `room-type-tab ${!hasDrawing ? 'disabled' : ''} ${activeRoom === room && activeType === type.code ? 'active' : ''}`;
+                    tabDiv.textContent = `R${room} ${type.name}`;
+                    tabDiv.dataset.room = room;
+                    tabDiv.dataset.type = type.code;
+                    
+                    if (hasDrawing) {
+                        tabDiv.addEventListener('click', () => {
+                            setActiveRoomType(room, type.code);
+                        });
+                    }
+                    
+                    roomTypeTabs.appendChild(tabDiv);
+                });
+            });
+        }
+        
+        // Set active room and type
+        function setActiveRoomType(room, type) {
+            activeRoom = room;
+            activeType = type;
+            const selectedType = types.find(t => t.code === type);
+            activeOrientation = selectedType.hasOrientations ? 'N' : 'Default';
+            activeStage = null;
+            
+            document.querySelectorAll('.room-type-tab').forEach(el => {
+                el.classList.toggle('active', el.dataset.room === room && el.dataset.type === type);
+            });
+            
+            renderOrientationTabs();
+            renderStageTabs();
+            updateDrawingView();
+        }
+        
+        // Render orientation tabs
+        function renderOrientationTabs() {
+            orientationTabs.innerHTML = '';
+            
+            const selectedType = types.find(t => t.code === activeType);
+            
+            if (selectedType.hasOrientations) {
+                orientations.slice(0, 4).forEach(orientation => {
+                    const hasDrawing = hasAnyDrawingForOrientation(activeFloor, activeRoom, activeType, orientation.code);
+                    
+                    const tabDiv = document.createElement('div');
+                    tabDiv.className = `orientation-tab ${!hasDrawing ? 'disabled' : ''} ${activeOrientation === orientation.code ? 'active' : ''}`;
+                    tabDiv.textContent = orientation.name;
+                    tabDiv.dataset.orientation = orientation.code;
+                    
+                    if (hasDrawing) {
+                        tabDiv.addEventListener('click', () => {
+                            setActiveOrientation(orientation.code);
+                        });
+                    }
+                    
+                    orientationTabs.appendChild(tabDiv);
+                });
+            } else {
+                const tabDiv = document.createElement('div');
+                tabDiv.className = 'orientation-tab active';
+                tabDiv.textContent = 'Default';
+                tabDiv.dataset.orientation = 'Default';
+                orientationTabs.appendChild(tabDiv);
+                
+                activeOrientation = 'Default';
+            }
+        }
+        
+        // Set active orientation
+        function setActiveOrientation(orientation) {
+            activeOrientation = orientation;
+            activeStage = null;
+            
+            document.querySelectorAll('.orientation-tab').forEach(el => {
+                el.classList.toggle('active', el.dataset.orientation === orientation);
+            });
+            
+            renderStageTabs();
+            updateDrawingView();
+        }
+        
+        // Render stage tabs
+        function renderStageTabs() {
+            stageTabs.innerHTML = '';
+            
+            stages.forEach(stage => {
+                const key = `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${stage.code}`;
+                const hasDrawing = getDrawingStatus(key);
+                
+                const tabDiv = document.createElement('div');
+                tabDiv.className = `stage-tab ${!hasDrawing ? 'disabled' : ''} ${activeStage === stage.code ? 'active' : ''}`;
+                tabDiv.textContent = stage.name;
+                tabDiv.dataset.stage = stage.code;
+                
+                if (hasDrawing) {
+                    tabDiv.addEventListener('click', () => {
+                        setActiveStage(stage.code);
+                    });
+                }
+                
+                stageTabs.appendChild(tabDiv);
+            });
+        }
+        
+        // Set active stage
+        function setActiveStage(stage) {
+            activeStage = stage;
+            
+            document.querySelectorAll('.stage-tab').forEach(el => {
+                el.classList.toggle('active', el.dataset.stage === stage);
+            });
+            
+            updateDrawingView();
+        }
+        
+        // Update the drawing view based on the current selection
+        function updateDrawingView() {
+            if (!activeStage) {
+                drawingContainer.classList.add('hidden');
+                urlForm.classList.add('hidden');
+                return;
+            }
+            
+            const key = `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${activeStage}`;
+            const url = getDrawingUrl(key);
+            
+            const selectedType = types.find(t => t.code === activeType);
+            const selectedOrientation = orientations.find(o => o.code === activeOrientation);
+            const selectedStage = stages.find(s => s.code === activeStage);
+            
+            // Create description
+            const description = `Floor ${activeFloor}, Room ${activeRoom}, ${selectedType.name}, ${selectedOrientation.name}, ${selectedStage.name}`;
+            
+            if (url) {
+                // Show drawing image
+                drawingContainer.classList.remove('hidden');
+                urlForm.classList.add('hidden');
+                
+                drawingTitle.textContent = description;
+                drawingImage.src = url;
+                
+                // Reset zoom and pan
+                resetImageTransform();
+            } else {
+                // Show URL input form
+                drawingContainer.classList.add('hidden');
+                urlForm.classList.remove('hidden');
+                
+                drawingKey.textContent = key;
+                drawingDescription.textContent = description;
+                urlInput.value = '';
+            }
+        }
+        
+        // Check if any drawing exists for a room-type combination
+        function hasAnyDrawingForRoomType(floor, room, type) {
+            const relevantKeys = csvData.filter(item => {
+                const [itemFloor, itemRoom, itemType] = item[0].split('-');
+                return itemFloor === floor && itemRoom === room && itemType === type;
+            });
+            
+            return relevantKeys.some(item => parseInt(item[1]) === 1);
+        }
+        
+        // Check if any drawing exists for a room-type-orientation combination
+        function hasAnyDrawingForOrientation(floor, room, type, orientation) {
+            const relevantKeys = csvData.filter(item => {
+                const [itemFloor, itemRoom, itemType, itemOrientation] = item[0].split('-');
+                return itemFloor === floor && itemRoom === room && itemType === type && itemOrientation === orientation;
+            });
+            
+            return relevantKeys.some(item => parseInt(item[1]) === 1);
+        }
+        
+        // Get the drawing status from CSV data
+        function getDrawingStatus(key) {
+            const row = csvData.find(item => item[0] === key);
+            return row ? parseInt(row[1]) === 1 : false;
+        }
+        
+        // Get the drawing URL from URL data
+        function getDrawingUrl(key) {
+            const row = urlData.find(item => item[0] === key);
+            return row && row[1] ? row[1] : null;
+        }
+        
+        // Set the drawing URL in URL data
+        function setDrawingUrl(key, url) {
+            // Find if the key exists in urlData
+            const existingIndex = urlData.findIndex(item => item[0] === key);
+            
+            if (existingIndex !== -1) {
+                urlData[existingIndex] = [key, url];
+            } else {
+                urlData.push([key, url]);
+            }
+            
+            // Also set the drawing status to 1 in csvData
+            const csvIndex = csvData.findIndex(item => item[0] === key);
+            if (csvIndex !== -1) {
+                csvData[csvIndex] = [key, 1];
+            }
+            
+            // Update UI
+            updateUI();
+        }
+        
+        // Save the drawing URL from the form
+        function saveDrawingUrl() {
+            const key = drawingKey.textContent;
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showNotification('Please enter a valid URL', true);
+                return;
+            }
+            
+            setDrawingUrl(key, url);
+            saveDataToLocalStorage();
+            showNotification('URL saved successfully');
+            
+            // Show the drawing instead of the form
+            updateDrawingView();
+        }
+        
+        // Toggle navigation pane visibility
+        function toggleNavPane() {
+            navPane.classList.toggle('collapsed');
+            navToggleIcon.textContent = navPane.classList.contains('collapsed') ? '▶' : '◀';
+        }
+        
+        // Zoom in the drawing image
+        function zoomIn() {
+            currentScale += 0.2;
+            updateImageTransform();
+        }
+        
+        // Zoom out the drawing image
+        function zoomOut() {
+            currentScale = Math.max(0.2, currentScale - 0.2);
+            updateImageTransform();
+        }
+        
+        // Toggle panning mode
+        function togglePan() {
+            isPanning = !isPanning;
+            panBtn.classList.toggle('active', isPanning);
+            drawingImage.classList.toggle('panning', isPanning);
+        }
+        
+        // Start panning
+        function startPan(e) {
+            if (!isPanning) return;
+            
+            e.preventDefault();
+            startPanX = e.clientX;
+            startPanY = e.clientY;
+        }
+        
+        // Pan the image
+        function pan(e) {
+            if (!isPanning || e.buttons !== 1) return;
+            
+            const deltaX = e.clientX - startPanX;
+            const deltaY = e.clientY - startPanY;
+            
+            translateX += deltaX;
+            translateY += deltaY;
+            
+            startPanX = e.clientX;
+            startPanY = e.clientY;
+            
+            updateImageTransform();
+        }
+        
+        // End panning
+        function endPan() {
+            if (!isPanning) return;
+        }
+        
+        // Update image transform (zoom and pan)
+        function updateImageTransform() {
+            drawingImage.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
+        }
+        
+        // Reset image transform
+        function resetImageTransform() {
+            currentScale = 1;
+            translateX = 0;
+            translateY = 0;
+            updateImageTransform();
+        }
+        
+        // Show URL form for changing URL
+        function showUrlForm() {
+            const key = `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${activeStage}`;
+            const url = getDrawingUrl(key);
+            
+            drawingContainer.classList.add('hidden');
+            urlForm.classList.remove('hidden');
+            
+            drawingKey.textContent = key;
+            urlInput.value = url || '';
+            
+            const selectedType = types.find(t => t.code === activeType);
+            const selectedOrientation = orientations.find(o => o.code === activeOrientation);
+            const selectedStage = stages.find(s => s.code === activeStage);
+            
+            // Create description
+            const description = `Floor ${activeFloor}, Room ${activeRoom}, ${selectedType.name}, ${selectedOrientation.name}, ${selectedStage.name}`;
+            drawingDescription.textContent = description;
+        }
+        
+        // Open the drawing manager in a new window
+        function openDrawingManager() {
+            window.open('building-drawings-manager.html', '_blank');
+        }
+        
+        // Import CSV data
+        function importCsv(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            showLoading(true);
+            
+            Papa.parse(file, {
+                complete: (results) => {
+                    try {
+                        // Process CSV data
+                        if (results.data && results.data.length > 0) {
+                            // Skip header row if it exists
+                            const data = results.data[0][0] === 'key' ? results.data.slice(1) : results.data;
+                            
+                            // Filter out empty rows
+                            const filteredData = data.filter(row => row.length >= 2 && row[0] && row[0].trim() !== '');
+                            
+                            // Update CSV data (availability)
+                            csvData = filteredData.map(row => [row[0], row[1]]);
+                            
+                            // Check if there's a third column for URLs
+                            if (filteredData[0].length >= 3) {
+                                urlData = filteredData.map(row => [row[0], row[2] || '']);
+                            } else {
+                                // Generate empty URL data
+                                urlData = filteredData.map(row => [row[0], '']);
+                            }
+                            
+                            // Update UI
+                            updateUI();
+                            saveDataToLocalStorage();
+                            showNotification('CSV imported successfully');
+                        }
+                    } catch (error) {
+                        console.error('Error processing CSV:', error);
+                        showNotification('Error processing CSV file', true);
+                    }
+                    
+                    showLoading(false);
+                    event.target.value = null; // Reset file input
+                },
+                error: (error) => {
+                    console.error('Error parsing CSV:', error);
+                    showNotification('Error parsing CSV file', true);
+                    showLoading(false);
+                    event.target.value = null; // Reset file input
+                }
+            });
+        }
+        
+        // Save CSV data
+        function saveCsv() {
+            // Combine csvData and urlData into a single CSV
+            const combinedData = csvData.map(row => {
+                const key = row[0];
+                const hasDrawing = row[1];
+                const url = getDrawingUrl(key) || '';
+                return [key, hasDrawing, url];
+            });
+            
+            // Add header row
+            combinedData.unshift(['key', 'hasDrawing', 'url']);
+            
+            // Generate CSV content
+            const csvContent = Papa.unparse(combinedData);
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'building_drawings_with_urls.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('CSV saved successfully');
+            saveDataToLocalStorage();
+        }
+        
+        // Update UI elements based on current data
+        function updateUI() {
+            renderFloorRegions();
+            renderRoomTypeTabs();
+            renderOrientationTabs();
+            renderStageTabs();
+            updateDrawingView();
+        }
+        
+        // Save data to localStorage
+        function saveDataToLocalStorage() {
+            try {
+                const dataToSave = {
+                    csvData: csvData,
+                    urlData: urlData
+                };
+                
+                localStorage.setItem('buildingDrawingsData', JSON.stringify(dataToSave));
+            } catch (e) {
+                console.error('Error saving to localStorage:', e);
+            }
+        }
+        
+        // Show/hide loading indicator
+        function showLoading(show) {
+            loadingEl.classList.toggle('hidden', !show);
+        }
+        
+        // Show notification
+        function showNotification(message, isError = false) {
+            notification.style.backgroundColor = isError ? '#f44336' : '#4CAF50';
+            notificationMessage.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Initialize the application
+        init();
+    </script>
+</body>
+</html>

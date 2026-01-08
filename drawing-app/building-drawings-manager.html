@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Drawings Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            color: #333;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        button {
+            cursor: pointer;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+            margin-right: 8px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #e0e0e0;
+        }
+        button.active {
+            background-color: #4a89dc;
+            color: white;
+        }
+        button.primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        button.primary:hover {
+            background-color: #388E3C;
+        }
+        button.secondary {
+            background-color: #2196F3;
+            color: white;
+        }
+        button.secondary:hover {
+            background-color: #1976D2;
+        }
+        .container {
+            margin-bottom: 20px;
+        }
+        .floor-tabs, .room-type-grid {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .room-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .room-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        .room-type-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        .room-type-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .room-type-item:hover {
+            background-color: #f9f9f9;
+        }
+        .room-type-item.active {
+            background-color: #e6f0ff;
+        }
+        .orientation-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .stages-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stage-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .stage-item label {
+            margin-left: 8px;
+            cursor: pointer;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .message {
+            padding: 10px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-align: center;
+            display: none;
+        }
+        .hidden {
+            display: none;
+        }
+        .file-input {
+            display: none;
+        }
+        .detail-section {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+        }
+        .no-drawings {
+            background-color: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            color: #757575;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Building Drawings Manager</h1>
+    
+    <div class="container">
+        <button id="exportBtn" class="primary">Download CSV</button>
+        <label for="importInput" class="secondary" style="padding: 8px 16px; border-radius: 4px; cursor: pointer; background-color: #2196F3; color: white; display: inline-block;">
+            Import CSV
+        </label>
+        <input type="file" id="importInput" accept=".csv" class="file-input">
+    </div>
+    
+    <div id="message" class="message"></div>
+    
+    <div id="floorTabs" class="floor-tabs"></div>
+    
+    <div id="roomTypeTabs" class="room-cards"></div>
+    
+    <div id="detailConfig" class="detail-section"></div>
+    
+    <div class="footer">
+        <button id="saveBtn" class="primary" style="padding: 10px 20px; font-size: 16px;">Save CSV</button>
+    </div>
+
+    <script>
+        // Constants
+        const floors = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+        const rooms = ['1', '2', '3'];
+        const types = [
+            { code: 'G', name: 'GA', hasOrientations: false },
+            { code: 'E', name: 'Elevation', hasOrientations: true },
+            { code: 'S', name: 'Section', hasOrientations: true },
+            { code: 'I', name: 'ICP', hasOrientations: false }
+        ];
+        const orientations = [
+            { code: 'N', name: 'North' },
+            { code: 'E', name: 'East' },
+            { code: 'S', name: 'South' },
+            { code: 'W', name: 'West' },
+            { code: 'Default', name: 'Default' }
+        ];
+        const stages = [
+            { code: 'O', name: 'Original' },
+            { code: 'D', name: 'Demolition' },
+            { code: 'P', name: 'Planning Approved' },
+            { code: 'A', name: 'Planning Amended' }
+        ];
+
+        // State
+        let csvData = [];
+        let activeFloor = '01';
+        let activeRoom = '1';
+        let activeType = 'G';
+        let activeOrientation = 'Default';
+
+        // DOM Elements
+        const exportBtn = document.getElementById('exportBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const importInput = document.getElementById('importInput');
+        const messageEl = document.getElementById('message');
+        const floorTabsEl = document.getElementById('floorTabs');
+        const roomTypeTabsEl = document.getElementById('roomTypeTabs');
+        const detailConfigEl = document.getElementById('detailConfig');
+
+        // Initialize
+        function init() {
+            generateCsvData();
+            renderFloorTabs();
+            renderRoomTypeTabs();
+            renderDetailedConfig();
+            
+            // Event Listeners
+            exportBtn.addEventListener('click', exportCsv);
+            saveBtn.addEventListener('click', exportCsv);
+            importInput.addEventListener('change', importCsv);
+        }
+
+        // Generate CSV data with all permutations
+        function generateCsvData() {
+            csvData = [];
+            
+            floors.forEach(floor => {
+                rooms.forEach(room => {
+                    types.forEach(type => {
+                        if (type.hasOrientations) {
+                            // For types with orientations (Elevation, Section)
+                            orientations.slice(0, 4).forEach(orientation => {
+                                stages.forEach(stage => {
+                                    const key = `${floor}-${room}-${type.code}-${orientation.code}-${stage.code}`;
+                                    // Set room 2 and 3 to 0 initially, room 1 randomly 0 or 1
+                                    const hasDrawing = room === '1' ? Math.round(Math.random()) : 0;
+                                    csvData.push([key, hasDrawing]);
+                                });
+                            });
+                        } else {
+                            // For types without orientations (GA, ICP)
+                            stages.forEach(stage => {
+                                const key = `${floor}-${room}-${type.code}-Default-${stage.code}`;
+                                // Set room 2 and 3 to 0 initially, room 1 randomly 0 or 1
+                                const hasDrawing = room === '1' ? Math.round(Math.random()) : 0;
+                                csvData.push([key, hasDrawing]);
+                            });
+                        }
+                    });
+                });
+            });
+        }
+
+        // Helper to get checkbox status
+        function getCheckboxStatus(floor, room, type, orientation, stage) {
+            const key = `${floor}-${room}-${type}-${orientation}-${stage}`;
+            const row = csvData.find(item => item[0] === key);
+            return row ? parseInt(row[1]) === 1 : false;
+        }
+
+        // Check if any drawing exists for a room-type combination
+        function hasAnyDrawingForRoomType(floor, room, type) {
+            const relevantKeys = csvData.filter(item => {
+                const [itemFloor, itemRoom, itemType] = item[0].split('-');
+                return itemFloor === floor && itemRoom === room && itemType === type;
+            });
+            
+            return relevantKeys.some(item => parseInt(item[1]) === 1);
+        }
+
+        // Check if any drawing exists for a room-type-orientation combination
+        function hasAnyDrawingForOrientation(floor, room, type, orientation) {
+            const relevantKeys = csvData.filter(item => {
+                const [itemFloor, itemRoom, itemType, itemOrientation] = item[0].split('-');
+                return itemFloor === floor && itemRoom === room && itemType === type && itemOrientation === orientation;
+            });
+            
+            return relevantKeys.some(item => parseInt(item[1]) === 1);
+        }
+
+        // Update CSV data when a drawing status changes
+        function updateDrawingStatus(floor, room, type, orientation, stage, status) {
+            const key = `${floor}-${room}-${type}-${orientation}-${stage}`;
+            csvData = csvData.map(item => {
+                if (item[0] === key) {
+                    return [key, status ? 1 : 0];
+                }
+                return item;
+            });
+            
+            renderDetailedConfig();
+        }
+
+        // Toggle all stages for a room-type-orientation combination
+        function updateOrientationStatus(floor, room, type, orientation, status) {
+            csvData = csvData.map(item => {
+                const [itemFloor, itemRoom, itemType, itemOrientation] = item[0].split('-');
+                if (itemFloor === floor && itemRoom === room && itemType === type && itemOrientation === orientation) {
+                    return [item[0], status ? 1 : 0];
+                }
+                return item;
+            });
+            
+            renderDetailedConfig();
+        }
+
+        // Toggle all orientations and stages for a room-type combination
+        function updateRoomTypeStatus(floor, room, type, status) {
+            csvData = csvData.map(item => {
+                const [itemFloor, itemRoom, itemType] = item[0].split('-');
+                if (itemFloor === floor && itemRoom === room && itemType === type) {
+                    return [item[0], status ? 1 : 0];
+                }
+                return item;
+            });
+            
+            renderRoomTypeTabs();
+            renderDetailedConfig();
+        }
+
+        // Export CSV data
+        function exportCsv() {
+            const csvContent = Papa.unparse({
+                fields: ['key', 'hasDrawing'],
+                data: csvData
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'building_drawings.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage('CSV file has been exported successfully!');
+        }
+
+        // Import CSV data
+        function importCsv(event) {
+            const file = event.target.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    complete: (results) => {
+                        // Skip header row if it exists
+                        const data = results.data[0][0] === 'key' ? results.data.slice(1) : results.data;
+                        // Filter out empty rows
+                        csvData = data.filter(row => row.length >= 2 && row[0] && row[0].trim() !== '');
+                        renderRoomTypeTabs();
+                        renderDetailedConfig();
+                        showMessage('CSV file has been imported successfully!');
+                    },
+                    header: false
+                });
+            }
+        }
+
+        // Show message
+        function showMessage(text) {
+            messageEl.textContent = text;
+            messageEl.style.display = 'block';
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Render floor tabs
+        function renderFloorTabs() {
+            floorTabsEl.innerHTML = '';
+            
+            floors.forEach(floor => {
+                const button = document.createElement('button');
+                button.textContent = `Floor ${floor}`;
+                button.className = activeFloor === floor ? 'active' : '';
+                button.addEventListener('click', () => {
+                    activeFloor = floor;
+                    document.querySelectorAll('#floorTabs button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    button.classList.add('active');
+                    renderRoomTypeTabs();
+                    renderDetailedConfig();
+                });
+                floorTabsEl.appendChild(button);
+            });
+        }
+
+        // Render room-type sub-tabs for the active floor
+        function renderRoomTypeTabs() {
+            roomTypeTabsEl.innerHTML = '';
+            
+            rooms.forEach(room => {
+                const roomCard = document.createElement('div');
+                roomCard.className = 'room-card';
+                
+                const roomTitle = document.createElement('h3');
+                roomTitle.textContent = `Room ${room}`;
+                roomCard.appendChild(roomTitle);
+                
+                const typeGrid = document.createElement('div');
+                typeGrid.className = 'room-type-grid';
+                
+                types.forEach(type => {
+                    const typeItem = document.createElement('div');
+                    typeItem.className = `room-type-item ${activeRoom === room && activeType === type.code ? 'active' : ''}`;
+                    
+                    const typeName = document.createElement('span');
+                    typeName.textContent = type.name;
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = hasAnyDrawingForRoomType(activeFloor, room, type.code);
+                    checkbox.addEventListener('change', (e) => {
+                        e.stopPropagation();
+                        updateRoomTypeStatus(activeFloor, room, type.code, e.target.checked);
+                    });
+                    
+                    typeItem.appendChild(typeName);
+                    typeItem.appendChild(checkbox);
+                    
+                    typeItem.addEventListener('click', () => {
+                        activeRoom = room;
+                        activeType = type.code;
+                        activeOrientation = type.hasOrientations ? 'N' : 'Default';
+                        
+                        document.querySelectorAll('.room-type-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        typeItem.classList.add('active');
+                        
+                        renderDetailedConfig();
+                    });
+                    
+                    typeGrid.appendChild(typeItem);
+                });
+                
+                roomCard.appendChild(typeGrid);
+                roomTypeTabsEl.appendChild(roomCard);
+            });
+        }
+
+        // Render the detailed configuration for the selected room-type
+        function renderDetailedConfig() {
+            detailConfigEl.innerHTML = '';
+            
+            const selectedType = types.find(t => t.code === activeType);
+            
+            if (!selectedType) return;
+            
+            if (!hasAnyDrawingForRoomType(activeFloor, activeRoom, activeType)) {
+                const noDrawingsDiv = document.createElement('div');
+                noDrawingsDiv.className = 'no-drawings';
+                noDrawingsDiv.innerHTML = `
+                    <p>No drawings available for this room-type combination.</p>
+                    <p>Check the box above to enable editing.</p>
+                `;
+                detailConfigEl.appendChild(noDrawingsDiv);
+                return;
+            }
+            
+            const titleEl = document.createElement('h3');
+            titleEl.textContent = `Floor ${activeFloor} - Room ${activeRoom} - ${selectedType.name} Configuration`;
+            detailConfigEl.appendChild(titleEl);
+            
+            // Orientation tabs for types with orientations
+            if (selectedType.hasOrientations) {
+                const orientationTabsEl = document.createElement('div');
+                orientationTabsEl.className = 'orientation-tabs';
+                
+                orientations.slice(0, 4).forEach(orientation => {
+                    const button = document.createElement('button');
+                    button.className = activeOrientation === orientation.code ? 'active' : '';
+                    
+                    const buttonContent = document.createElement('div');
+                    buttonContent.style.display = 'flex';
+                    buttonContent.style.alignItems = 'center';
+                    
+                    const orientationName = document.createElement('span');
+                    orientationName.textContent = orientation.name;
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.style.marginLeft = '8px';
+                    checkbox.checked = hasAnyDrawingForOrientation(activeFloor, activeRoom, activeType, orientation.code);
+                    checkbox.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        updateOrientationStatus(activeFloor, activeRoom, activeType, orientation.code, e.target.checked);
+                    });
+                    
+                    buttonContent.appendChild(orientationName);
+                    buttonContent.appendChild(checkbox);
+                    button.appendChild(buttonContent);
+                    
+                    button.addEventListener('click', () => {
+                        activeOrientation = orientation.code;
+                        
+                        document.querySelectorAll('.orientation-tabs button').forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+                        button.classList.add('active');
+                        
+                        renderStages();
+                    });
+                    
+                    orientationTabsEl.appendChild(button);
+                });
+                
+                detailConfigEl.appendChild(orientationTabsEl);
+            }
+            
+            // Stages section
+            const stagesContainer = document.createElement('div');
+            stagesContainer.id = 'stagesContainer';
+            stagesContainer.className = 'stages-grid';
+            detailConfigEl.appendChild(stagesContainer);
+            
+            renderStages();
+        }
+        
+        // Render stages checkboxes
+        function renderStages() {
+            const stagesContainer = document.getElementById('stagesContainer');
+            if (!stagesContainer) return;
+            
+            stagesContainer.innerHTML = '';
+            
+            stages.forEach(stage => {
+                const stageItem = document.createElement('div');
+                stageItem.className = 'stage-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `stage-${stage.code}`;
+                checkbox.checked = getCheckboxStatus(activeFloor, activeRoom, activeType, activeOrientation, stage.code);
+                checkbox.addEventListener('change', (e) => {
+                    updateDrawingStatus(activeFloor, activeRoom, activeType, activeOrientation, stage.code, e.target.checked);
+                });
+                
+                const label = document.createElement('label');
+                label.htmlFor = `stage-${stage.code}`;
+                label.textContent = stage.name;
+                
+                stageItem.appendChild(checkbox);
+                stageItem.appendChild(label);
+                stagesContainer.appendChild(stageItem);
+            });
+        }
+
+        // Initialize the application
+        init();
+    </script>
+</body>
+</html>

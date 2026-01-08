@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Drawings System</title>
+    <style>
+        :root {
+            --primary-color: #4a89dc;
+            --secondary-color: #5cb85c;
+            --background-color: #f9f9f9;
+            --border-color: #ddd;
+            --text-color: #333;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+        
+        .app-cards {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .app-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: 350px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        
+        .app-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+        
+        .app-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        
+        .app-description {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .btn:hover {
+            background-color: #3a7bd5;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #4cae4c;
+        }
+        
+        footer {
+            background-color: #fff;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            margin-top: 40px;
+        }
+        
+        .footer-text {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .app-cards {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .app-card {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Building Drawings System</h1>
+        <p>Manage and view building drawings for all floors and rooms</p>
+    </header>
+    
+    <div class="container">
+        <div class="app-cards">
+            <div class="app-card">
+                <div class="app-icon">📋</div>
+                <h2 class="app-title">Drawing Manager</h2>
+                <p class="app-description">
+                    Create and manage the database of available drawings for each level, room, type, orientation, and stage of the building.
+                </p>
+                <a href="building-drawings-manager.html" class="btn" target="_blank">Open Manager</a>
+            </div>
+            
+            <div class="app-card">
+                <div class="app-icon">🔍</div>
+                <h2 class="app-title">Drawing Viewer</h2>
+                <p class="app-description">
+                    View and interact with building drawings using an intuitive interface with a visual floor selector and navigation controls.
+                </p>
+                <a href="drawings-viewer.html" class="btn btn-secondary" target="_blank">Open Viewer</a>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p class="footer-text">Building Drawings System &copy; 2025</p>
+    </footer>
+    
+    <script>
+        // Save separate HTML files
+        function saveHtmlFile(filename, content) {
+            const blob = new Blob([content], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
