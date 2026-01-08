@@ -1,0 +1,104 @@
+:root {
+    --bg-color: #121214;
+    --panel-bg: rgba(30, 30, 35, 0.95);
+    --text-main: #f0f0f0;
+    --accent: #d4b445;
+    --border: rgba(255,255,255,0.1);
+}
+
+body { margin: 0; overflow: hidden; background-color: var(--bg-color); font-family: 'Segoe UI', sans-serif; color: var(--text-main); }
+#canvas-3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; outline: none; }
+
+/* UI Panel */
+#schematic-panel {
+    position: absolute; bottom: 20px; left: 20px; width: 360px; height: 400px;
+    background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px;
+    backdrop-filter: blur(12px); box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: flex; flex-direction: column; z-index: 10;
+    transition: height 0.3s ease;
+    overflow: hidden;
+}
+
+#schematic-panel.minimized {
+    height: 46px; /* Header only */
+}
+
+.panel-header {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 600; text-transform: uppercase; color: #aaa;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.2);
+}
+
+.view-controls { display: flex; gap: 4px; background: rgba(255,255,255,0.05); padding: 2px; border-radius: 4px; }
+.view-btn {
+    background: none; border: none; color: #888; padding: 4px 8px; font-size: 10px; font-weight: 700;
+    cursor: pointer; border-radius: 2px; transition: all 0.2s;
+}
+.view-btn:hover { color: #fff; }
+.view-btn.active { background: var(--accent); color: #111; }
+
+.panel-actions button {
+    background: none; border: none; color: #888; cursor: pointer; font-size: 16px; padding: 0 5px;
+}
+.panel-actions button:hover { color: #fff; }
+
+/* Custom Header Select Style - Professional Dark */
+#window-select {
+    background-color: #222 !important;
+    color: #eee !important;
+    border: 1px solid #444;
+    font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-right: 8px;
+    cursor: pointer;
+    outline: none;
+}
+#window-select:hover { border-color: #666; }
+
+#canvas-wrapper {
+    flex: 1; position: relative; overflow: hidden; width: 100%; height: 100%; background: #1a1a1a;
+}
+#canvas-2d { width: 100%; height: 100%; cursor: grab; }
+#canvas-2d:active { cursor: grabbing; }
+
+#loader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 100; transition: opacity 0.6s ease; pointer-events: none;
+}
+.spinner {
+    width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Lil-Gui Customization - Professional Dark Theme */
+.lil-gui { 
+    --background-color: rgba(20, 20, 25, 0.95);
+    --text-color: #eeeeee;
+    --title-background-color: #2a2a2a;
+    --widget-color: #444;
+    --hover-color: #555;
+    --focus-color: #666;
+    --number-color: var(--accent);
+    --string-color: #a3e635;
+}
+.lil-gui .title { color: var(--accent); font-weight: 700; border-left: 3px solid var(--accent); }
+
+/* Dropdown Styling - Clean Dark Mode */
+.lil-gui .controller select {
+    background-color: #333 !important;
+    color: #f0f0f0 !important;
+    border: 1px solid #555 !important;
+    border-radius: 2px;
+    padding: 2px 5px;
+    font-size: 11px;
+}
+.lil-gui .controller select:hover {
+    background-color: #444 !important;
+    border-color: #777 !important;
+}
+.lil-gui .controller select option {
+    background-color: #222;
+    color: #fff;
+}
