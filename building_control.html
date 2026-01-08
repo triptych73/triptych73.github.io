@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Control Portal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-title">
+                <h1>Building Control Portal</h1>
+                <span class="subtitle">Church Tower • Final Sign-off</span>
+            </div>
+            <div class="progress-section">
+                <div class="progress-container">
+                    <div class="progress-bar"></div>
+                </div>
+                <span class="progress-stats">60% Complete</span>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Left: Status -->
+            <aside>
+                <div class="glass-card">
+                    <div class="card-title"><i class="fas fa-church"></i> Status</div>
+                    <ul class="info-list">
+                        <li class="info-item">
+                            <span class="info-label">Lower 60%</span>
+                            <span class="info-value highlight-green">Signed Off <i class="fas fa-check"></i></span>
+                        </li>
+                        <li class="info-item">
+                            <span class="info-label">Current</span>
+                            <span class="info-value">Upper Floors</span>
+                        </li>
+                        <li class="info-item">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">Change of Use</span>
+                        </li>
+                        <li class="info-item">
+                            <span class="info-label">Inspector</span>
+                            <span class="info-value">Assigned</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-title"><i class="fas fa-fire-extinguisher"></i> Safety</div>
+                    <ul class="info-list">
+                        <li class="info-item">
+                            <span class="info-label">Sprinklers</span>
+                            <span class="info-value highlight-orange">BS 9251</span>
+                        </li>
+                        <li class="info-item">
+                            <span class="info-label">Strategy</span>
+                            <span class="info-value">Engineered</span>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Center: Checklist -->
+            <main>
+                <div class="glass-card">
+                    <div class="card-title"><i class="fas fa-tasks"></i> Compliance Checklist</div>
+
+                    <div class="checklist-section">
+                        <div class="section-header"><i class="fas fa-fire"></i> Part B: Fire Safety</div>
+                        <div class="checklist-item">
+                            <div class="checkbox"><i class="fas fa-check"></i></div>
+                            <div class="item-content"><span class="item-title">Sprinkler Commissioning (BS 9251)</span>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox"><i class="fas fa-check"></i></div>
+                            <div class="item-content"><span class="item-title">Fire Alarm (LD1/Grade A)</span></div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox"><i class="fas fa-check"></i></div>
+                            <div class="item-content"><span class="item-title">Emergency Lighting</span></div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox"><i class="fas fa-check"></i></div>
+                            <div class="item-content"><span class="item-title">Fire Door Certs (FD30S)</span></div>
+                        </div>
+                    </div>
+
+                    <div class="checklist-section">
+                        <div class="section-header"><i class="fas fa-leaf"></i> Part L: Conservation</div>
+                        <div class="checklist-item">
+                            <div class="checkbox"><i class="fas fa-check"></i></div>
+                            <div class="item-content"><span class="item-title">EPC Assessment</span></div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox"><i class="fas fa-check"></i></div>
+                            <div class="item-content"><span class="item-title">Thermal Element Upgrades</span></div>
+                        </div>
+                    </div>
+
+                    <div class="checklist-section">
+                        <div class="section-header"><i class="fas fa-bolt"></i> Services & Structure</div>
+                        <div class="checklist-item">
+                            <div class="checkbox"><i class="fas fa-check"></i></div>
+                            <div class="item-content"><span class="item-title">Electrical Cert (NICEIC)</span></div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox"><i class="fas fa-check"></i></div>
+                            <div class="item-content"><span class="item-title">Structural Sign-off</span></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right: Documents -->
+            <aside>
+                <div class="glass-card">
+                    <div class="card-title"><i class="fas fa-book"></i> Approved Docs</div>
+                    <a href="https://assets.publishing.service.gov.uk/media/637a2ccb8fa8f55ba15be0fd/ADS_B1_v1.pdf"
+                        target="_blank" class="doc-link">
+                        <div class="doc-icon"><i class="fas fa-fire"></i></div>
+                        <div>
+                            <div class="doc-name">Doc B</div>
+                            <div class="doc-sub">Fire Safety</div>
+                        </div>
+                    </a>
+                    <a href="https://assets.publishing.service.gov.uk/media/63d91dcdd3bf7f251e6047e2/ADL1_2021_with_2023_amendments.pdf"
+                        target="_blank" class="doc-link">
+                        <div class="doc-icon"><i class="fas fa-leaf"></i></div>
+                        <div>
+                            <div class="doc-name">Doc L</div>
+                            <div class="doc-sub">Conservation</div>
+                        </div>
+                    </a>
+                    <a href="https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/540330/BR_PDF_AD_M1_2015_with_2016_amendments_V3.pdf"
+                        target="_blank" class="doc-link">
+                        <div class="doc-icon"><i class="fas fa-wheelchair"></i></div>
+                        <div>
+                            <div class="doc-name">Doc M</div>
+                            <div class="doc-sub">Access</div>
+                        </div>
+                    </a>
+                    <a href="https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/441872/BR_PDF_AD_P_2013.pdf"
+                        target="_blank" class="doc-link">
+                        <div class="doc-icon"><i class="fas fa-bolt"></i></div>
+                        <div>
+                            <div class="doc-name">Doc P</div>
+                            <div class="doc-sub">Electrical</div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-title"><i class="fas fa-file-upload"></i> Upload</div>
+                    <div class="upload-area">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <div>Drop certificates here</div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

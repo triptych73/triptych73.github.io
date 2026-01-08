@@ -1,0 +1,347 @@
+/* Compact Functional Theme */
+/* Tokens from Triptych73 Gantt App */
+
+:root {
+    --bg-midnight: #0F1115;
+    --bg-panel: #16191D;
+    --border: #2A2E35;
+    --text-stone: #F5F5F0;
+    --text-muted: #888888;
+    --bronze: #9A8C74;
+    --emerald: #10B981;
+    --alert: #EF4444;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    background: var(--bg-midnight);
+    color: var(--text-stone);
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+}
+
+/* Typography - Compact */
+h1,
+h2,
+.card-title {
+    font-family: 'Cinzel', serif;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.header-title {
+    display: flex;
+    flex-direction: column;
+}
+
+h1 {
+    font-size: 1.4rem;
+    font-weight: 500;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.subtitle {
+    color: var(--bronze);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 0.25rem;
+}
+
+/* Progress Bar - Inline */
+.progress-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    max-width: 400px;
+}
+
+.progress-container {
+    background: var(--bg-panel);
+    height: 4px;
+    border: 1px solid var(--border);
+    flex: 1;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--bronze);
+    width: 60%;
+    transition: width 0.3s ease;
+}
+
+.progress-stats {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+/* Grid Layout - Tighter */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 240px 1fr 240px;
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .progress-section {
+        max-width: 100%;
+    }
+}
+
+/* Cards - Reduced Padding */
+.glass-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 1rem;
+}
+
+.glass-card+.glass-card {
+    margin-top: 1rem;
+}
+
+.card-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--bronze);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.card-title i {
+    color: var(--text-muted);
+    font-size: 0.8em;
+}
+
+/* Info List - Compact */
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+}
+
+.info-value {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.highlight-orange {
+    color: var(--bronze);
+}
+
+.highlight-green {
+    color: var(--emerald);
+}
+
+/* Checklist - Compact Rows */
+.checklist-section {
+    margin-bottom: 1.25rem;
+}
+
+.checklist-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-header {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    color: var(--text-stone);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+}
+
+.checklist-item {
+    background: transparent;
+    border: 1px solid var(--border);
+    margin-bottom: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.checklist-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--bronze);
+}
+
+.checklist-item.checked {
+    background: rgba(16, 185, 129, 0.05);
+    border-color: var(--emerald);
+}
+
+.checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.checklist-item.checked .checkbox {
+    background: var(--emerald);
+    border-color: var(--emerald);
+}
+
+.checkbox i {
+    color: var(--bg-midnight);
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.checklist-item.checked .checkbox i {
+    opacity: 1;
+}
+
+.item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.item-title {
+    font-weight: 500;
+    font-size: 0.8rem;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-desc {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: none;
+    /* Hide descriptions for compact view */
+}
+
+/* Document Links - Compact */
+.doc-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    margin-bottom: 0.25rem;
+}
+
+.doc-link:hover {
+    border-color: var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-stone);
+}
+
+.doc-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--bg-midnight);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bronze);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.doc-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.doc-sub {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+/* Upload Area - Minimal */
+.upload-area {
+    border: 1px dashed var(--border);
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: 0.15s;
+    font-size: 0.7rem;
+}
+
+.upload-area:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.upload-area i {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--bronze);
+}
