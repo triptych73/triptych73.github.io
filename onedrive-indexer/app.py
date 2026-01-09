@@ -21,67 +21,81 @@ st.set_page_config(page_title="OneDrive Indexer", page_icon="📂", layout="wide
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    
+    :root {
+        --primary-color: #4a89dc;
+        --secondary-color: #5cb85c;
+        --background-color: #f9f9f9;
+        --border-color: #ddd;
+        --text-color: #333;
+        --card-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
     
     html, body, [class*="css"]  {
-        font-family: 'Inter', sans-serif;
-        color: #1f2937;
+        font-family: 'Inter', 'Segoe UI', sans-serif;
+        color: var(--text-color);
     }
     
-    .reportview-container {
-        background: #f9fafb;
+    .stApp {
+        background-color: var(--background-color);
     }
     
-    /* Breadcrumb / distinct header */
+    /* Breadcrumb */
     .breadcrumb {
         font-size: 0.95rem;
         color: #4b5563;
         padding: 0.75rem 1rem;
         background: #ffffff;
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        box-shadow: var(--card-shadow);
         margin-bottom: 1.5rem;
     }
     
     /* Cost Box */
     .cost-box {
         padding: 1rem;
-        background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
-        border: 1px solid #81e6d9;
-        border-radius: 12px;
-        color: #234e52;
+        background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+        border: 1px solid #91d5ff;
+        border-radius: 8px;
+        color: #003a8c;
         font-weight: 600;
         text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--card-shadow);
         margin-bottom: 1.5rem;
     }
     
-    .stCheckbox { margin-top: 0px; }
-    
-    /* Indexed Badge styling */
+    /* Indexed Badge */
     .indexed-badge {
         display: inline-flex;
         align-items: center;
         padding: 2px 8px;
-        background-color: #ecfdf5;
-        border: 1px solid #a7f3d0;
-        border-radius: 9999px; /* Pill shape */
-        color: #047857;
+        background-color: #f0fdf4;
+        border: 1px solid #86efac;
+        border-radius: 9999px;
+        color: var(--secondary-color);
         font-size: 0.75rem;
         font-weight: 600;
         margin-left: 8px;
     }
     
-    /* Row styling overrides */
+    /* Row styling */
     div[data-testid="stHorizontalBlock"] {
         align-items: center;
-        padding-top: 4px;
-        padding-bottom: 4px;
-        border-bottom: 1px solid #f3f4f6;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-color);
     }
     div[data-testid="stHorizontalBlock"]:hover {
-        background-color: #f9fafb;
+        background-color: #f0f9ff;
+    }
+    
+    /* Sticky action panel */
+    .sticky-action-panel {
+        position: sticky;
+        top: 20px;
+        align-self: flex-start;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -213,6 +227,8 @@ def go_up():
         st.session_state["indexed_ids_cache"] = set()
         st.rerun()
 
+current_selection = []
+
 col_nav, col_action = st.columns([3, 1])
 
 with col_nav:
@@ -251,7 +267,7 @@ with col_nav:
     h1.write("✅")
     h3.write("**Name**")
 
-    current_selection = []
+    # Selection list populated in loop
 
     for item in items:
         item_id = item.get('id')
@@ -289,6 +305,7 @@ with col_nav:
                     st.error("Could not fetch document.")
 
 with col_action:
+    st.markdown('<div class="sticky-action-panel">', unsafe_allow_html=True)
     st.markdown("### Actions")
     current_cost = cost_estimator.get_total_cost()
     st.markdown(f"<div class='cost-box'>💰 Est. Cost: ${current_cost:.4f}</div>", unsafe_allow_html=True)
@@ -325,3 +342,6 @@ with col_action:
                     st.warning("No supported files found.")
         except Exception as e:
             st.error(f"Error: {e}")
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # Close sticky container
+
