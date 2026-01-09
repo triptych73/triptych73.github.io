@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <!-- Firebase Auth Guard -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) window.location.href = 'login.html';
+            });
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Structural Stair Solver 2.5</title>
@@ -14,23 +27,61 @@
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    
+
     <style>
-        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 0; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        .interactive-panel { pointer-events: auto; transition: height 0.3s ease; }
-        
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
-        
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #111;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .interactive-panel {
+            pointer-events: auto;
+            transition: height 0.3s ease;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+
         .panel-content {
             transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, margin 0.3s ease;
-            max-height: 1000px; 
+            max-height: 1000px;
             opacity: 1;
             overflow: hidden;
         }
+
         .panel-content.collapsed {
             max-height: 0;
             opacity: 0;
@@ -38,546 +89,548 @@
         }
     </style>
 </head>
+
 <body>
 
-<div id="canvas-container"></div>
-<div id="root"></div>
+    <div id="canvas-container"></div>
+    <div id="root"></div>
 
-<script type="text/babel">
+    <script type="text/babel">
 
-    const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef } = React;
 
-    // --- Constants ---
-    const STEEL_DENSITY = 7850; 
-    const GRAVITY = 9.81; 
-    const E_MODULUS = 210000; 
-    const YIELD_S275 = 275; 
-    const YIELD_S355 = 355; 
-    const LOCAL_POINT_LOAD = 1000; 
-    const LOCAL_DEFLECTION_LIMIT = 2.0; 
-    const SLENDERNESS_LIMIT = 50; 
+        // --- Constants ---
+        const STEEL_DENSITY = 7850;
+        const GRAVITY = 9.81;
+        const E_MODULUS = 210000;
+        const YIELD_S275 = 275;
+        const YIELD_S355 = 355;
+        const LOCAL_POINT_LOAD = 1000;
+        const LOCAL_DEFLECTION_LIMIT = 2.0;
+        const SLENDERNESS_LIMIT = 50;
 
-    // --- UI Components ---
-    const DeflectionBreakdown = ({ beam, sag, total, limit }) => {
-        const beamPct = (beam / (total || 1)) * 100;
-        const sagPct = (sag / (total || 1)) * 100;
-        
-        return (
-            <div className="mt-3 bg-gray-900/50 p-3 rounded border border-gray-700">
-                <div className="flex justify-between items-end mb-1">
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Total Deflection</span>
-                    <span className={`text-lg font-mono font-bold ${total > limit ? 'text-red-500' : 'text-green-400'}`}>
-                        {total.toFixed(1)} <span className="text-xs text-gray-500">mm</span>
-                    </span>
-                </div>
-                
-                <div className="w-full h-2 bg-gray-700 rounded-full flex overflow-hidden mb-2">
-                    <div style={{ width: `${beamPct}%` }} className="bg-blue-500 h-full" title="Beam Bending"></div>
-                    <div style={{ width: `${sagPct}%` }} className="bg-orange-500 h-full" title="Accordion Sag"></div>
-                </div>
+        // --- UI Components ---
+        const DeflectionBreakdown = ({ beam, sag, total, limit }) => {
+            const beamPct = (beam / (total || 1)) * 100;
+            const sagPct = (sag / (total || 1)) * 100;
 
-                <div className="flex justify-between text-[10px] space-x-2">
-                    <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
-                        <span className="text-gray-400">Beam Bend: <span className="text-gray-200 font-mono">{beam.toFixed(1)}mm</span></span>
+            return (
+                <div className="mt-3 bg-gray-900/50 p-3 rounded border border-gray-700">
+                    <div className="flex justify-between items-end mb-1">
+                        <span className="text-xs text-gray-400 font-semibold uppercase">Total Deflection</span>
+                        <span className={`text-lg font-mono font-bold ${total > limit ? 'text-red-500' : 'text-green-400'}`}>
+                            {total.toFixed(1)} <span className="text-xs text-gray-500">mm</span>
+                        </span>
                     </div>
-                    <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-orange-500 mr-1"></div>
-                        <span className="text-gray-400">Unfolding: <span className="text-gray-200 font-mono">{sag.toFixed(1)}mm</span></span>
+
+                    <div className="w-full h-2 bg-gray-700 rounded-full flex overflow-hidden mb-2">
+                        <div style={{ width: `${beamPct}%` }} className="bg-blue-500 h-full" title="Beam Bending"></div>
+                        <div style={{ width: `${sagPct}%` }} className="bg-orange-500 h-full" title="Accordion Sag"></div>
                     </div>
+
+                    <div className="flex justify-between text-[10px] space-x-2">
+                        <div className="flex items-center">
+                            <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
+                            <span className="text-gray-400">Beam Bend: <span className="text-gray-200 font-mono">{beam.toFixed(1)}mm</span></span>
+                        </div>
+                        <div className="flex items-center">
+                            <div className="w-2 h-2 rounded-full bg-orange-500 mr-1"></div>
+                            <span className="text-gray-400">Unfolding: <span className="text-gray-200 font-mono">{sag.toFixed(1)}mm</span></span>
+                        </div>
+                    </div>
+                    <div className="text-[10px] text-right text-gray-500 mt-1">Limit: {limit.toFixed(1)}mm</div>
                 </div>
-                <div className="text-[10px] text-right text-gray-500 mt-1">Limit: {limit.toFixed(1)}mm</div>
-            </div>
-        );
-    };
-
-    const StatusBadge = ({ pass, value, unit, label, subLabel, warning }) => {
-        let borderColor = pass ? 'border-green-600' : 'border-red-600';
-        let bgColor = pass ? 'bg-green-900/30' : 'bg-red-900/30';
-        let badgeColor = pass ? 'bg-green-600' : 'bg-red-600';
-        let badgeText = pass ? 'PASS' : 'FAIL';
-
-        if (warning) {
-            borderColor = 'border-yellow-600';
-            bgColor = 'bg-yellow-900/30';
-            badgeColor = 'bg-yellow-600';
-            badgeText = 'WARNING';
-        }
-
-        return (
-            <div className={`p-2 rounded border ${borderColor} ${bgColor}`}>
-                <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs text-gray-400 uppercase font-semibold">{label}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${badgeColor}`}>
-                        {badgeText}
-                    </span>
-                </div>
-                <div className="text-xl font-mono font-bold text-gray-100">
-                    {value} <span className="text-sm text-gray-500">{unit}</span>
-                </div>
-                {subLabel && <div className="text-[10px] text-gray-400 mt-1">{subLabel}</div>}
-            </div>
-        );
-    };
-
-    const App = () => {
-        const [showInput, setShowInput] = useState(true);
-        const [showResults, setShowResults] = useState(true);
-
-        // Inputs can be empty strings temporarily for editing
-        const [inputs, setInputs] = useState({
-            steelGrade: 'S275',
-            liveLoadType: 'domestic',
-            stepCount: 14,
-            width: 1000,
-            rise: 180,
-            going: 250,
-            thickness: 6,
-            cheekVisible: true,
-            cheekSide: 'two',
-            cheekHeight: 250,
-            cheekThickness: 10,
-        });
-
-        const [results, setResults] = useState({
-            deflectionTotal: 0, deflectionBeam: 0, deflectionSag: 0, globalLimit: 0, passGlobal: true,
-            stress: 0, passStress: true,
-            localDeflection: 0, passLocal: true, supportCondition: '',
-            slendernessRatio: 0, passSlenderness: true,
-            reactionForce: 0, steelMassKg: 0, frequency: 0,
-            overallStatus: 'SAFE',
-            span: 0, inertia: 0, totalLoad: 0
-        });
-
-        const sceneRef = useRef(null);
-
-        // --- Load Config from URL ---
-        useEffect(() => {
-            const params = new URLSearchParams(window.location.search);
-            const configStr = params.get('config');
-            if (configStr) {
-                try {
-                    const config = JSON.parse(configStr);
-                    setInputs(prev => ({ ...prev, ...config }));
-                } catch (e) {
-                    console.error("Invalid JSON config in URL", e);
-                }
-            }
-        }, []);
-
-        // --- Helper for Inputs ---
-        // Allows deleting the number (empty string) without forcing 0 immediately
-        const handleNumInput = (field, value) => {
-            if (value === '') {
-                setInputs(prev => ({ ...prev, [field]: '' }));
-            } else {
-                setInputs(prev => ({ ...prev, [field]: parseFloat(value) }));
-            }
+            );
         };
 
-        // --- Physics Engine ---
-        useEffect(() => {
-            calculateStructure();
-        }, [inputs]);
+        const StatusBadge = ({ pass, value, unit, label, subLabel, warning }) => {
+            let borderColor = pass ? 'border-green-600' : 'border-red-600';
+            let bgColor = pass ? 'bg-green-900/30' : 'bg-red-900/30';
+            let badgeColor = pass ? 'bg-green-600' : 'bg-red-600';
+            let badgeText = pass ? 'PASS' : 'FAIL';
 
-        const calculateStructure = () => {
-            // Safe parse for calculations (treat empty string as 0)
-            const getVal = (val) => (val === '' || isNaN(val)) ? 0 : val;
-
-            const stepCount = getVal(inputs.stepCount);
-            const width = getVal(inputs.width);
-            const rise = getVal(inputs.rise);
-            const going = getVal(inputs.going);
-            const thickness = getVal(inputs.thickness);
-            const cheekHeight = getVal(inputs.cheekHeight);
-            const cheekThickness = getVal(inputs.cheekThickness);
-            
-            const { steelGrade, liveLoadType, cheekVisible, cheekSide } = inputs;
-
-            // 1. Geometry & Loads
-            const L = stepCount * going; 
-            const stepHypotenuse = Math.sqrt(rise**2 + going**2);
-            const slopeLength = stepCount * stepHypotenuse;
-            
-            const stepVolumeM3 = ((stepCount * (rise + going) * width * thickness) / 1e9); 
-            let cheekVolumeM3 = 0;
-            if (cheekVisible) {
-                const cheekCount = cheekSide === 'two' ? 2 : 1;
-                cheekVolumeM3 = (cheekCount * slopeLength * cheekHeight * cheekThickness) / 1e9;
-            }
-            const totalSteelMassKg = (stepVolumeM3 + cheekVolumeM3) * STEEL_DENSITY;
-            const deadLoadN = totalSteelMassKg * GRAVITY;
-            const liveLoadKnM2 = liveLoadType === 'domestic' ? 1.5 : 2.5;
-            const planAreaM2 = (L * width) / 1e6;
-            const liveLoadN = (liveLoadKnM2 * 1000) * planAreaM2;
-            const w_SLS = deadLoadN + liveLoadN;
-            const w_ULS = (deadLoadN * 1.35) + (liveLoadN * 1.5);
-
-            // 2. Inertia (Rigid Body)
-            const theta = Math.atan(rise / (going || 1)); // prevent div/0
-            const t_waist = rise * Math.cos(theta); 
-            const expansionFactor = (rise + going) / (stepHypotenuse || 1);
-            const A_steel_smeared = width * thickness * expansionFactor;
-            
-            // Base Inertia (Steps)
-            let I_rigid = (A_steel_smeared * Math.pow(t_waist, 2)) / 12;
-            
-            if (cheekVisible) {
-                const count = cheekSide === 'two' ? 2 : 1;
-                I_rigid += count * ((cheekThickness * Math.pow(cheekHeight, 3)) / 12);
+            if (warning) {
+                borderColor = 'border-yellow-600';
+                bgColor = 'bg-yellow-900/30';
+                badgeColor = 'bg-yellow-600';
+                badgeText = 'WARNING';
             }
 
-            // 3. Deflection A: Beam (Rigid)
-            // Prevent div by zero
-            const I_safe = I_rigid > 0 ? I_rigid : 1;
-            const L_safe = L > 0 ? L : 1;
+            return (
+                <div className={`p-2 rounded border ${borderColor} ${bgColor}`}>
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-gray-400 uppercase font-semibold">{label}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${badgeColor}`}>
+                            {badgeText}
+                        </span>
+                    </div>
+                    <div className="text-xl font-mono font-bold text-gray-100">
+                        {value} <span className="text-sm text-gray-500">{unit}</span>
+                    </div>
+                    {subLabel && <div className="text-[10px] text-gray-400 mt-1">{subLabel}</div>}
+                </div>
+            );
+        };
 
-            const loadPerMm_SLS = w_SLS / L_safe;
-            const deflectionBeam = (5 * loadPerMm_SLS * Math.pow(L, 4)) / (384 * E_MODULUS * I_safe);
-            const globalLimit = L / 360;
+        const App = () => {
+            const [showInput, setShowInput] = useState(true);
+            const [showResults, setShowResults] = useState(true);
 
-            // 4. Deflection B: Sag (Unfolding)
-            let deflectionTotal = 0;
-            let deflectionSag = 0;
-
-            if (cheekVisible) {
-                deflectionTotal = deflectionBeam;
-                deflectionSag = 0;
-            } else {
-                // Formula: min(0.98, 0.2 + (t/30)^1.5)
-                const thicknessFactor = Math.pow(thickness / 30, 1.5);
-                const efficiency = Math.min(0.98, 0.2 + thicknessFactor);
-                
-                const I_effective = I_safe * efficiency;
-                
-                deflectionTotal = (5 * loadPerMm_SLS * Math.pow(L, 4)) / (384 * E_MODULUS * I_effective);
-                deflectionSag = Math.max(0, deflectionTotal - deflectionBeam);
-            }
-
-            // 5. Stress
-            const loadPerMm_ULS = w_ULS / L_safe;
-            const M_max = (loadPerMm_ULS * Math.pow(L, 2)) / 8; 
-            const structuralDepth = cheekVisible && cheekHeight > t_waist ? cheekHeight : t_waist;
-            const stress = (M_max * (structuralDepth / 2)) / I_safe;
-            const yieldStrength = steelGrade === 'S275' ? YIELD_S275 : YIELD_S355;
-
-            // 6. Local Tread Analysis
-            const effective_width = Math.max(300, width); 
-            const I_longitudinal = (effective_width * Math.pow(thickness, 3)) / 12;
-            const def_longitudinal = (LOCAL_POINT_LOAD * Math.pow(going, 3)) / (192 * E_MODULUS * (I_longitudinal || 1));
-
-            let def_transverse = 0;
-            const I_transverse = (going * Math.pow(thickness, 3)) / 12;
-            let supportCondition = '';
-
-            if (!cheekVisible) {
-                def_transverse = 1e6; // Infinite
-                supportCondition = '2-Side (Risers)';
-            } else if (cheekSide === 'one') {
-                const a = width / 2;
-                def_transverse = (LOCAL_POINT_LOAD * Math.pow(a, 3)) / (3 * E_MODULUS * (I_transverse || 1));
-                supportCondition = '3-Side (Cantilever)';
-            } else {
-                def_transverse = (LOCAL_POINT_LOAD * Math.pow(width, 3)) / (192 * E_MODULUS * (I_transverse || 1));
-                supportCondition = '4-Side (Fixed)';
-            }
-
-            const localDeflection = 1 / ((1 / (def_transverse || 1e9)) + (1 / (def_longitudinal || 1e9)));
-
-            // 7. Slenderness & Freq
-            const slendernessRatio = rise / (thickness || 1);
-            const loadPerMm_Dead = deadLoadN / L_safe;
-            const stiffnessRatio = deflectionBeam / (deflectionTotal || 1); 
-            const deflection_Dead_Beam = (5 * loadPerMm_Dead * Math.pow(L, 4)) / (384 * E_MODULUS * I_safe);
-            const deflection_Dead_Total = deflection_Dead_Beam / (stiffnessRatio || 1);
-            
-            const frequency = deflection_Dead_Total > 0 ? 18 / Math.sqrt(deflection_Dead_Total) : 0;
-
-            // 8. Status
-            const passGlobal = deflectionTotal <= globalLimit;
-            const passStress = stress <= yieldStrength;
-            const passLocal = localDeflection <= LOCAL_DEFLECTION_LIMIT;
-            const passSlenderness = slendernessRatio <= SLENDERNESS_LIMIT;
-
-            let overallStatus = 'SAFE';
-            if (!passGlobal || !passStress || !passLocal || !passSlenderness) {
-                overallStatus = 'UNSAFE';
-            }
-
-            setResults({
-                deflectionTotal, deflectionBeam, deflectionSag, globalLimit, passGlobal,
-                stress, passStress,
-                localDeflection, passLocal, supportCondition,
-                slendernessRatio, passSlenderness,
-                reactionForce: w_ULS / 2 / 1000, 
-                steelMassKg: totalSteelMassKg,
-                frequency,
-                overallStatus,
-                span: L,
-                inertia: I_rigid, 
-                totalLoad: w_ULS
+            // Inputs can be empty strings temporarily for editing
+            const [inputs, setInputs] = useState({
+                steelGrade: 'S275',
+                liveLoadType: 'domestic',
+                stepCount: 14,
+                width: 1000,
+                rise: 180,
+                going: 250,
+                thickness: 6,
+                cheekVisible: true,
+                cheekSide: 'two',
+                cheekHeight: 250,
+                cheekThickness: 10,
             });
+
+            const [results, setResults] = useState({
+                deflectionTotal: 0, deflectionBeam: 0, deflectionSag: 0, globalLimit: 0, passGlobal: true,
+                stress: 0, passStress: true,
+                localDeflection: 0, passLocal: true, supportCondition: '',
+                slendernessRatio: 0, passSlenderness: true,
+                reactionForce: 0, steelMassKg: 0, frequency: 0,
+                overallStatus: 'SAFE',
+                span: 0, inertia: 0, totalLoad: 0
+            });
+
+            const sceneRef = useRef(null);
+
+            // --- Load Config from URL ---
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const configStr = params.get('config');
+                if (configStr) {
+                    try {
+                        const config = JSON.parse(configStr);
+                        setInputs(prev => ({ ...prev, ...config }));
+                    } catch (e) {
+                        console.error("Invalid JSON config in URL", e);
+                    }
+                }
+            }, []);
+
+            // --- Helper for Inputs ---
+            // Allows deleting the number (empty string) without forcing 0 immediately
+            const handleNumInput = (field, value) => {
+                if (value === '') {
+                    setInputs(prev => ({ ...prev, [field]: '' }));
+                } else {
+                    setInputs(prev => ({ ...prev, [field]: parseFloat(value) }));
+                }
+            };
+
+            // --- Physics Engine ---
+            useEffect(() => {
+                calculateStructure();
+            }, [inputs]);
+
+            const calculateStructure = () => {
+                // Safe parse for calculations (treat empty string as 0)
+                const getVal = (val) => (val === '' || isNaN(val)) ? 0 : val;
+
+                const stepCount = getVal(inputs.stepCount);
+                const width = getVal(inputs.width);
+                const rise = getVal(inputs.rise);
+                const going = getVal(inputs.going);
+                const thickness = getVal(inputs.thickness);
+                const cheekHeight = getVal(inputs.cheekHeight);
+                const cheekThickness = getVal(inputs.cheekThickness);
+
+                const { steelGrade, liveLoadType, cheekVisible, cheekSide } = inputs;
+
+                // 1. Geometry & Loads
+                const L = stepCount * going;
+                const stepHypotenuse = Math.sqrt(rise ** 2 + going ** 2);
+                const slopeLength = stepCount * stepHypotenuse;
+
+                const stepVolumeM3 = ((stepCount * (rise + going) * width * thickness) / 1e9);
+                let cheekVolumeM3 = 0;
+                if (cheekVisible) {
+                    const cheekCount = cheekSide === 'two' ? 2 : 1;
+                    cheekVolumeM3 = (cheekCount * slopeLength * cheekHeight * cheekThickness) / 1e9;
+                }
+                const totalSteelMassKg = (stepVolumeM3 + cheekVolumeM3) * STEEL_DENSITY;
+                const deadLoadN = totalSteelMassKg * GRAVITY;
+                const liveLoadKnM2 = liveLoadType === 'domestic' ? 1.5 : 2.5;
+                const planAreaM2 = (L * width) / 1e6;
+                const liveLoadN = (liveLoadKnM2 * 1000) * planAreaM2;
+                const w_SLS = deadLoadN + liveLoadN;
+                const w_ULS = (deadLoadN * 1.35) + (liveLoadN * 1.5);
+
+                // 2. Inertia (Rigid Body)
+                const theta = Math.atan(rise / (going || 1)); // prevent div/0
+                const t_waist = rise * Math.cos(theta);
+                const expansionFactor = (rise + going) / (stepHypotenuse || 1);
+                const A_steel_smeared = width * thickness * expansionFactor;
+
+                // Base Inertia (Steps)
+                let I_rigid = (A_steel_smeared * Math.pow(t_waist, 2)) / 12;
+
+                if (cheekVisible) {
+                    const count = cheekSide === 'two' ? 2 : 1;
+                    I_rigid += count * ((cheekThickness * Math.pow(cheekHeight, 3)) / 12);
+                }
+
+                // 3. Deflection A: Beam (Rigid)
+                // Prevent div by zero
+                const I_safe = I_rigid > 0 ? I_rigid : 1;
+                const L_safe = L > 0 ? L : 1;
+
+                const loadPerMm_SLS = w_SLS / L_safe;
+                const deflectionBeam = (5 * loadPerMm_SLS * Math.pow(L, 4)) / (384 * E_MODULUS * I_safe);
+                const globalLimit = L / 360;
+
+                // 4. Deflection B: Sag (Unfolding)
+                let deflectionTotal = 0;
+                let deflectionSag = 0;
+
+                if (cheekVisible) {
+                    deflectionTotal = deflectionBeam;
+                    deflectionSag = 0;
+                } else {
+                    // Formula: min(0.98, 0.2 + (t/30)^1.5)
+                    const thicknessFactor = Math.pow(thickness / 30, 1.5);
+                    const efficiency = Math.min(0.98, 0.2 + thicknessFactor);
+
+                    const I_effective = I_safe * efficiency;
+
+                    deflectionTotal = (5 * loadPerMm_SLS * Math.pow(L, 4)) / (384 * E_MODULUS * I_effective);
+                    deflectionSag = Math.max(0, deflectionTotal - deflectionBeam);
+                }
+
+                // 5. Stress
+                const loadPerMm_ULS = w_ULS / L_safe;
+                const M_max = (loadPerMm_ULS * Math.pow(L, 2)) / 8;
+                const structuralDepth = cheekVisible && cheekHeight > t_waist ? cheekHeight : t_waist;
+                const stress = (M_max * (structuralDepth / 2)) / I_safe;
+                const yieldStrength = steelGrade === 'S275' ? YIELD_S275 : YIELD_S355;
+
+                // 6. Local Tread Analysis
+                const effective_width = Math.max(300, width);
+                const I_longitudinal = (effective_width * Math.pow(thickness, 3)) / 12;
+                const def_longitudinal = (LOCAL_POINT_LOAD * Math.pow(going, 3)) / (192 * E_MODULUS * (I_longitudinal || 1));
+
+                let def_transverse = 0;
+                const I_transverse = (going * Math.pow(thickness, 3)) / 12;
+                let supportCondition = '';
+
+                if (!cheekVisible) {
+                    def_transverse = 1e6; // Infinite
+                    supportCondition = '2-Side (Risers)';
+                } else if (cheekSide === 'one') {
+                    const a = width / 2;
+                    def_transverse = (LOCAL_POINT_LOAD * Math.pow(a, 3)) / (3 * E_MODULUS * (I_transverse || 1));
+                    supportCondition = '3-Side (Cantilever)';
+                } else {
+                    def_transverse = (LOCAL_POINT_LOAD * Math.pow(width, 3)) / (192 * E_MODULUS * (I_transverse || 1));
+                    supportCondition = '4-Side (Fixed)';
+                }
+
+                const localDeflection = 1 / ((1 / (def_transverse || 1e9)) + (1 / (def_longitudinal || 1e9)));
+
+                // 7. Slenderness & Freq
+                const slendernessRatio = rise / (thickness || 1);
+                const loadPerMm_Dead = deadLoadN / L_safe;
+                const stiffnessRatio = deflectionBeam / (deflectionTotal || 1);
+                const deflection_Dead_Beam = (5 * loadPerMm_Dead * Math.pow(L, 4)) / (384 * E_MODULUS * I_safe);
+                const deflection_Dead_Total = deflection_Dead_Beam / (stiffnessRatio || 1);
+
+                const frequency = deflection_Dead_Total > 0 ? 18 / Math.sqrt(deflection_Dead_Total) : 0;
+
+                // 8. Status
+                const passGlobal = deflectionTotal <= globalLimit;
+                const passStress = stress <= yieldStrength;
+                const passLocal = localDeflection <= LOCAL_DEFLECTION_LIMIT;
+                const passSlenderness = slendernessRatio <= SLENDERNESS_LIMIT;
+
+                let overallStatus = 'SAFE';
+                if (!passGlobal || !passStress || !passLocal || !passSlenderness) {
+                    overallStatus = 'UNSAFE';
+                }
+
+                setResults({
+                    deflectionTotal, deflectionBeam, deflectionSag, globalLimit, passGlobal,
+                    stress, passStress,
+                    localDeflection, passLocal, supportCondition,
+                    slendernessRatio, passSlenderness,
+                    reactionForce: w_ULS / 2 / 1000,
+                    steelMassKg: totalSteelMassKg,
+                    frequency,
+                    overallStatus,
+                    span: L,
+                    inertia: I_rigid,
+                    totalLoad: w_ULS
+                });
+            };
+
+            // --- Three.js Logic ---
+            useEffect(() => {
+                if (!document.getElementById('canvas-container')) return;
+
+                const container = document.getElementById('canvas-container');
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x2a2a2a);
+                scene.fog = new THREE.Fog(0x2a2a2a, 2000, 8000);
+
+                const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+                camera.position.set(2000, 1500, 2000);
+
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                while (container.firstChild) container.removeChild(container.firstChild);
+                container.appendChild(renderer.domElement);
+
+                const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+
+                // Lights
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+                scene.add(ambientLight);
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+                dirLight.position.set(1000, 3000, 1000);
+                dirLight.castShadow = true;
+                scene.add(dirLight);
+                const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                fillLight.position.set(-1000, 1000, -1000);
+                scene.add(fillLight);
+
+                const gridHelper = new THREE.GridHelper(5000, 50, 0x444444, 0x333333);
+                scene.add(gridHelper);
+
+                const stairGroup = new THREE.Group();
+                scene.add(stairGroup);
+                sceneRef.current = stairGroup;
+
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                };
+                animate();
+
+                const handleResize = () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                };
+                window.addEventListener('resize', handleResize);
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
+                };
+            }, []);
+
+            // --- Update Geometry ---
+            useEffect(() => {
+                if (!sceneRef.current) return;
+                const group = sceneRef.current;
+                while (group.children.length > 0) { group.remove(group.children[0]); }
+
+                // Safe parse for 3D
+                const getVal = (val) => (val === '' || isNaN(val)) ? 0 : val;
+                const stepCount = getVal(inputs.stepCount);
+                const width = getVal(inputs.width);
+                const rise = getVal(inputs.rise);
+                const going = getVal(inputs.going);
+                const thickness = getVal(inputs.thickness);
+                const cheekHeight = getVal(inputs.cheekHeight);
+                const cheekThickness = getVal(inputs.cheekThickness);
+                const { cheekVisible, cheekSide } = inputs;
+
+                if (stepCount <= 0 || width <= 0) return;
+
+                // Steps
+                const shape = new THREE.Shape();
+                shape.moveTo(0, 0);
+                for (let i = 0; i < stepCount; i++) {
+                    const x = i * going;
+                    const y = i * rise;
+                    shape.lineTo(x, y + rise);
+                    shape.lineTo(x + going, y + rise);
+                }
+                for (let i = stepCount - 1; i >= 0; i--) {
+                    const x = i * going;
+                    const y = i * rise;
+                    shape.lineTo(x + going, y + rise - thickness);
+                    shape.lineTo(x + thickness, y + rise - thickness);
+                    shape.lineTo(x + thickness, y);
+                }
+                shape.lineTo(0, 0);
+
+                const geometry = new THREE.ExtrudeGeometry(shape, { steps: 1, depth: width, bevelEnabled: false });
+                geometry.translate(0, 0, -width / 2);
+
+                const matColor = results.overallStatus === 'SAFE' ? 0xffffff : 0xffa0a0;
+                const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+                    color: matColor, metalness: 0.3, roughness: 0.2, side: THREE.DoubleSide
+                }));
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+
+                // Cheeks
+                if (cheekVisible) {
+                    const totalRise = stepCount * rise;
+                    const totalGoing = stepCount * going;
+                    const length = Math.sqrt(totalRise ** 2 + totalGoing ** 2) + (going / 2);
+                    const angle = Math.atan2(totalRise, totalGoing);
+                    const cheekGeo = new THREE.BoxGeometry(length, cheekHeight, cheekThickness);
+                    const cheekMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.3, roughness: 0.2 });
+                    const createCheek = (zPos) => {
+                        const c = new THREE.Mesh(cheekGeo, cheekMat);
+                        c.position.set(totalGoing / 2, (totalRise / 2) + (rise / 2), zPos);
+                        c.rotation.z = angle;
+                        c.castShadow = true;
+                        return c;
+                    };
+                    if (cheekSide === 'one' || cheekSide === 'two') group.add(createCheek(-width / 2 - cheekThickness / 2));
+                    if (cheekSide === 'two') group.add(createCheek(width / 2 + cheekThickness / 2));
+                }
+
+                const bbox = new THREE.Box3().setFromObject(group);
+                group.position.sub(bbox.getCenter(new THREE.Vector3()));
+
+            }, [inputs, results.overallStatus]);
+
+            return (
+                <div id="ui-layer" className="flex flex-col md:flex-row justify-between p-4 md:p-6 overflow-hidden h-screen pointer-events-none">
+
+                    {/* --- INPUTS --- */}
+                    <div className="interactive-panel bg-gray-900/90 backdrop-blur text-white rounded-xl shadow-2xl border border-gray-700 w-full md:w-96 flex flex-col mb-4 md:mb-0 h-auto self-start">
+                        <div className="p-4 border-b border-gray-700 flex justify-between items-center cursor-pointer select-none" onClick={() => setShowInput(!showInput)}>
+                            <h2 className="text-lg font-bold text-blue-400">Design Inputs</h2>
+                            <span className={`transition transform ${showInput ? 'rotate-180' : ''}`}>▼</span>
+                        </div>
+                        <div className={`panel-content ${showInput ? '' : 'collapsed'}`}>
+                            <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div><label className="text-xs text-gray-400">Grade</label><select className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.steelGrade} onChange={(e) => setInputs({ ...inputs, steelGrade: e.target.value })}><option value="S275">S275</option><option value="S355">S355</option></select></div>
+                                    <div><label className="text-xs text-gray-400">Load</label><select className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.liveLoadType} onChange={(e) => setInputs({ ...inputs, liveLoadType: e.target.value })}><option value="domestic">Domestic</option><option value="office">Office</option></select></div>
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400">Steps: {inputs.stepCount}</label>
+                                    <input type="range" min="3" max="25" className="w-full" value={inputs.stepCount} onChange={(e) => setInputs({ ...inputs, stepCount: parseInt(e.target.value) })} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div><label className="text-xs text-gray-400">Rise</label><input type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.rise} onChange={(e) => handleNumInput('rise', e.target.value)} /></div>
+                                    <div><label className="text-xs text-gray-400">Going</label><input type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.going} onChange={(e) => handleNumInput('going', e.target.value)} /></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div><label className="text-xs text-gray-400">Width</label><input type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.width} onChange={(e) => handleNumInput('width', e.target.value)} /></div>
+                                    <div><label className="text-xs text-gray-400">Thick</label><input type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.thickness} onChange={(e) => handleNumInput('thickness', e.target.value)} /></div>
+                                </div>
+                                <div className="pt-4 border-t border-gray-700">
+                                    <label className="flex items-center text-sm font-bold text-gray-300 mb-2">
+                                        <input type="checkbox" className="mr-2" checked={inputs.cheekVisible} onChange={(e) => setInputs({ ...inputs, cheekVisible: e.target.checked })} />
+                                        Add Stringers
+                                    </label>
+                                    {inputs.cheekVisible && (
+                                        <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-700">
+                                            <select className="bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.cheekSide} onChange={(e) => setInputs({ ...inputs, cheekSide: e.target.value })}><option value="one">One Side</option><option value="two">Two Sides</option></select>
+                                            <input type="number" placeholder="Height" className="bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.cheekHeight} onChange={(e) => handleNumInput('cheekHeight', e.target.value)} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* --- RESULTS --- */}
+                    <div className="interactive-panel bg-gray-900/90 backdrop-blur text-white rounded-xl shadow-2xl border border-gray-700 w-full md:w-96 flex flex-col h-auto self-start">
+                        <div className={`p-4 border-b border-gray-700 flex justify-between items-center cursor-pointer select-none ${results.overallStatus === 'SAFE' ? 'bg-green-900/20' : 'bg-red-900/20'}`} onClick={() => setShowResults(!showResults)}>
+                            <h2 className="text-lg font-bold flex items-center">
+                                <span className={`mr-2 px-2 py-0.5 rounded text-sm ${results.overallStatus === 'SAFE' ? 'bg-green-600' : 'bg-red-600'}`}>{results.overallStatus}</span>
+                                Matrix
+                            </h2>
+                            <span className={`transition transform ${showResults ? 'rotate-180' : ''}`}>▼</span>
+                        </div>
+
+                        <div className={`panel-content ${showResults ? '' : 'collapsed'}`}>
+                            <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                                {/* Global Physics Section */}
+                                <div className="space-y-2">
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Global Beam Theory</h3>
+
+                                    <DeflectionBreakdown
+                                        beam={results.deflectionBeam}
+                                        sag={results.deflectionSag}
+                                        total={results.deflectionTotal}
+                                        limit={results.globalLimit}
+                                    />
+
+                                    <div className="mt-2">
+                                        <StatusBadge pass={results.passStress} value={results.stress.toFixed(0)} unit="MPa" label="Beam Stress" subLabel={`Yield: ${inputs.steelGrade === 'S275' ? 275 : 355}`} />
+                                    </div>
+
+                                    <div className="text-[10px] text-gray-500 font-mono flex justify-between pt-1 px-1">
+                                        <span>Span: {results.span}mm</span>
+                                        <span>Load: {(results.totalLoad / 1000).toFixed(1)}kN</span>
+                                        <span>I_rigid: {(results.inertia / 1e4).toFixed(0)}e4</span>
+                                    </div>
+                                </div>
+
+                                {/* Reality Checks */}
+                                <div className="space-y-2">
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Reality Checks (Local)</h3>
+
+                                    {/* 2. Tread Stiffness */}
+                                    <div className={`p-3 rounded border ${results.passLocal ? 'border-gray-700 bg-gray-800' : 'border-red-500 bg-red-900/20'}`}>
+                                        <div className="flex justify-between items-start mb-1">
+                                            <div>
+                                                <div className="text-sm font-bold text-gray-200">Tread Bounciness</div>
+                                                <div className="text-[10px] text-blue-300 font-mono">{results.supportCondition}</div>
+                                            </div>
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${results.passLocal ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{results.passLocal ? 'PASS' : 'FAIL'}</span>
+                                        </div>
+                                        <div className="mt-1 flex items-baseline">
+                                            <span className="text-xl font-mono font-bold">{results.localDeflection.toFixed(2)}</span>
+                                            <span className="text-xs text-gray-400 ml-1">mm (1kN Load)</span>
+                                        </div>
+                                    </div>
+
+                                    {/* 3. Slenderness */}
+                                    <div className={`p-3 rounded border ${results.passSlenderness ? 'border-gray-700 bg-gray-800' : 'border-red-500 bg-red-900/20'}`}>
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="text-sm font-bold text-gray-200">Plate Buckling</span>
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${results.passSlenderness ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{results.passSlenderness ? 'PASS' : 'FAIL'}</span>
+                                        </div>
+                                        <div className="mt-1 flex items-baseline">
+                                            <span className="text-xl font-mono font-bold">{results.slendernessRatio.toFixed(1)}</span>
+                                            <span className="text-xs text-gray-400 ml-1">Ratio (b/t)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-center pt-2 border-t border-gray-700">
+                                    <div><div className="text-xs text-gray-500">Weight</div><div className="text-sm font-bold text-gray-300">{results.steelMassKg.toFixed(0)} kg</div></div>
+                                    <div><div className="text-xs text-gray-500">Freq</div><div className={`text-sm font-bold ${results.frequency > 10 ? 'text-green-400' : 'text-yellow-400'}`}>{results.frequency.toFixed(1)} Hz</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
         };
 
-        // --- Three.js Logic ---
-        useEffect(() => {
-            if (!document.getElementById('canvas-container')) return;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
 
-            const container = document.getElementById('canvas-container');
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x2a2a2a); 
-            scene.fog = new THREE.Fog(0x2a2a2a, 2000, 8000);
-
-            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-            camera.position.set(2000, 1500, 2000);
-
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            
-            while (container.firstChild) container.removeChild(container.firstChild);
-            container.appendChild(renderer.domElement);
-
-            const controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-
-            // Lights
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); 
-            scene.add(ambientLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            dirLight.position.set(1000, 3000, 1000);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
-            fillLight.position.set(-1000, 1000, -1000);
-            scene.add(fillLight);
-
-            const gridHelper = new THREE.GridHelper(5000, 50, 0x444444, 0x333333);
-            scene.add(gridHelper);
-
-            const stairGroup = new THREE.Group();
-            scene.add(stairGroup);
-            sceneRef.current = stairGroup;
-
-            const animate = () => {
-                requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            };
-            animate();
-
-            const handleResize = () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            };
-            window.addEventListener('resize', handleResize);
-
-            return () => {
-                window.removeEventListener('resize', handleResize);
-                if(container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
-            };
-        }, []); 
-
-        // --- Update Geometry ---
-        useEffect(() => {
-            if (!sceneRef.current) return;
-            const group = sceneRef.current;
-            while(group.children.length > 0){ group.remove(group.children[0]); }
-
-            // Safe parse for 3D
-            const getVal = (val) => (val === '' || isNaN(val)) ? 0 : val;
-            const stepCount = getVal(inputs.stepCount);
-            const width = getVal(inputs.width);
-            const rise = getVal(inputs.rise);
-            const going = getVal(inputs.going);
-            const thickness = getVal(inputs.thickness);
-            const cheekHeight = getVal(inputs.cheekHeight);
-            const cheekThickness = getVal(inputs.cheekThickness);
-            const { cheekVisible, cheekSide } = inputs;
-
-            if (stepCount <= 0 || width <= 0) return;
-
-            // Steps
-            const shape = new THREE.Shape();
-            shape.moveTo(0, 0);
-            for (let i = 0; i < stepCount; i++) {
-                const x = i * going;
-                const y = i * rise;
-                shape.lineTo(x, y + rise);
-                shape.lineTo(x + going, y + rise);
-            }
-            for (let i = stepCount - 1; i >= 0; i--) {
-                const x = i * going;
-                const y = i * rise;
-                shape.lineTo(x + going, y + rise - thickness);
-                shape.lineTo(x + thickness, y + rise - thickness);
-                shape.lineTo(x + thickness, y);
-            }
-            shape.lineTo(0, 0);
-
-            const geometry = new THREE.ExtrudeGeometry(shape, { steps: 1, depth: width, bevelEnabled: false });
-            geometry.translate(0, 0, -width / 2);
-            
-            const matColor = results.overallStatus === 'SAFE' ? 0xffffff : 0xffa0a0;
-            const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ 
-                color: matColor, metalness: 0.3, roughness: 0.2, side: THREE.DoubleSide
-            }));
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            group.add(mesh);
-
-            // Cheeks
-            if (cheekVisible) {
-                const totalRise = stepCount * rise;
-                const totalGoing = stepCount * going;
-                const length = Math.sqrt(totalRise**2 + totalGoing**2) + (going/2);
-                const angle = Math.atan2(totalRise, totalGoing);
-                const cheekGeo = new THREE.BoxGeometry(length, cheekHeight, cheekThickness);
-                const cheekMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.3, roughness: 0.2 });
-                const createCheek = (zPos) => {
-                    const c = new THREE.Mesh(cheekGeo, cheekMat);
-                    c.position.set(totalGoing / 2, (totalRise / 2) + (rise/2), zPos);
-                    c.rotation.z = angle;
-                    c.castShadow = true;
-                    return c;
-                };
-                if (cheekSide === 'one' || cheekSide === 'two') group.add(createCheek(-width/2 - cheekThickness/2));
-                if (cheekSide === 'two') group.add(createCheek(width/2 + cheekThickness/2));
-            }
-            
-            const bbox = new THREE.Box3().setFromObject(group);
-            group.position.sub(bbox.getCenter(new THREE.Vector3()));
-
-        }, [inputs, results.overallStatus]);
-
-        return (
-            <div id="ui-layer" className="flex flex-col md:flex-row justify-between p-4 md:p-6 overflow-hidden h-screen pointer-events-none">
-                
-                {/* --- INPUTS --- */}
-                <div className="interactive-panel bg-gray-900/90 backdrop-blur text-white rounded-xl shadow-2xl border border-gray-700 w-full md:w-96 flex flex-col mb-4 md:mb-0 h-auto self-start">
-                    <div className="p-4 border-b border-gray-700 flex justify-between items-center cursor-pointer select-none" onClick={() => setShowInput(!showInput)}>
-                        <h2 className="text-lg font-bold text-blue-400">Design Inputs</h2>
-                        <span className={`transition transform ${showInput ? 'rotate-180' : ''}`}>▼</span>
-                    </div>
-                    <div className={`panel-content ${showInput ? '' : 'collapsed'}`}>
-                        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div><label className="text-xs text-gray-400">Grade</label><select className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.steelGrade} onChange={(e) => setInputs({...inputs, steelGrade: e.target.value})}><option value="S275">S275</option><option value="S355">S355</option></select></div>
-                                <div><label className="text-xs text-gray-400">Load</label><select className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.liveLoadType} onChange={(e) => setInputs({...inputs, liveLoadType: e.target.value})}><option value="domestic">Domestic</option><option value="office">Office</option></select></div>
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-400">Steps: {inputs.stepCount}</label>
-                                <input type="range" min="3" max="25" className="w-full" value={inputs.stepCount} onChange={(e) => setInputs({...inputs, stepCount: parseInt(e.target.value)})} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div><label className="text-xs text-gray-400">Rise</label><input type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.rise} onChange={(e) => handleNumInput('rise', e.target.value)} /></div>
-                                <div><label className="text-xs text-gray-400">Going</label><input type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.going} onChange={(e) => handleNumInput('going', e.target.value)} /></div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div><label className="text-xs text-gray-400">Width</label><input type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.width} onChange={(e) => handleNumInput('width', e.target.value)} /></div>
-                                <div><label className="text-xs text-gray-400">Thick</label><input type="number" className="w-full bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.thickness} onChange={(e) => handleNumInput('thickness', e.target.value)} /></div>
-                            </div>
-                            <div className="pt-4 border-t border-gray-700">
-                                <label className="flex items-center text-sm font-bold text-gray-300 mb-2">
-                                    <input type="checkbox" className="mr-2" checked={inputs.cheekVisible} onChange={(e) => setInputs({...inputs, cheekVisible: e.target.checked})} />
-                                    Add Stringers
-                                </label>
-                                {inputs.cheekVisible && (
-                                    <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-gray-700">
-                                        <select className="bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.cheekSide} onChange={(e) => setInputs({...inputs, cheekSide: e.target.value})}><option value="one">One Side</option><option value="two">Two Sides</option></select>
-                                        <input type="number" placeholder="Height" className="bg-gray-800 rounded p-1 text-sm border border-gray-600" value={inputs.cheekHeight} onChange={(e) => handleNumInput('cheekHeight', e.target.value)} />
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* --- RESULTS --- */}
-                <div className="interactive-panel bg-gray-900/90 backdrop-blur text-white rounded-xl shadow-2xl border border-gray-700 w-full md:w-96 flex flex-col h-auto self-start">
-                     <div className={`p-4 border-b border-gray-700 flex justify-between items-center cursor-pointer select-none ${results.overallStatus === 'SAFE' ? 'bg-green-900/20' : 'bg-red-900/20'}`} onClick={() => setShowResults(!showResults)}>
-                        <h2 className="text-lg font-bold flex items-center">
-                            <span className={`mr-2 px-2 py-0.5 rounded text-sm ${results.overallStatus === 'SAFE' ? 'bg-green-600' : 'bg-red-600'}`}>{results.overallStatus}</span>
-                            Matrix
-                        </h2>
-                        <span className={`transition transform ${showResults ? 'rotate-180' : ''}`}>▼</span>
-                    </div>
-
-                    <div className={`panel-content ${showResults ? '' : 'collapsed'}`}>
-                        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
-                            
-                            {/* Global Physics Section */}
-                            <div className="space-y-2">
-                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Global Beam Theory</h3>
-                                
-                                <DeflectionBreakdown 
-                                    beam={results.deflectionBeam} 
-                                    sag={results.deflectionSag} 
-                                    total={results.deflectionTotal} 
-                                    limit={results.globalLimit} 
-                                />
-
-                                <div className="mt-2">
-                                    <StatusBadge pass={results.passStress} value={results.stress.toFixed(0)} unit="MPa" label="Beam Stress" subLabel={`Yield: ${inputs.steelGrade === 'S275' ? 275 : 355}`}/>
-                                </div>
-
-                                <div className="text-[10px] text-gray-500 font-mono flex justify-between pt-1 px-1">
-                                    <span>Span: {results.span}mm</span>
-                                    <span>Load: {(results.totalLoad/1000).toFixed(1)}kN</span>
-                                    <span>I_rigid: {(results.inertia/1e4).toFixed(0)}e4</span>
-                                </div>
-                            </div>
-
-                            {/* Reality Checks */}
-                            <div className="space-y-2">
-                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Reality Checks (Local)</h3>
-                                
-                                {/* 2. Tread Stiffness */}
-                                <div className={`p-3 rounded border ${results.passLocal ? 'border-gray-700 bg-gray-800' : 'border-red-500 bg-red-900/20'}`}>
-                                    <div className="flex justify-between items-start mb-1">
-                                        <div>
-                                            <div className="text-sm font-bold text-gray-200">Tread Bounciness</div>
-                                            <div className="text-[10px] text-blue-300 font-mono">{results.supportCondition}</div>
-                                        </div>
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${results.passLocal ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{results.passLocal ? 'PASS' : 'FAIL'}</span>
-                                    </div>
-                                    <div className="mt-1 flex items-baseline">
-                                        <span className="text-xl font-mono font-bold">{results.localDeflection.toFixed(2)}</span>
-                                        <span className="text-xs text-gray-400 ml-1">mm (1kN Load)</span>
-                                    </div>
-                                </div>
-
-                                {/* 3. Slenderness */}
-                                <div className={`p-3 rounded border ${results.passSlenderness ? 'border-gray-700 bg-gray-800' : 'border-red-500 bg-red-900/20'}`}>
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="text-sm font-bold text-gray-200">Plate Buckling</span>
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${results.passSlenderness ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{results.passSlenderness ? 'PASS' : 'FAIL'}</span>
-                                    </div>
-                                    <div className="mt-1 flex items-baseline">
-                                        <span className="text-xl font-mono font-bold">{results.slendernessRatio.toFixed(1)}</span>
-                                        <span className="text-xs text-gray-400 ml-1">Ratio (b/t)</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-center pt-2 border-t border-gray-700">
-                                <div><div className="text-xs text-gray-500">Weight</div><div className="text-sm font-bold text-gray-300">{results.steelMassKg.toFixed(0)} kg</div></div>
-                                <div><div className="text-xs text-gray-500">Freq</div><div className={`text-sm font-bold ${results.frequency > 10 ? 'text-green-400' : 'text-yellow-400'}`}>{results.frequency.toFixed(1)} Hz</div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-
-</script>
+    </script>
 
 </body>
+
 </html>
