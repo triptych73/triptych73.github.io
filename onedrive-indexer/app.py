@@ -21,48 +21,96 @@ st.set_page_config(page_title="OneDrive Indexer", page_icon="📂", layout="wide
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
     
     :root {
-        --primary-color: #4a89dc;
-        --secondary-color: #5cb85c;
-        --background-color: #f9f9f9;
-        --border-color: #ddd;
-        --text-color: #333;
-        --card-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        --primary-color: #9A8C74; /* Bronze */
+        --background-color: #0F1115; /* Midnight */
+        --secondary-background-color: #1A1D23; /* Surface */
+        --text-color: #F5F5F0; /* Portland */
+        --border-color: rgba(255, 255, 255, 0.1);
     }
     
     html, body, [class*="css"]  {
         font-family: 'Inter', 'Segoe UI', sans-serif;
         color: var(--text-color);
-    }
-    
-    .stApp {
         background-color: var(--background-color);
     }
     
-    /* Breadcrumb */
+    /* Main App Background */
+    .stApp {
+        background-color: var(--background-color);
+        background-image: linear-gradient(rgba(154, 140, 116, 0.03) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(154, 140, 116, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+    }
+
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Cinzel', serif !important;
+        color: #9A8C74 !important; /* Bronze */
+        font-weight: 600 !important;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(15, 17, 21, 0.95);
+        border-right: 1px solid var(--border-color);
+    }
+    
+    /* Buttons - Glass/Bronze Style */
+    .stButton button {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: #9A8C74; /* Bronze */
+        border: 1px solid rgba(154, 140, 116, 0.3);
+        font-family: 'Inter', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+    }
+    .stButton button:hover {
+        background-color: #9A8C74;
+        color: #0F1115; /* Midnight text on hover */
+        border-color: #9A8C74;
+    }
+    
+    /* Primary Action Button overrides */
+    div[data-testid="stHorizontalBlock"] button[kind="primary"] {
+        background-color: #9A8C74;
+        color: #0F1115;
+        border: none;
+    }
+    div[data-testid="stHorizontalBlock"] button[kind="primary"]:hover {
+        background-color: #B5A894;
+    }
+
+    /* Breadcrum - Dark Mode */
     .breadcrumb {
-        font-size: 0.95rem;
-        color: #4b5563;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.6);
         padding: 0.75rem 1rem;
-        background: #ffffff;
+        background: rgba(255, 255, 255, 0.03);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
-        box-shadow: var(--card-shadow);
+        border-radius: 4px;
         margin-bottom: 1.5rem;
+        font-family: 'Inter', monospace;
+    }
+    .breadcrumb strong {
+        color: #F5F5F0;
+        font-weight: 500;
     }
     
     /* Cost Box */
     .cost-box {
         padding: 1rem;
-        background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-        border: 1px solid #91d5ff;
-        border-radius: 8px;
-        color: #003a8c;
+        background: rgba(154, 140, 116, 0.1); /* Bronze tint */
+        border: 1px solid rgba(154, 140, 116, 0.3);
+        border-radius: 4px;
+        color: #9A8C74;
         font-weight: 600;
         text-align: center;
-        box-shadow: var(--card-shadow);
+        font-family: 'Cinzel', serif;
         margin-bottom: 1.5rem;
     }
     
@@ -71,24 +119,33 @@ st.markdown("""
         display: inline-flex;
         align-items: center;
         padding: 2px 8px;
-        background-color: #f0fdf4;
-        border: 1px solid #86efac;
-        border-radius: 9999px;
-        color: var(--secondary-color);
-        font-size: 0.75rem;
+        background-color: rgba(16, 185, 129, 0.1); /* Green tint */
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        border-radius: 2px;
+        color: #10b981; /* Emerald */
+        font-size: 0.7rem;
         font-weight: 600;
+        text-transform: uppercase;
         margin-left: 8px;
+        font-family: 'Inter', monospace;
     }
     
     /* Row styling */
     div[data-testid="stHorizontalBlock"] {
         align-items: center;
-        padding-top: 8px;
-        padding-bottom: 8px;
+        padding-top: 12px;
+        padding-bottom: 12px;
         border-bottom: 1px solid var(--border-color);
     }
     div[data-testid="stHorizontalBlock"]:hover {
-        background-color: #f0f9ff;
+        background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Inputs */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"] {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: #F5F5F0;
+        border: 1px solid var(--border-color);
     }
     
     /* Sticky action panel */
@@ -96,6 +153,10 @@ st.markdown("""
         position: sticky;
         top: 20px;
         align-self: flex-start;
+        background: #0F1115; /* Hide content behind when scrolling if needed */
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
