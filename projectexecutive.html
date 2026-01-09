@@ -491,8 +491,8 @@
         function openIndexer() {
             const modal = document.getElementById('app-modal');
             const frame = document.getElementById('app-frame');
-            // Local Streamlit URL
-            const appUrl = "http://localhost:8501/?embed=true";
+            // Live Streamlit Cloud URL
+            const appUrl = "https://onedrive-indexer.streamlit.app?embed=true";
 
             if (frame.src === "about:blank" || frame.src === "") {
                 frame.src = appUrl;
