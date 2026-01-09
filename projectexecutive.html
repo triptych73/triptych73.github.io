@@ -491,8 +491,8 @@
         function openIndexer() {
             const modal = document.getElementById('app-modal');
             const frame = document.getElementById('app-frame');
-            // UPDATE THIS URL AFTER DEPLOYING TO STREAMLIT CLOUD
-            const appUrl = "https://onedrive-indexer.streamlit.app?embed=true";
+            // Local Streamlit URL
+            const appUrl = "http://localhost:8501/?embed=true";
 
             if (frame.src === "about:blank" || frame.src === "") {
                 frame.src = appUrl;
@@ -505,53 +505,7 @@
         }
     </script>
 
-    <!-- APP MODAL OVERLAY -->
-    <div id="app-modal" class="fixed inset-0 z-[100] hidden">
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-midnight/90 backdrop-blur-sm" onclick="closeModal()"></div>
 
-        <!-- Modal Content -->
-        <div
-            class="absolute inset-4 md:inset-10 bg-surface border border-white/10 rounded-xl overflow-hidden flex flex-col shadow-2xl">
-            <!-- Header -->
-            <div class="px-6 py-4 bg-surface-light border-b border-white/5 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                    <h3 class="font-serif text-bronze tracking-wide">AI Knowledge Base</h3>
-                </div>
-                <button onclick="closeModal()" class="text-white/40 hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Iframe Container -->
-            <div class="flex-grow bg-white relative">
-                <!-- PLACEHOLDER SRC: You must update this URL after Streamlit deployment -->
-                <iframe id="app-frame" src="" class="absolute inset-0 w-full h-full border-0"></iframe>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function openIndexer() {
-            const modal = document.getElementById('app-modal');
-            const frame = document.getElementById('app-frame');
-            // UPDATE THIS URL AFTER DEPLOYING TO STREAMLIT CLOUD
-            const appUrl = "https://onedrive-indexer.streamlit.app?embed=true";
-
-            if (frame.src === "about:blank" || frame.src === "") {
-                frame.src = appUrl;
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('app-modal').classList.add('hidden');
-        }
-    </script>
 
 </body>
 
