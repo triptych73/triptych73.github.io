@@ -7,9 +7,10 @@ openpyxl
 pypdf
 tabulate
 python-dotenv
-xlrd >= 1.0.0
+xlrd
 python-pptx
 openai
 anthropic
 google-generativeai
-input_to_token_count_estimates
+google-genai
+firebase-admin
