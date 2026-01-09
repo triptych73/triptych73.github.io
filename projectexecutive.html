@@ -316,8 +316,8 @@
                     </a>
 
                     <!-- Tool 6 (Indexer) -->
-                    <div onclick="openIndexer()"
-                        class="cursor-pointer glass-panel p-5 rounded-lg group hover:bg-white/[0.04] transition-all relative overflow-hidden">
+                    <a href="https://onedrive-indexer.streamlit.app" target="_blank"
+                        class="cursor-pointer glass-panel p-5 rounded-lg group hover:bg-white/[0.04] transition-all relative overflow-hidden block">
                         <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
                             <svg class="w-12 h-12 text-bronze" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
@@ -326,10 +326,17 @@
                             </svg>
                         </div>
                         <div class="font-mono text-[10px] text-bronze mb-1">KNOWLEDGE BASE</div>
-                        <h3 class="font-serif text-lg text-white mb-2 group-hover:text-bronze transition-colors">
-                            AI Indexer</h3>
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-serif text-lg text-white group-hover:text-bronze transition-colors">AI
+                                Indexer</h3>
+                            <svg class="w-4 h-4 text-white/30 group-hover:text-bronze transition-colors" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </div>
                         <p class="text-xs text-white/40">OneDrive document scanner & Firebase sync.</p>
-                    </div>
+                    </a>
                 </div>
             </div>
 
@@ -457,53 +464,7 @@
         St Mary Somerset | Project ID: SMS-1694 | System V2.1
     </footer>
 
-    <!-- APP MODAL OVERLAY -->
-    <div id="app-modal" class="fixed inset-0 z-[100] hidden">
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-midnight/90 backdrop-blur-sm" onclick="closeModal()"></div>
 
-        <!-- Modal Content -->
-        <div
-            class="absolute inset-4 md:inset-10 bg-surface border border-white/10 rounded-xl overflow-hidden flex flex-col shadow-2xl">
-            <!-- Header -->
-            <div class="px-6 py-4 bg-surface-light border-b border-white/5 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                    <h3 class="font-serif text-bronze tracking-wide">AI Knowledge Base</h3>
-                </div>
-                <button onclick="closeModal()" class="text-white/40 hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Iframe Container -->
-            <div class="flex-grow bg-white relative">
-                <!-- PLACEHOLDER SRC: You must update this URL after Streamlit deployment -->
-                <iframe id="app-frame" src="" class="absolute inset-0 w-full h-full border-0"></iframe>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function openIndexer() {
-            const modal = document.getElementById('app-modal');
-            const frame = document.getElementById('app-frame');
-            // Live Streamlit Cloud URL
-            const appUrl = "https://onedrive-indexer.streamlit.app?embed=true";
-
-            if (frame.src === "about:blank" || frame.src === "") {
-                frame.src = appUrl;
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('app-modal').classList.add('hidden');
-        }
-    </script>
 
 
 
