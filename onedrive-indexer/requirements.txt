@@ -1,0 +1,16 @@
+streamlit
+msal
+requests
+python-docx
+pandas
+openpyxl
+pypdf
+tabulate
+python-dotenv
+xlrd
+python-pptx
+openai
+anthropic
+google-generativeai
+google-genai
+firebase-admin
