@@ -1,0 +1,15 @@
+streamlit
+msal
+requests
+python-docx
+pandas
+openpyxl
+pypdf
+tabulate
+python-dotenv
+xlrd >= 1.0.0
+python-pptx
+openai
+anthropic
+google-generativeai
+input_to_token_count_estimates
