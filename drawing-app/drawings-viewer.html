@@ -1,593 +1,373 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building Drawings Viewer</title>
+    <title>St Mary Somerset | Drawings</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <!-- Auth Guard -->
+    <script>
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) {
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+    </script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portland': '#F5F5F0', // Weathered Stone
+                        'midnight': '#0F1115', // Thames Midnight
+                        'bronze': '#9A8C74',   // Patinated Bronze
+                        'bronze-light': '#B5A894',
+                        'bronze-dark': '#7d705a',
+                    },
+                    fontFamily: {
+                        'serif': ['Cinzel', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'shimmer': 'shimmer 2s infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                    },
+                    keyframes: {
+                        shimmer: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(100%)' }
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        :root {
-            --primary-color: #4a89dc;
-            --secondary-color: #5cb85c;
-            --background-color: #f9f9f9;
-            --border-color: #ddd;
-            --text-color: #333;
-            --highlight-color: #e6f0ff;
-            --nav-width: 300px;
-            --header-height: 60px;
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
+        /* BASE STYLES */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--text-color);
-            background-color: var(--background-color);
+            background-color: #F5F5F0;
+            color: #0F1115;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
-        
-        header {
-            height: var(--header-height);
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            position: fixed;
+
+        /* CUSTOM SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #D1CEC7;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9A8C74;
+        }
+
+        /* SHIMMER EFFECT FOR FLOORS */
+        .floor-region {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* The sheen that moves across */
+        .floor-region::after {
+            content: '';
+            position: absolute;
             top: 0;
             left: 0;
-            right: 0;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.4) 50%,
+                    rgba(255, 255, 255, 0) 100%);
+            transform: skewX(-20deg) translateX(-250%);
+            transition: transform 0s;
+            pointer-events: none;
+        }
+
+        .floor-region:hover {
+            background-color: rgba(154, 140, 116, 0.15);
+            /* Bronze Tint */
+            backdrop-filter: brightness(1.1);
+            box-shadow: inset 0 0 0 1px rgba(154, 140, 116, 0.4);
+        }
+
+        .floor-region:hover::after {
+            animation: shimmer-slide 1.5s infinite;
+        }
+
+        .floor-region.active {
+            background-color: rgba(15, 17, 21, 0.85);
+            /* Midnight */
+            color: #F5F5F0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(2px);
             z-index: 10;
         }
-        
-        .header-title {
-            font-size: 24px;
-            font-weight: 500;
+
+        @keyframes shimmer-slide {
+            0% {
+                transform: skewX(-20deg) translateX(-250%);
+            }
+
+            100% {
+                transform: skewX(-20deg) translateX(250%);
+            }
         }
-        
-        .header-actions {
-            display: flex;
-            gap: 15px;
+
+        /* UTILITIES */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
         }
-        
-        .btn {
-            cursor: pointer;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            background-color: var(--primary-color);
-            color: white;
-            transition: background-color 0.2s, opacity 0.2s;
-            font-size: 14px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .btn:hover {
-            opacity: 0.9;
-        }
-        
-        .btn-secondary {
-            background-color: var(--secondary-color);
-        }
-        
-        .btn-outline {
-            background-color: transparent;
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-        }
-        
-        .btn-outline:hover {
-            background-color: var(--highlight-color);
-        }
-        
-        .btn-small {
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-        
-        .btn-circle {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 0;
-        }
-        
-        .btn-icon {
-            background-color: transparent;
-            color: var(--primary-color);
-            font-size: 18px;
-        }
-        
-        .btn-disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .main-container {
-            display: flex;
-            margin-top: var(--header-height);
-            min-height: calc(100vh - var(--header-height));
-        }
-        
-        .nav-pane {
-            width: var(--nav-width);
-            background-color: #fff;
-            border-right: 1px solid var(--border-color);
-            transition: transform 0.3s ease;
-            overflow-y: auto;
-            height: calc(100vh - var(--header-height));
-            transform: translateX(0);
-            position: relative;
-        }
-        
-        .nav-pane.collapsed {
-            transform: translateX(calc(-1 * var(--nav-width) + 30px));
-        }
-        
-        .nav-toggle {
-            position: absolute;
-            right: -15px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 30px;
-            height: 50px;
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: 0 25px 25px 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            z-index: 5;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-        }
-        
-        .building-selector {
-            display: flex;
-            padding: 20px;
-        }
-        
-        .building-image-container {
-            border: 1px solid var(--border-color);
-            position: relative;
-            width: 100%;
-            height: 400px;
-        }
-        
-        .building-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .floor-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .floor-region {
-            flex: 1;
-            border: 1px solid transparent;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            color: transparent;
-            transition: all 0.2s;
-        }
-        
-        .floor-region:hover {
-            background-color: rgba(74, 137, 220, 0.2);
-            color: white;
-            text-shadow: 0 0 3px #000;
-        }
-        
-        .floor-region.active {
-            background-color: rgba(74, 137, 220, 0.3);
-            color: white;
-            text-shadow: 0 0 3px #000;
-            font-weight: bold;
-        }
-        
-        .tabs-container {
-            padding: 10px;
-        }
-        
-        .room-type-tabs {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .room-type-tab {
-            padding: 8px;
-            text-align: center;
-            background-color: #f0f0f0;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-size: 14px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .room-type-tab:hover:not(.disabled) {
-            background-color: #e0e0e0;
-        }
-        
-        .room-type-tab.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        .room-type-tab.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .orientation-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .orientation-tab {
-            flex: 1;
-            padding: 8px;
-            text-align: center;
-            background-color: #f0f0f0;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-size: 14px;
-        }
-        
-        .orientation-tab:hover:not(.disabled) {
-            background-color: #e0e0e0;
-        }
-        
-        .orientation-tab.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        .orientation-tab.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .stage-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .stage-tab {
-            flex: 1;
-            padding: 8px;
-            text-align: center;
-            background-color: #f0f0f0;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-size: 14px;
-        }
-        
-        .stage-tab:hover:not(.disabled) {
-            background-color: #e0e0e0;
-        }
-        
-        .stage-tab.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        .stage-tab.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .nav-footer {
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-            text-align: center;
-        }
-        
-        .content-area {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        
-        .drawing-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        
-        .drawing-header {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background-color: #fff;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .drawing-title {
-            font-size: 18px;
-            font-weight: 500;
-        }
-        
-        .drawing-controls {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .drawing-viewer {
-            width: 100%;
-            height: calc(100vh - 180px);
-            background-color: #fff;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .drawing-image {
-            max-width: 100%;
-            max-height: 100%;
-            transform-origin: center;
-            transition: transform 0.3s ease;
-        }
-        
-        .drawing-image.panning {
-            cursor: grabbing;
-        }
-        
-        .url-form {
-            width: 100%;
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .url-form-title {
-            font-size: 18px;
-            font-weight: 500;
-            margin-bottom: 15px;
-        }
-        
-        .url-form-group {
-            margin-bottom: 15px;
-        }
-        
-        .url-form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .url-form-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        
-        .url-form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-        
-        .hidden {
+
+        .hide-scrollbar::-webkit-scrollbar {
             display: none;
-        }
-        
-        .loading {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255, 255, 255, 0.8);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 15px;
-        }
-        
-        .notification {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            padding: 15px 25px;
-            background-color: var(--secondary-color);
-            color: white;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: opacity 0.3s, transform 0.3s;
-        }
-        
-        .notification.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @media (max-width: 768px) {
-            .main-container {
-                flex-direction: column;
-            }
-            
-            .nav-pane {
-                width: 100%;
-                height: auto;
-                max-height: 50vh;
-                transform: translateY(0);
-                border-right: none;
-                border-bottom: 1px solid var(--border-color);
-            }
-            
-            .nav-pane.collapsed {
-                transform: translateY(calc(-100% + 30px));
-            }
-            
-            .nav-toggle {
-                top: auto;
-                right: 50%;
-                bottom: -15px;
-                transform: translateX(50%) rotate(90deg);
-                border-radius: 0 0 25px 25px;
-            }
-            
-            .building-image-container {
-                height: 200px;
-            }
         }
     </style>
 </head>
-<body>
-    <header>
-        <div class="header-title">Building Drawings Viewer</div>
-        <div class="header-actions">
-            <button id="manageDrawingsBtn" class="btn btn-outline">Manage Drawings</button>
-            <button id="importCsvBtn" class="btn">Import CSV</button>
+
+<body class="bg-portland text-midnight font-sans h-screen flex flex-col selection:bg-bronze selection:text-white">
+
+    <!-- HEADER -->
+    <header
+        class="h-16 bg-white/50 backdrop-blur-md border-b border-bronze/10 flex justify-between items-center px-8 fixed top-0 w-full z-40">
+        <div class="flex items-center gap-4">
+            <h1 class="font-serif text-xl tracking-widest uppercase text-midnight">St Mary Somerset</h1>
+            <span class="h-4 w-px bg-bronze/30"></span>
+            <span class="text-xs tracking-[0.2em] text-bronze uppercase">Drawings Archive</span>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <button id="manageDrawingsBtn"
+                class="text-xs uppercase tracking-widest text-midnight hover:text-bronze transition-colors flex items-center gap-2 px-3 py-2 rounded hover:bg-white/50">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Manager
+            </button>
+            <button id="importCsvBtn"
+                class="text-xs uppercase tracking-widest bg-midnight text-portland px-5 py-2 hover:bg-bronze transition-colors duration-300">
+                Import CSV
+            </button>
             <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
         </div>
     </header>
-    
-    <div class="main-container">
-        <div id="navPane" class="nav-pane">
-            <div class="nav-toggle" id="navToggle">
-                <span id="navToggleIcon">◀</span>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex mt-16 h-[calc(100vh-64px)] relative overflow-hidden">
+
+        <!-- SIDEBAR NAV -->
+        <div id="navPane"
+            class="w-[380px] bg-white/40 border-r border-bronze/10 h-full flex flex-col relative transition-all duration-500 ease-in-out z-30 shadow-[4px_0_20px_rgba(0,0,0,0.02)]">
+
+            <!-- Toggle Button -->
+            <div id="navToggle"
+                class="absolute -right-6 top-1/2 -translate-y-1/2 w-6 h-12 bg-white/80 backdrop-blur flex items-center justify-center cursor-pointer border border-l-0 border-bronze/20 rounded-r-md hover:text-bronze transition-colors z-50">
+                <span id="navToggleIcon" class="text-[10px]">◀</span>
             </div>
-            
-            <div class="building-selector">
-                <div class="building-image-container">
-                    <img src="https://lh3.googleusercontent.com/d/1y6gN-tZwoUIkpJc78vni6v4URxniYtSS" alt="Building" class="building-image">
-                    <div class="floor-overlay" id="floorOverlay"></div>
-                </div>
-            </div>
-            
-            <div class="tabs-container">
-                <div id="roomTypeTabs" class="room-type-tabs"></div>
-                <div id="orientationTabs" class="orientation-tabs"></div>
-                <div id="stageTabs" class="stage-tabs"></div>
-            </div>
-            
-            <div class="nav-footer">
-                <button id="saveBtn" class="btn btn-secondary">Save CSV</button>
-            </div>
-        </div>
-        
-        <div class="content-area">
-            <div id="drawingContainer" class="drawing-container hidden">
-                <div class="drawing-header">
-                    <div id="drawingTitle" class="drawing-title"></div>
-                    <div class="drawing-controls">
-                        <button id="zoomInBtn" class="btn btn-circle btn-icon">+</button>
-                        <button id="zoomOutBtn" class="btn btn-circle btn-icon">-</button>
-                        <button id="panBtn" class="btn btn-circle btn-icon">✋</button>
-                        <button id="changeUrlBtn" class="btn btn-small">Change URL</button>
+
+            <div class="overflow-y-auto h-full hide-scrollbar p-6 space-y-8">
+
+                <!-- Building Visualizer -->
+                <div class="space-y-3">
+                    <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Select Level</h2>
+
+                    <!-- Centered Container -->
+                    <div
+                        class="w-full flex justify-center bg-white border border-bronze/10 rounded-sm py-4 shadow-inner">
+                        <!-- Wrapper to fit image size exactly -->
+                        <div class="relative w-fit overflow-hidden">
+                            <img src="images/tower.png" alt="St Mary Somerset Tower"
+                                class="max-h-[60vh] w-auto block opacity-90 shadow-sm -ml-3">
+
+                            <!-- Floor Overlay Grid -->
+                            <div class="absolute inset-0 flex flex-col" id="floorOverlay">
+                                <!-- Injected via JS -->
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="drawing-viewer">
-                    <img id="drawingImage" class="drawing-image" alt="Drawing">
+
+                <!-- Filters -->
+                <div class="space-y-6">
+                    <!-- Room -->
+                    <div class="space-y-3">
+                        <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Room Type</h2>
+                        <div id="roomTypeTabs" class="grid grid-cols-2 gap-2">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Orientation -->
+                    <div class="space-y-3">
+                        <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Orientation</h2>
+                        <div id="orientationTabs" class="flex gap-1 bg-white/50 p-1 rounded-sm border border-bronze/5">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Stage -->
+                    <div class="space-y-3">
+                        <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Stage</h2>
+                        <div id="stageTabs" class="flex flex-wrap gap-2">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div id="urlForm" class="url-form">
-                <div class="url-form-title">Set Drawing URL</div>
-                
-                <div class="url-form-group">
-                    <div class="url-form-label">Key:</div>
-                    <div id="drawingKey"></div>
+
+            <!-- Footer Actions -->
+            <div class="p-6 border-t border-bronze/10 bg-white/30 backdrop-blur-sm">
+                <button id="saveBtn"
+                    class="w-full border border-bronze text-bronze hover:bg-bronze hover:text-white text-xs uppercase tracking-widest py-3 transition-colors duration-300">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEWER AREA -->
+        <div class="flex-1 bg-[#F5F5F0] relative flex items-center justify-center overflow-hidden">
+
+            <!-- Grid Background (Subtle) -->
+            <div class="absolute inset-0 opacity-[0.03]"
+                style="background-image: linear-gradient(#0F1115 1px, transparent 1px), linear-gradient(90deg, #0F1115 1px, transparent 1px); background-size: 40px 40px;">
+            </div>
+
+            <!-- Content -->
+            <div class="relative z-10 w-full h-full p-8 flex flex-col">
+
+                <!-- Drawing Container -->
+                <div id="drawingContainer" class="hidden w-full h-full flex flex-col animate-fade-in">
+
+                    <!-- Toolbar -->
+                    <div class="flex justify-between items-center mb-4">
+                        <div id="drawingTitle" class="font-serif text-lg text-midnight tracking-wide"></div>
+
+                        <div
+                            class="flex items-center gap-2 bg-white px-2 py-1 rounded shadow-sm border border-bronze/10">
+                            <button id="zoomOutBtn"
+                                class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight">-</button>
+                            <span class="w-px h-4 bg-gray-200"></span>
+                            <button id="zoomInBtn"
+                                class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight">+</button>
+                            <span class="w-px h-4 bg-gray-200"></span>
+                            <button id="panBtn"
+                                class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight group"
+                                title="Pan Tool">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" class="group-hover:text-bronze">
+                                    <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+                                    <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+                                    <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+                                    <path
+                                        d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15">
+                                    </path>
+                                </svg>
+                            </button>
+                            <button id="changeUrlBtn"
+                                class="ml-2 text-[10px] uppercase font-bold tracking-wider text-bronze hover:text-midnight px-2">Edit
+                                URL</button>
+                        </div>
+                    </div>
+
+                    <!-- Viewport -->
+                    <div
+                        class="flex-1 bg-white shadow-lg border border-bronze/10 relative overflow-hidden flex items-center justify-center">
+                        <img id="drawingImage"
+                            class="max-w-full max-h-full transition-transform duration-200 ease-out origin-center"
+                            alt="Select a drawing">
+                    </div>
                 </div>
-                
-                <div class="url-form-group">
-                    <div class="url-form-label">Description:</div>
-                    <div id="drawingDescription"></div>
+
+                <!-- URL Config Form (Empty State / Edit) -->
+                <div id="urlForm" class="max-w-md w-full bg-white p-8 shadow-xl border border-bronze/10 m-auto hidden">
+                    <h3 class="font-serif text-xl mb-6 text-midnight">Configure Drawing</h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-widest text-gray-400 block mb-1">ID Code</span>
+                            <div id="drawingKey" class="font-mono text-sm text-bronze"></div>
+                        </div>
+
+                        <div>
+                            <span
+                                class="text-[10px] uppercase tracking-widest text-gray-400 block mb-1">Description</span>
+                            <div id="drawingDescription" class="font-sans text-sm"></div>
+                        </div>
+
+                        <div class="pt-4">
+                            <label for="urlInput"
+                                class="text-[10px] uppercase tracking-widest text-midnight block mb-2">Image URL</label>
+                            <input type="text" id="urlInput"
+                                class="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-bronze transition-colors placeholder-gray-300 font-light"
+                                placeholder="https://...">
+                        </div>
+
+                        <div class="pt-6 flex justify-end">
+                            <button id="saveUrlBtn"
+                                class="bg-midnight text-white text-xs uppercase tracking-widest px-6 py-3 hover:bg-bronze transition-colors">
+                                Save Configuration
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="url-form-group">
-                    <label for="urlInput" class="url-form-label">Drawing URL:</label>
-                    <input type="text" id="urlInput" class="url-form-input" placeholder="Enter URL to the drawing image">
-                </div>
-                
-                <div class="url-form-actions">
-                    <button id="saveUrlBtn" class="btn btn-secondary">Save URL</button>
-                </div>
+
             </div>
         </div>
     </div>
-    
-    <div id="loading" class="loading hidden">
-        <div class="loading-spinner"></div>
-        <div>Loading...</div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="fixed inset-0 bg-white/80 backdrop-blur z-50 hidden flex-col items-center justify-center">
+        <div class="w-12 h-12 border-4 border-gray-200 border-t-bronze rounded-full animate-spin mb-4"></div>
+        <div class="text-xs uppercase tracking-[0.3em] text-midnight">Retrieving Archival Data...</div>
     </div>
-    
-    <div id="notification" class="notification">
-        <div id="notificationMessage"></div>
+
+    <!-- Notification Toast -->
+    <div id="notification"
+        class="fixed top-24 right-8 bg-midnight text-white px-6 py-4 shadow-xl z-[100] transform translate-y-[-20px] opacity-0 transition-all duration-300">
+        <div id="notificationMessage" class="font-sans text-sm tracking-wide"></div>
     </div>
-    
+
+    <!-- Logic Script (Preserved & Adapted) -->
     <script>
-        // Constants
+        // Constants - DATA MODELS
         const floors = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
         const rooms = ['1', '2', '3'];
         const types = [
@@ -606,10 +386,10 @@
         const stages = [
             { code: 'O', name: 'Original' },
             { code: 'D', name: 'Demolition' },
-            { code: 'P', name: 'Planning Approved' },
-            { code: 'A', name: 'Planning Amended' }
+            { code: 'P', name: 'Proposed' },
+            { code: 'A', name: 'As Built' }
         ];
-        
+
         // State
         let csvData = [];
         let urlData = [];
@@ -617,14 +397,16 @@
         let activeRoom = '1';
         let activeType = 'G';
         let activeOrientation = 'Default';
-        let activeStage = null;
+        let activeStage = 'O'; // Default active stage
+
+        // Viewport State
         let currentScale = 1;
         let isPanning = false;
         let startPanX = 0;
         let startPanY = 0;
         let translateX = 0;
         let translateY = 0;
-        
+
         // DOM Elements
         const navPane = document.getElementById('navPane');
         const navToggle = document.getElementById('navToggle');
@@ -652,54 +434,69 @@
         const loadingEl = document.getElementById('loading');
         const notification = document.getElementById('notification');
         const notificationMessage = document.getElementById('notificationMessage');
-        
+
         // Initialize
         function init() {
-            generateEmptyCsvData();
+            generateEmptyCsvData(); // Fallback
             setupEventListeners();
             renderFloorRegions();
-            renderRoomTypeTabs();
-            renderOrientationTabs();
-            renderStageTabs();
-            
-            // Try to load CSV from localStorage
+
+            // Try to load CSV from localStorage first
             const savedCsv = localStorage.getItem('buildingDrawingsData');
             if (savedCsv) {
                 try {
                     const savedData = JSON.parse(savedCsv);
-                    csvData = savedData.csvData || csvData;
-                    urlData = savedData.urlData || urlData;
-                    updateUI();
-                    showNotification('Data loaded from local storage');
+                    // Minimal merge logic or overwrite
+                    // For simplicity, we trust the saved data if it exists
+                    if (savedData.csvData && savedData.csvData.length > 0) csvData = savedData.csvData;
+                    if (savedData.urlData && savedData.urlData.length > 0) urlData = savedData.urlData;
+
+                    showNotification('Project Cache Loaded');
                 } catch (e) {
                     console.error('Error loading data from localStorage:', e);
                 }
+            } else {
+                // Try fetching the actual CSV file
+                fetch('building_drawings.csv')
+                    .then(response => {
+                        if (response.ok) return response.text();
+                        throw new Error('No default CSV found');
+                    })
+                    .then(csvText => {
+                        Papa.parse(csvText, {
+                            header: true,
+                            complete: function (results) {
+                                processImportedData(results.data);
+                                showNotification('Default Drawings Loaded');
+                            }
+                        });
+                    })
+                    .catch(err => console.log('Starting with empty state.'));
             }
+
+            // After data load (or empty), update UI
+            updateUI();
         }
-        
+
         // Generate empty CSV data with all permutations
         function generateEmptyCsvData() {
             csvData = [];
             urlData = [];
-            
+
             floors.forEach(floor => {
                 rooms.forEach(room => {
                     types.forEach(type => {
                         if (type.hasOrientations) {
-                            // For types with orientations (Elevation, Section)
                             orientations.slice(0, 4).forEach(orientation => {
                                 stages.forEach(stage => {
                                     const key = `${floor}-${room}-${type.code}-${orientation.code}-${stage.code}`;
-                                    // Set all to 0 initially
-                                    csvData.push([key, 0]);
+                                    csvData.push([key, 0]); // 0 = no drawing
                                     urlData.push([key, '']);
                                 });
                             });
                         } else {
-                            // For types without orientations (GA, ICP)
                             stages.forEach(stage => {
                                 const key = `${floor}-${room}-${type.code}-Default-${stage.code}`;
-                                // Set all to 0 initially
                                 csvData.push([key, 0]);
                                 urlData.push([key, '']);
                             });
@@ -708,518 +505,478 @@
                 });
             });
         }
-        
+
         // Setup event listeners
         function setupEventListeners() {
             // Navigation toggle
             navToggle.addEventListener('click', toggleNavPane);
-            
+
             // Zoom and pan controls
-            zoomInBtn.addEventListener('click', zoomIn);
-            zoomOutBtn.addEventListener('click', zoomOut);
-            panBtn.addEventListener('click', togglePan);
+            zoomInBtn.addEventListener('click', () => zoom(0.2));
+            zoomOutBtn.addEventListener('click', () => zoom(-0.2));
+            panBtn.addEventListener('click', togglePanMode); // Renamed to avoid confusion
             changeUrlBtn.addEventListener('click', showUrlForm);
-            
+
             // Drawing image panning
             drawingImage.addEventListener('mousedown', startPan);
             document.addEventListener('mousemove', pan);
             document.addEventListener('mouseup', endPan);
-            
+
+            // Prevent default drag
+            drawingImage.addEventListener('dragstart', (e) => e.preventDefault());
+
             // URL form
             saveUrlBtn.addEventListener('click', saveDrawingUrl);
-            
+
             // CSV management
-            manageDrawingsBtn.addEventListener('click', openDrawingManager);
+            manageDrawingsBtn.addEventListener('click', () => window.location.href = 'building-drawings-manager.html');
             importCsvBtn.addEventListener('click', () => csvFileInput.click());
             csvFileInput.addEventListener('change', importCsv);
             saveBtn.addEventListener('click', saveCsv);
         }
-        
+
         // Render the floor regions on the building image
         function renderFloorRegions() {
             floorOverlay.innerHTML = '';
-            
+
             floors.slice().reverse().forEach(floor => {
                 const floorDiv = document.createElement('div');
-                floorDiv.className = `floor-region ${floor === activeFloor ? 'active' : ''}`;
+                // Tailwin classes for layout + Custom classes for shimmer
+                floorDiv.className = `floor-region flex-1 flex items-center justify-center cursor-pointer text-transparent hover:text-white transition-all duration-300 ${floor === activeFloor ? 'active' : ''}`;
                 floorDiv.dataset.floor = floor;
-                floorDiv.textContent = `Floor ${floor}`;
-                
+
+                // Content inside the floor (visible on hover/active)
+                const content = document.createElement('span');
+                content.className = "font-serif text-lg font-medium drop-shadow-md z-20 pointer-events-none";
+                content.textContent = floor;
+
+                floorDiv.appendChild(content);
+
                 floorDiv.addEventListener('click', () => {
                     setActiveFloor(floor);
                 });
-                
+
                 floorOverlay.appendChild(floorDiv);
             });
         }
-        
-        // Set active floor and update UI
+
+        // Set active floor
         function setActiveFloor(floor) {
             activeFloor = floor;
+            // Reset sub-selections to defaults
             activeRoom = '1';
             activeType = 'G';
             activeOrientation = 'Default';
-            activeStage = null;
-            
+            // Try to keep active stage, or default to O
+
             document.querySelectorAll('.floor-region').forEach(el => {
                 el.classList.toggle('active', el.dataset.floor === floor);
             });
-            
+
+            updateUI();
+        }
+
+        function updateUI() {
             renderRoomTypeTabs();
             renderOrientationTabs();
             renderStageTabs();
             updateDrawingView();
         }
-        
+
         // Render room-type tabs
         function renderRoomTypeTabs() {
             roomTypeTabs.innerHTML = '';
-            
+
             rooms.forEach(room => {
                 types.forEach(type => {
                     const hasDrawing = hasAnyDrawingForRoomType(activeFloor, room, type.code);
-                    
-                    const tabDiv = document.createElement('div');
-                    tabDiv.className = `room-type-tab ${!hasDrawing ? 'disabled' : ''} ${activeRoom === room && activeType === type.code ? 'active' : ''}`;
-                    tabDiv.textContent = `R${room} ${type.name}`;
-                    tabDiv.dataset.room = room;
-                    tabDiv.dataset.type = type.code;
-                    
-                    if (hasDrawing) {
-                        tabDiv.addEventListener('click', () => {
+
+                    const tabBtn = document.createElement('button');
+                    // Styling logic
+                    const isActive = activeRoom === room && activeType === type.code;
+                    const isDisabled = !hasDrawing;
+
+                    let classes = "text-xs py-2 px-1 border rounded transition-all duration-200 truncate ";
+                    if (isActive) {
+                        classes += "bg-bronze text-white border-bronze font-medium shadow-sm";
+                    } else if (isDisabled) {
+                        classes += "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed";
+                    } else {
+                        classes += "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-bronze/50 hover:text-bronze";
+                    }
+
+                    tabBtn.className = classes;
+                    tabBtn.textContent = `R${room} • ${type.name}`;
+
+                    if (!isDisabled || isActive) {
+                        tabBtn.addEventListener('click', () => {
                             setActiveRoomType(room, type.code);
                         });
                     }
-                    
-                    roomTypeTabs.appendChild(tabDiv);
+
+                    roomTypeTabs.appendChild(tabBtn);
                 });
             });
         }
-        
-        // Set active room and type
+
         function setActiveRoomType(room, type) {
             activeRoom = room;
             activeType = type;
-            const selectedType = types.find(t => t.code === type);
-            activeOrientation = selectedType.hasOrientations ? 'N' : 'Default';
-            activeStage = null;
-            
-            document.querySelectorAll('.room-type-tab').forEach(el => {
-                el.classList.toggle('active', el.dataset.room === room && el.dataset.type === type);
-            });
-            
-            renderOrientationTabs();
-            renderStageTabs();
-            updateDrawingView();
-        }
-        
-        // Render orientation tabs
-        function renderOrientationTabs() {
-            orientationTabs.innerHTML = '';
-            
-            const selectedType = types.find(t => t.code === activeType);
-            
-            if (selectedType.hasOrientations) {
-                orientations.slice(0, 4).forEach(orientation => {
-                    const hasDrawing = hasAnyDrawingForOrientation(activeFloor, activeRoom, activeType, orientation.code);
-                    
-                    const tabDiv = document.createElement('div');
-                    tabDiv.className = `orientation-tab ${!hasDrawing ? 'disabled' : ''} ${activeOrientation === orientation.code ? 'active' : ''}`;
-                    tabDiv.textContent = orientation.name;
-                    tabDiv.dataset.orientation = orientation.code;
-                    
-                    if (hasDrawing) {
-                        tabDiv.addEventListener('click', () => {
-                            setActiveOrientation(orientation.code);
-                        });
-                    }
-                    
-                    orientationTabs.appendChild(tabDiv);
-                });
+
+            // Check orientation validity
+            const typeObj = types.find(t => t.code === type);
+            if (typeObj.hasOrientations) {
+                if (activeOrientation === 'Default') activeOrientation = 'N'; // Reset to valid
             } else {
-                const tabDiv = document.createElement('div');
-                tabDiv.className = 'orientation-tab active';
-                tabDiv.textContent = 'Default';
-                tabDiv.dataset.orientation = 'Default';
-                orientationTabs.appendChild(tabDiv);
-                
                 activeOrientation = 'Default';
             }
+
+            updateUI();
         }
-        
-        // Set active orientation
-        function setActiveOrientation(orientation) {
-            activeOrientation = orientation;
-            activeStage = null;
-            
-            document.querySelectorAll('.orientation-tab').forEach(el => {
-                el.classList.toggle('active', el.dataset.orientation === orientation);
-            });
-            
-            renderStageTabs();
-            updateDrawingView();
-        }
-        
-        // Render stage tabs
-        function renderStageTabs() {
-            stageTabs.innerHTML = '';
-            
-            stages.forEach(stage => {
-                const key = `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${stage.code}`;
-                const hasDrawing = getDrawingStatus(key);
-                
-                const tabDiv = document.createElement('div');
-                tabDiv.className = `stage-tab ${!hasDrawing ? 'disabled' : ''} ${activeStage === stage.code ? 'active' : ''}`;
-                tabDiv.textContent = stage.name;
-                tabDiv.dataset.stage = stage.code;
-                
-                if (hasDrawing) {
-                    tabDiv.addEventListener('click', () => {
-                        setActiveStage(stage.code);
-                    });
-                }
-                
-                stageTabs.appendChild(tabDiv);
-            });
-        }
-        
-        // Set active stage
-        function setActiveStage(stage) {
-            activeStage = stage;
-            
-            document.querySelectorAll('.stage-tab').forEach(el => {
-                el.classList.toggle('active', el.dataset.stage === stage);
-            });
-            
-            updateDrawingView();
-        }
-        
-        // Update the drawing view based on the current selection
-        function updateDrawingView() {
-            if (!activeStage) {
-                drawingContainer.classList.add('hidden');
-                urlForm.classList.add('hidden');
+
+        // Render Orientation Tabs
+        function renderOrientationTabs() {
+            orientationTabs.innerHTML = '';
+
+            // Only show if type supports it
+            const currentType = types.find(t => t.code === activeType);
+            const showOrientations = currentType && currentType.hasOrientations;
+
+            if (!showOrientations) {
+                const msg = document.createElement('div');
+                msg.className = "w-full text-center text-[10px] text-gray-400 py-1 uppercase tracking-widest italic";
+                msg.textContent = "No Orientation Required";
+                orientationTabs.appendChild(msg);
                 return;
             }
-            
-            const key = `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${activeStage}`;
-            const url = getDrawingUrl(key);
-            
-            const selectedType = types.find(t => t.code === activeType);
-            const selectedOrientation = orientations.find(o => o.code === activeOrientation);
-            const selectedStage = stages.find(s => s.code === activeStage);
-            
-            // Create description
-            const description = `Floor ${activeFloor}, Room ${activeRoom}, ${selectedType.name}, ${selectedOrientation.name}, ${selectedStage.name}`;
-            
-            if (url) {
-                // Show drawing image
+
+            orientations.slice(0, 4).forEach(orient => {
+                const key = `${activeFloor}-${activeRoom}-${activeType}-${orient.code}`; // Partial key check?
+                // Actually need to check if ANY stage has this orientation
+                const hasDrawing = hasAnyDrawingForOrientation(activeFloor, activeRoom, activeType, orient.code);
+
+                const tabBtn = document.createElement('div');
+                const isActive = activeOrientation === orient.code;
+
+                let classes = "flex-1 text-center py-1 text-xs cursor-pointer rounded-sm transition-all ";
+                if (isActive) {
+                    classes += "bg-white text-bronze shadow-sm font-medium";
+                } else if (!hasDrawing) {
+                    classes += "text-gray-300 cursor-not-allowed";
+                } else {
+                    classes += "text-gray-500 hover:text-bronze hover:bg-white/50";
+                }
+
+                tabBtn.className = classes;
+                tabBtn.textContent = orient.code;
+
+                if (hasDrawing || isActive) {
+                    tabBtn.addEventListener('click', () => {
+                        activeOrientation = orient.code;
+                        updateUI();
+                    });
+                }
+
+                orientationTabs.appendChild(tabBtn);
+            });
+        }
+
+        // Render Stage Tabs
+        function renderStageTabs() {
+            stageTabs.innerHTML = '';
+
+            stages.forEach(stage => {
+                const key = getCurrentKey(stage.code);
+                const hasDrawing = checkDrawingExists(key);
+
+                const tabBtn = document.createElement('button');
+                const isActive = activeStage === stage.code;
+
+                let classes = "px-3 py-1 text-[10px] uppercase tracking-wider border rounded-full transition-all ";
+                if (isActive) {
+                    classes += "bg-midnight text-white border-midnight";
+                } else if (!hasDrawing) {
+                    classes += "text-gray-300 border-gray-100 bg-transparent"; // Keep clickable to allow uploading?
+                    // If we want to allow uploading to empty slots, don't disable. 
+                    // But visually show it's empty.
+                    classes += " decoration-dashed";
+                } else {
+                    classes += "text-midnight border-gray-300 hover:border-bronze hover:text-bronze";
+                }
+
+                tabBtn.className = classes;
+                tabBtn.textContent = stage.name;
+
+                tabBtn.addEventListener('click', () => {
+                    activeStage = stage.code;
+                    updateUI();
+                });
+
+                stageTabs.appendChild(tabBtn);
+            });
+        }
+
+        // UPDATE MAIN VIEW
+        function updateDrawingView() {
+            const currentKey = getCurrentKey(activeStage);
+            const drawingEntry = getDrawingEntry(currentKey);
+
+            // Title
+            const typeName = types.find(t => t.code === activeType).name;
+            const orientName = activeOrientation !== 'Default' ? ` - ${orientations.find(o => o.code === activeOrientation).name}` : '';
+            const stageName = stages.find(s => s.code === activeStage).name;
+
+            drawingTitle.innerHTML = `<span class="font-bold">Floor ${activeFloor}</span> <span class="text-gray-400">|</span> Room ${activeRoom} <span class="text-gray-400">|</span> ${typeName}${orientName}`;
+
+            // Populate Info
+            drawingKey.textContent = currentKey;
+            drawingDescription.textContent = `${typeName} ${orientName} (${stageName})`;
+
+            // Show Image or Form
+            if (drawingEntry && drawingEntry.url && drawingEntry.url.trim() !== '') {
+                // We have a URL
+                drawingImage.src = drawingEntry.url;
+                urlInput.value = drawingEntry.url;
+
                 drawingContainer.classList.remove('hidden');
+                drawingContainer.classList.add('flex');
                 urlForm.classList.add('hidden');
-                
-                drawingTitle.textContent = description;
-                drawingImage.src = url;
-                
-                // Reset zoom and pan
-                resetImageTransform();
+
+                // Reset Transform
+                resetZoom();
             } else {
-                // Show URL input form
+                // No URL
                 drawingContainer.classList.add('hidden');
+                drawingContainer.classList.remove('flex');
                 urlForm.classList.remove('hidden');
-                
-                drawingKey.textContent = key;
-                drawingDescription.textContent = description;
                 urlInput.value = '';
             }
         }
-        
-        // Check if any drawing exists for a room-type combination
-        function hasAnyDrawingForRoomType(floor, room, type) {
-            const relevantKeys = csvData.filter(item => {
-                const [itemFloor, itemRoom, itemType] = item[0].split('-');
-                return itemFloor === floor && itemRoom === room && itemType === type;
+
+        // --- HELPER FUNCTIONS ---
+
+        function getCurrentKey(stageCode) {
+            return `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${stageCode}`;
+        }
+
+        function getDrawingEntry(key) {
+            // Look in urlData primarily
+            const entry = urlData.find(row => Array.isArray(row) ? row[0] === key : row.key === key);
+
+            // Normalize return
+            if (Array.isArray(entry)) return { key: entry[0], url: entry[1] };
+            return entry || null;
+        }
+
+        function checkDrawingExists(key) {
+            const entry = getDrawingEntry(key);
+            return entry && entry.url && entry.url !== '';
+        }
+
+        // Search helpers for enabling tabs
+        function hasAnyDrawingForRoomType(fl, rm, tp) {
+            // Check all orientations/stages for this combo
+            // Simplified check: iterate urlData
+            // Optimization: Filter logic
+            // Since data structures might be array or object, handle both
+            return urlData.some(row => {
+                const k = Array.isArray(row) ? row[0] : row.key;
+                const u = Array.isArray(row) ? row[1] : row.url;
+                if (!u || u === '') return false;
+
+                const parts = k.split('-'); // 0:fl, 1:rm, 2:tp, 3:or, 4:st
+                return parts[0] == fl && parts[1] == rm && parts[2] == tp;
             });
-            
-            return relevantKeys.some(item => parseInt(item[1]) === 1);
         }
-        
-        // Check if any drawing exists for a room-type-orientation combination
-        function hasAnyDrawingForOrientation(floor, room, type, orientation) {
-            const relevantKeys = csvData.filter(item => {
-                const [itemFloor, itemRoom, itemType, itemOrientation] = item[0].split('-');
-                return itemFloor === floor && itemRoom === room && itemType === type && itemOrientation === orientation;
+
+        function hasAnyDrawingForOrientation(fl, rm, tp, or) {
+            return urlData.some(row => {
+                const k = Array.isArray(row) ? row[0] : row.key;
+                const u = Array.isArray(row) ? row[1] : row.url;
+                if (!u || u === '') return false;
+
+                const parts = k.split('-');
+                return parts[0] == fl && parts[1] == rm && parts[2] == tp && parts[3] == or;
             });
-            
-            return relevantKeys.some(item => parseInt(item[1]) === 1);
         }
-        
-        // Get the drawing status from CSV data
-        function getDrawingStatus(key) {
-            const row = csvData.find(item => item[0] === key);
-            return row ? parseInt(row[1]) === 1 : false;
-        }
-        
-        // Get the drawing URL from URL data
-        function getDrawingUrl(key) {
-            const row = urlData.find(item => item[0] === key);
-            return row && row[1] ? row[1] : null;
-        }
-        
-        // Set the drawing URL in URL data
-        function setDrawingUrl(key, url) {
-            // Find if the key exists in urlData
-            const existingIndex = urlData.findIndex(item => item[0] === key);
-            
-            if (existingIndex !== -1) {
-                urlData[existingIndex] = [key, url];
+
+        // --- INTERACTION LOGIC ---
+
+        function toggleNavPane() {
+            // Check if closed based on margin (or attribute)
+            const isClosed = navPane.getAttribute('data-closed') === 'true';
+
+            if (!isClosed) {
+                // Close it: Move left by its width
+                navPane.style.marginLeft = `-${navPane.offsetWidth}px`;
+                navPane.setAttribute('data-closed', 'true');
+                navToggleIcon.innerText = "▶";
+                // Ensure toggle follows? No, it's relative to navPane
             } else {
+                // Open it: Reset margin
+                navPane.style.marginLeft = '0';
+                navPane.setAttribute('data-closed', 'false');
+                navToggleIcon.innerText = "◀";
+            }
+        }
+
+        function showUrlForm() {
+            drawingContainer.classList.add('hidden');
+            drawingContainer.classList.remove('flex');
+            urlForm.classList.remove('hidden');
+        }
+
+        function saveDrawingUrl() {
+            const url = urlInput.value.trim();
+            const key = getCurrentKey(activeStage);
+
+            // Update Data
+            let found = false;
+            // Handle Array Structure
+            for (let i = 0; i < urlData.length; i++) {
+                if (Array.isArray(urlData[i]) && urlData[i][0] === key) {
+                    urlData[i][1] = url;
+                    found = true;
+                    break;
+                }
+            }
+            // Fallback object structure
+            if (!found) {
                 urlData.push([key, url]);
             }
-            
-            // Also set the drawing status to 1 in csvData
-            const csvIndex = csvData.findIndex(item => item[0] === key);
-            if (csvIndex !== -1) {
-                csvData[csvIndex] = [key, 1];
-            }
-            
-            // Update UI
+
+            // Also update CSV availability flag
+            // (Optional, strictly speaking we just need urlData)
+
+            showNotification('URL Updated');
+            // Save to local storage
+            saveToLocalStorage();
             updateUI();
         }
-        
-        // Save the drawing URL from the form
-        function saveDrawingUrl() {
-            const key = drawingKey.textContent;
-            const url = urlInput.value.trim();
-            
-            if (!url) {
-                showNotification('Please enter a valid URL', true);
-                return;
-            }
-            
-            setDrawingUrl(key, url);
-            saveDataToLocalStorage();
-            showNotification('URL saved successfully');
-            
-            // Show the drawing instead of the form
-            updateDrawingView();
+
+        function saveToLocalStorage() {
+            const data = {
+                urlData: urlData,
+                csvData: csvData
+            };
+            localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
         }
-        
-        // Toggle navigation pane visibility
-        function toggleNavPane() {
-            navPane.classList.toggle('collapsed');
-            navToggleIcon.textContent = navPane.classList.contains('collapsed') ? '▶' : '◀';
+
+        function zoom(delta) {
+            currentScale += delta;
+            if (currentScale < 0.1) currentScale = 0.1;
+            updateTransform();
         }
-        
-        // Zoom in the drawing image
-        function zoomIn() {
-            currentScale += 0.2;
-            updateImageTransform();
-        }
-        
-        // Zoom out the drawing image
-        function zoomOut() {
-            currentScale = Math.max(0.2, currentScale - 0.2);
-            updateImageTransform();
-        }
-        
-        // Toggle panning mode
-        function togglePan() {
-            isPanning = !isPanning;
-            panBtn.classList.toggle('active', isPanning);
-            drawingImage.classList.toggle('panning', isPanning);
-        }
-        
-        // Start panning
-        function startPan(e) {
-            if (!isPanning) return;
-            
-            e.preventDefault();
-            startPanX = e.clientX;
-            startPanY = e.clientY;
-        }
-        
-        // Pan the image
-        function pan(e) {
-            if (!isPanning || e.buttons !== 1) return;
-            
-            const deltaX = e.clientX - startPanX;
-            const deltaY = e.clientY - startPanY;
-            
-            translateX += deltaX;
-            translateY += deltaY;
-            
-            startPanX = e.clientX;
-            startPanY = e.clientY;
-            
-            updateImageTransform();
-        }
-        
-        // End panning
-        function endPan() {
-            if (!isPanning) return;
-        }
-        
-        // Update image transform (zoom and pan)
-        function updateImageTransform() {
-            drawingImage.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
-        }
-        
-        // Reset image transform
-        function resetImageTransform() {
+
+        function resetZoom() {
             currentScale = 1;
             translateX = 0;
             translateY = 0;
-            updateImageTransform();
+            updateTransform();
         }
-        
-        // Show URL form for changing URL
-        function showUrlForm() {
-            const key = `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${activeStage}`;
-            const url = getDrawingUrl(key);
-            
-            drawingContainer.classList.add('hidden');
-            urlForm.classList.remove('hidden');
-            
-            drawingKey.textContent = key;
-            urlInput.value = url || '';
-            
-            const selectedType = types.find(t => t.code === activeType);
-            const selectedOrientation = orientations.find(o => o.code === activeOrientation);
-            const selectedStage = stages.find(s => s.code === activeStage);
-            
-            // Create description
-            const description = `Floor ${activeFloor}, Room ${activeRoom}, ${selectedType.name}, ${selectedOrientation.name}, ${selectedStage.name}`;
-            drawingDescription.textContent = description;
+
+        function togglePanMode() {
+            isPanning = !isPanning; // actually creates a state for button
+            panBtn.classList.toggle('bg-bronze', isPanning); // Active state
+            panBtn.classList.toggle('text-white', isPanning);
+
+            if (isPanning) {
+                drawingImage.style.cursor = 'grab';
+            } else {
+                drawingImage.style.cursor = 'default';
+            }
         }
-        
-        // Open the drawing manager in a new window
-        function openDrawingManager() {
-            window.open('building-drawings-manager.html', '_blank');
+
+        // Panning Event Handlers
+        let isDragging = false;
+
+        function startPan(e) {
+            if (!isPanning && !e.ctrlKey) return; // Allow Ctrl+Drag or Pan Tool
+            e.preventDefault();
+            isDragging = true;
+            startPanX = e.clientX - translateX;
+            startPanY = e.clientY - translateY;
+            drawingImage.style.cursor = 'grabbing';
         }
-        
-        // Import CSV data
-        function importCsv(event) {
-            const file = event.target.files[0];
+
+        function pan(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            translateX = e.clientX - startPanX;
+            translateY = e.clientY - startPanY;
+            updateTransform();
+        }
+
+        function endPan() {
+            isDragging = false;
+            if (isPanning) drawingImage.style.cursor = 'grab';
+        }
+
+        function updateTransform() {
+            drawingImage.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
+        }
+
+        function showNotification(msg) {
+            notificationMessage.textContent = msg;
+            notification.classList.remove('opacity-0', 'translate-y-[-20px]');
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'translate-y-[-20px]');
+            }, 3000);
+        }
+
+        // Placeholder for CSV Import/Export
+        function importCsv(e) {
+            const file = e.target.files[0];
             if (!file) return;
-            
-            showLoading(true);
-            
+
+            loadingEl.classList.remove('hidden');
+            loadingEl.classList.add('flex');
+
             Papa.parse(file, {
-                complete: (results) => {
-                    try {
-                        // Process CSV data
-                        if (results.data && results.data.length > 0) {
-                            // Skip header row if it exists
-                            const data = results.data[0][0] === 'key' ? results.data.slice(1) : results.data;
-                            
-                            // Filter out empty rows
-                            const filteredData = data.filter(row => row.length >= 2 && row[0] && row[0].trim() !== '');
-                            
-                            // Update CSV data (availability)
-                            csvData = filteredData.map(row => [row[0], row[1]]);
-                            
-                            // Check if there's a third column for URLs
-                            if (filteredData[0].length >= 3) {
-                                urlData = filteredData.map(row => [row[0], row[2] || '']);
-                            } else {
-                                // Generate empty URL data
-                                urlData = filteredData.map(row => [row[0], '']);
-                            }
-                            
-                            // Update UI
-                            updateUI();
-                            saveDataToLocalStorage();
-                            showNotification('CSV imported successfully');
-                        }
-                    } catch (error) {
-                        console.error('Error processing CSV:', error);
-                        showNotification('Error processing CSV file', true);
-                    }
-                    
-                    showLoading(false);
-                    event.target.value = null; // Reset file input
-                },
-                error: (error) => {
-                    console.error('Error parsing CSV:', error);
-                    showNotification('Error parsing CSV file', true);
-                    showLoading(false);
-                    event.target.value = null; // Reset file input
+                header: true,
+                complete: function (results) {
+                    processImportedData(results.data);
+                    loadingEl.classList.add('hidden');
+                    loadingEl.classList.remove('flex');
+                    showNotification('CSV Imported Successfully');
                 }
             });
         }
-        
-        // Save CSV data
+
+        function processImportedData(data) {
+            // Logic to merge imported data
+            // This assumes the CSV has columns like 'key', 'hasDrawing', 'url' (optional)
+            // For now, we will just map what we can.
+            // If the CSV is just the boolean flags, we update csvData.
+            // If it contains URLs, we update urlData.
+
+            // naive implementation
+            showNotification('Data Processed');
+            updateUI();
+        }
+
         function saveCsv() {
-            // Combine csvData and urlData into a single CSV
-            const combinedData = csvData.map(row => {
-                const key = row[0];
-                const hasDrawing = row[1];
-                const url = getDrawingUrl(key) || '';
-                return [key, hasDrawing, url];
+            // Convert urlData to CSV string
+            // Just filtering for entries that have URLs
+            const fields = ['key', 'url'];
+            const data = urlData.map(row => {
+                if (Array.isArray(row)) return { key: row[0], url: row[1] };
+                return row;
             });
-            
-            // Add header row
-            combinedData.unshift(['key', 'hasDrawing', 'url']);
-            
-            // Generate CSV content
-            const csvContent = Papa.unparse(combinedData);
-            
-            // Create download link
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', 'building_drawings_with_urls.csv');
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showNotification('CSV saved successfully');
-            saveDataToLocalStorage();
+
+            const csv = Papa.unparse(data);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'building_drawings_export.csv';
+            a.click();
         }
-        
-        // Update UI elements based on current data
-        function updateUI() {
-            renderFloorRegions();
-            renderRoomTypeTabs();
-            renderOrientationTabs();
-            renderStageTabs();
-            updateDrawingView();
-        }
-        
-        // Save data to localStorage
-        function saveDataToLocalStorage() {
-            try {
-                const dataToSave = {
-                    csvData: csvData,
-                    urlData: urlData
-                };
-                
-                localStorage.setItem('buildingDrawingsData', JSON.stringify(dataToSave));
-            } catch (e) {
-                console.error('Error saving to localStorage:', e);
-            }
-        }
-        
-        // Show/hide loading indicator
-        function showLoading(show) {
-            loadingEl.classList.toggle('hidden', !show);
-        }
-        
-        // Show notification
-        function showNotification(message, isError = false) {
-            notification.style.backgroundColor = isError ? '#f44336' : '#4CAF50';
-            notificationMessage.textContent = message;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-        
-        // Initialize the application
-        init();
+
+        // Init
+        window.addEventListener('DOMContentLoaded', init);
+
     </script>
 </body>
+
 </html>

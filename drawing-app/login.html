@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | St Mary Somerset</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portland': '#F5F5F0',
+                        'midnight': '#0F1115',
+                        'bronze': '#9A8C74',
+                    },
+                    fontFamily: {
+                        'serif': ['Cinzel', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body
+    class="bg-portland text-midnight font-sans h-screen flex flex-col items-center justify-center relative overflow-hidden">
+
+    <!-- Background Decoration -->
+    <div class="absolute inset-0 z-0 pointer-events-none opacity-[0.03]"
+        style="background-image: radial-gradient(#0F1115 1px, transparent 1px); background-size: 30px 30px;">
+    </div>
+
+    <!-- Login Card -->
+    <div
+        class="relative z-10 w-full max-w-md bg-white p-12 shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-bronze/10 text-center">
+
+        <!-- Header -->
+        <div class="mb-10">
+            <h1 class="font-serif text-2xl tracking-[0.15em] uppercase text-midnight">St Mary Somerset</h1>
+            <div class="h-px w-16 bg-bronze/40 mx-auto my-4"></div>
+            <p class="text-xs uppercase tracking-[0.2em] text-bronze">Drawings Archive Access</p>
+        </div>
+
+        <!-- Auth Form -->
+        <form id="loginForm" class="space-y-6">
+            <div id="errorMsg"
+                class="hidden text-xs text-red-500 bg-red-50 p-2 rounded border border-red-100 uppercase tracking-wide">
+            </div>
+
+            <div class="space-y-4">
+                <div class="text-left">
+                    <label for="email" class="text-[10px] uppercase tracking-widest text-gray-500 block mb-1">Email
+                        Access Code</label>
+                    <input type="email" id="email"
+                        class="w-full bg-gray-50 border-b border-gray-200 p-3 text-sm focus:outline-none focus:border-bronze focus:bg-white transition-colors"
+                        placeholder="user@example.com" required>
+                </div>
+
+                <div class="text-left">
+                    <label for="password"
+                        class="text-[10px] uppercase tracking-widest text-gray-500 block mb-1">Passphrase</label>
+                    <input type="password" id="password"
+                        class="w-full bg-gray-50 border-b border-gray-200 p-3 text-sm focus:outline-none focus:border-bronze focus:bg-white transition-colors"
+                        placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="w-full bg-midnight text-white py-4 text-xs uppercase tracking-[0.15em] hover:bg-bronze transition-all duration-300 shadow-lg hover:shadow-xl translate-y-0 hover:-translate-y-0.5">
+                Enter Archive
+            </button>
+
+            <p class="text-[10px] text-gray-400 mt-4">Protected Area. Authorized Personnel Only.</p>
+        </form>
+    </div>
+
+    <script src="firebase-config.js"></script> <!-- Will be created next -->
+    <script>
+        // Init Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('loginForm');
+            const errorMsg = document.getElementById('errorMsg');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Check if config exists
+            if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey) {
+                errorMsg.textContent = "System Error: Firebase Configuration Missing.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            // Initialize Firebase
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Verifying...";
+                errorMsg.classList.add('hidden');
+
+                try {
+                    await firebase.auth().signInWithEmailAndPassword(email, password);
+                    // Success
+                    window.location.href = 'drawings-viewer.html';
+                } catch (error) {
+                    console.error(error);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Enter Archive";
+                    errorMsg.textContent = "Access Denied: " + error.message;
+                    errorMsg.classList.remove('hidden');
+                }
+            });
+
+            // Check if already logged in
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    window.location.href = 'drawings-viewer.html';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

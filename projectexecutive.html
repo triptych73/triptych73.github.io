@@ -13,6 +13,24 @@
         rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <!-- Auth Guard -->
+    <script>
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) {
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+    </script>
     <script>
         tailwind.config = {
             theme: {
@@ -98,8 +116,8 @@
             <div class="text-white/40">
                 Phase: <span class="text-portland">Fit-out</span>
             </div>
-            <a href="index.html" class="hover:text-bronze transition-colors ml-4 text-white/20 hover:text-white/60">Log
-                Out</a>
+            <a href="#" onclick="firebase.auth().signOut().then(() => window.location.href='index.html')"
+                class="hover:text-bronze transition-colors ml-4 text-white/20 hover:text-white/60">Log Out</a>
         </div>
     </nav>
 
@@ -319,9 +337,9 @@
                                 <p class="text-[10px] text-white/40">Rev F Pack - Approved</p>
                             </div>
                         </div>
-                        <button
-                            class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-colors text-white/60">View
-                            Files</button>
+                        <a href="drawing-app/drawings-viewer.html"
+                            class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-colors text-white/60 hover:text-white hover:bg-bronze/20 border border-transparent hover:border-bronze/30">View
+                            Files</a>
                     </div>
 
                     <div class="p-4 flex items-center justify-between group hover:bg-white/[0.02]">
