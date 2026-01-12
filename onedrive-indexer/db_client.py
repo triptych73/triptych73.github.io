@@ -11,7 +11,6 @@ def get_db():
         env_creds = os.environ.get("FIREBASE_CREDENTIALS")
         if env_creds:
             import json
-            # If it's a string, parse it.
             try:
                 # Handle potential quoting issues in Streamlit Secrets
                 if env_creds.startswith("'") and env_creds.endswith("'"):
@@ -24,13 +23,15 @@ def get_db():
                 st.error(f"Firebase Config Error: {e}")
                 return None
 
-        # 2. Try Local File (Dev)
-        key_files = [f for f in os.listdir('.') if f.endswith('.json') and 'firebase' in f]
-        if key_files:
-            cred = credentials.Certificate(key_files[0])
-            firebase_admin.initialize_app(cred)
-            return firestore.client()
-            
+        # 2. Try Local File (for local development)
+        import glob
+        json_files = glob.glob("*.json")
+        for f in json_files:
+            if "firebase-adminsdk" in f:
+                cred = credentials.Certificate(f)
+                firebase_admin.initialize_app(cred)
+                return firestore.client()
+
         return None
     
     return firestore.client()
