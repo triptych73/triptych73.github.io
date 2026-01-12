@@ -60,6 +60,15 @@ st.markdown("""
         background-color: #F0EFEB;
         border-right: 1px solid var(--border-color);
     }
+
+    /* Compact Sidebar spacing */
+    section[data-testid="stSidebar"] .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+        gap: 0.5rem !important; 
+    }
     
     /* Buttons - Solid Midnight Style (like "SAVE CONFIGURATION") */
     .stButton button {
@@ -181,6 +190,23 @@ st.markdown("""
         background-color: #FFFFFF;
         border-radius: 0px;
     }
+
+    /* Mobile compact rows */
+    @media (max-width: 768px) {
+        div[data-testid="stHorizontalBlock"] {
+            flex-wrap: nowrap !important;
+            gap: 4px !important;
+            padding: 6px 0 !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div {
+            min-width: auto !important;
+        }
+        /* Keep drawer expand arrow visible */
+        section[data-testid="stSidebar"][aria-expanded="false"] button {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -220,7 +246,7 @@ def save_key_to_env(key_name, key_value):
     st.toast(f"Saved {key_name} to .env!", icon="💾")
 
 # 4. Auth & Settings
-st.sidebar.title("⚙️ Settings")
+st.sidebar.title("Settings")
 client_id = os.environ.get("CLIENT_ID") or st.sidebar.text_input("Client ID")
 client_secret = os.environ.get("CLIENT_SECRET") or st.sidebar.text_input("Client Secret", type="password")
 tenant_id = os.environ.get("TENANT_ID", "common")
@@ -232,7 +258,7 @@ if not client_id or not client_secret:
 
 # --- AI Settings ---
 st.sidebar.divider()
-st.sidebar.title("🧠 AI / OCR")
+st.sidebar.title("AI / OCR")
 enable_ai = st.sidebar.checkbox("Enable AI OCR", value=False)
 llm_client = None
 
@@ -262,6 +288,20 @@ st.sidebar.header("Indexing Options")
 recursive_indexing = st.sidebar.checkbox("Recursively Index Subfolders", value=True)
 sync_to_db = st.sidebar.checkbox("Sync to Firebase DB", value=True, help="Save logic/metadata to Firestore")
 
+# --- File Type Filter ---
+st.sidebar.divider()
+st.sidebar.header("File Types to Index")
+ALL_FILE_TYPES = [".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".md"]
+if "selected_file_types" not in st.session_state:
+    st.session_state["selected_file_types"] = ALL_FILE_TYPES.copy()
+selected_file_types = st.sidebar.multiselect(
+    "Include these file types:",
+    options=ALL_FILE_TYPES,
+    default=st.session_state["selected_file_types"],
+    key="file_type_selector"
+)
+st.session_state["selected_file_types"] = selected_file_types
+
 # Auth Logic
 SCOPES = ["Files.Read.All", "User.Read", "Files.ReadWrite.All"] 
 AUTHORITY = f"https://login.microsoftonline.com/{tenant_id}"
@@ -276,7 +316,11 @@ if "access_token" not in st.session_state:
             st.session_state["access_token"] = result["access_token"]
             st.rerun()
         else:
-            st.error(f"❌ Login failed: {result.get('error_description')}")
+            # Code expired or invalid - clear URL and allow re-login
+            st.query_params.clear()
+            st.warning("⚠️ Your session expired. Please sign in again.")
+            auth_url = get_auth_url(msal_app, redirect_uri, SCOPES)
+            st.markdown(f"<a href='{auth_url}'><button>Sign in with Microsoft</button></a>", unsafe_allow_html=True)
             st.stop()
     else:
         auth_url = get_auth_url(msal_app, redirect_uri, SCOPES)
@@ -290,6 +334,11 @@ client = GraphClient(token)
 if "user_info" not in st.session_state: st.session_state["user_info"] = client.get_me()
 user = st.session_state["user_info"]
 if user: st.sidebar.success(f"👤 {user.get('displayName')}")
+
+# --- Sidebar Actions Placeholder ---
+# We reserve this space now so it appears at the top, 
+# but we populate it later once we know what files are selected.
+sidebar_placeholder = st.sidebar.empty()
 
 # Navigation
 def enter_folder(new_id, new_name):
@@ -309,100 +358,120 @@ def go_up():
         st.session_state["selected_items"] = set()
         st.session_state["current_folder_items"] = None
         st.session_state["indexed_ids_cache"] = set()
-        st.rerun()
+
 
 current_selection = []
+hist_names = [name for _, name in st.session_state["history"]]
+path_str = " / ".join(hist_names + [st.session_state["current_folder_name"]])
+st.markdown(f"<div class='breadcrumb'>📂 <strong>{path_str}</strong></div>", unsafe_allow_html=True)
+if st.session_state["history"]: st.button("⬅️ Up One Level", on_click=go_up)
 
-col_nav, col_action = st.columns([3, 1])
+# --- Document Viewer Area ---
+if "view_content" not in st.session_state: st.session_state["view_content"] = None
+if "view_name" not in st.session_state: st.session_state["view_name"] = ""
+if "view_id" not in st.session_state: st.session_state["view_id"] = None
 
-with col_nav:
-    hist_names = [name for _, name in st.session_state["history"]]
-    path_str = " / ".join(hist_names + [st.session_state["current_folder_name"]])
-    st.markdown(f"<div class='breadcrumb'>📂 <strong>{path_str}</strong></div>", unsafe_allow_html=True)
-    if st.session_state["history"]: st.button("⬅️ Up One Level", on_click=go_up)
 
-    # --- Document Viewer Area ---
-    if "view_content" not in st.session_state: st.session_state["view_content"] = None
-    if "view_name" not in st.session_state: st.session_state["view_name"] = ""
+# Document viewer moved inline - code removed from header
 
-    if st.session_state["view_content"]:
-        with st.expander(f"📖 Viewing: {st.session_state['view_name']}", expanded=True):
-            st.markdown(st.session_state["view_content"])
-            if st.button("❌ Close Viewer", use_container_width=True):
-                st.session_state["view_content"] = None
-                st.rerun()
-    # ---------------------------
 
-    if st.session_state["current_folder_items"] is None:
-        with st.spinner("Loading..."):
-            items = client.get_drive_item_children(st.session_state["current_folder_id"])
-            st.session_state["current_folder_items"] = items
-            
-            # --- Check DB Status ---
-            if sync_to_db: 
-                 ids_to_check = [item['id'] for item in items]
-                 st.session_state["indexed_ids_cache"] = db_client.get_indexed_status(ids_to_check)
+if st.session_state["current_folder_items"] is None:
+    with st.spinner("Loading..."):
+        items = client.get_drive_item_children(st.session_state["current_folder_id"])
+        st.session_state["current_folder_items"] = items
+        
+        # --- Check DB Status ---
+        if sync_to_db: 
+             ids_to_check = [item['id'] for item in items]
+             st.session_state["indexed_ids_cache"] = db_client.get_indexed_status(ids_to_check)
+
+items = st.session_state["current_folder_items"]
+indexed_ids = st.session_state["indexed_ids_cache"]
+
+st.markdown("---")
+
+# Collect selections from the file explorer
+for item in items:
+    item_id = item.get('id')
+    is_folder = 'folder' in item
+    name = item.get('name')
+    icon = "📁" if is_folder else "📄"
     
-    items = st.session_state["current_folder_items"]
-    indexed_ids = st.session_state["indexed_ids_cache"]
-
-    st.markdown("---")
-    h1, h2, h3, h4, h5 = st.columns([0.05, 0.05, 0.6, 0.15, 0.15])
-    h1.write("✅")
-    h3.write("**Name**")
-
-    # Selection list populated in loop
-
-    for item in items:
-        item_id = item.get('id')
-        is_folder = 'folder' in item
-        name = item.get('name')
-        icon = "📁" if is_folder else "📄"
+    # Color coding logic
+    is_indexed = item_id in indexed_ids
+    
+    c1, c2, c3, c4, c5 = st.columns([0.05, 0.05, 0.6, 0.15, 0.15], vertical_alignment="center")
+    
+    if c1.checkbox("", key=f"sel_{item_id}"):
+        current_selection.append(item)
         
-        # Color coding logic
-        is_indexed = item_id in indexed_ids
-        
-        c1, c2, c3, c4, c5 = st.columns([0.05, 0.05, 0.6, 0.15, 0.15], vertical_alignment="center")
-        
-        if c1.checkbox("", key=f"sel_{item_id}"):
-            current_selection.append(item)
-            
-        c2.write(icon)
-        
-        if is_indexed:
-            c3.markdown(f"**{name}** <span class='indexed-badge'>✅ Indexed</span>", unsafe_allow_html=True)
-        else:
-            c3.write(name)
-        
-        if is_folder:
-            if c5.button("Open", key=f"btn_{item_id}"):
-                enter_folder(item_id, name)
-        elif is_indexed:
-            # View Button for files
-            if c5.button("👁️ View", key=f"view_{item_id}"):
+    c2.write(icon)
+    
+    if is_indexed:
+        c3.markdown(f"**{name}** <span class='indexed-badge'>✅ Indexed</span>", unsafe_allow_html=True)
+    else:
+        c3.write(name)
+    
+    if is_folder:
+        if c5.button("Open", key=f"btn_{item_id}"):
+            enter_folder(item_id, name)
+    elif is_indexed:
+        # View Button for files
+        if c5.button("View", key=f"view_{item_id}"):
+            # Toggle logic: if already viewing this, close it.
+            if st.session_state.get("view_id") == item_id:
+                st.session_state["view_id"] = None
+                st.session_state["view_content"] = None
+            else:
                 doc = db_client.get_document_content(item_id)
                 if doc:
                     st.session_state["view_content"] = doc.get("content", "*No content found in DB*")
                     st.session_state["view_name"] = name
-                    st.rerun()
+                    st.session_state["view_id"] = item_id
                 else:
                     st.error("Could not fetch document.")
+            st.rerun()
 
-with col_action:
-    st.markdown('<div class="sticky-action-panel">', unsafe_allow_html=True)
+    # --- Inline Document Viewer ---
+    if st.session_state.get("view_id") == item_id and st.session_state.get("view_content"):
+         # Render full width below the row
+         # Render full width below the row
+         st.markdown(f"#### 📖 {name}")
+         with st.container(height=500, border=True):
+             st.markdown(st.session_state["view_content"])
+             if st.button("❌ Close Preview", key=f"close_{item_id}"):
+                 st.session_state["view_id"] = None
+                 st.session_state["view_content"] = None
+                 st.rerun()
+             st.divider()
+
+# --- Update Index Button with correct label ---
+if current_selection:
+    btn_label = f"🚀 Index {len(current_selection)} Selected"
+    items_to_index = current_selection
+else:
+    btn_label = "🚀 Index Entire Folder"
+    items_to_index = items
+
+# Filter items by selected file types
+if items_to_index and st.session_state.get("selected_file_types"):
+    selected_types = st.session_state["selected_file_types"]
+    items_to_index = [
+        item for item in items_to_index 
+        if 'folder' in item or any(item.get('name', '').lower().endswith(ext) for ext in selected_types)
+    ]
+
+# --- Sidebar Actions (Always Visible) ---
+with sidebar_placeholder.container():
     st.markdown("### Actions")
-    current_cost = cost_estimator.get_total_cost()
+    # Calculate cost dynamically
+    current_cost = cost_estimator.get_total_cost() # This updates as items might change? Actually cost is static unless recalculated
+    # Note: cost_estimator doesn't change based on selection unless we recalc. 
+    # But let's show it.
     st.markdown(f"<div class='cost-box'>💰 Est. Cost: ${current_cost:.4f}</div>", unsafe_allow_html=True)
-    
-    if current_selection:
-        btn_label = f"🚀 Index {len(current_selection)} Selected"
-        items_to_index = current_selection
-    else:
-        btn_label = "🚀 Index Entire Folder"
-        items_to_index = items
 
-    if st.button(btn_label, type="primary"):
-        status_area = st.empty()
+    if st.button(btn_label, type="primary", use_container_width=True):
+        status_area = st.empty() # In sidebar container
         try:
             with st.spinner("Indexing & Syncing..."):
                 def update_status(msg): status_area.text(msg)
@@ -413,19 +482,17 @@ with col_action:
                     status_callback=update_status,
                     recursive=recursive_indexing,
                     llm_client=llm_client,
-                    sync_db=sync_to_db # Pass the toggle value
+                    sync_db=sync_to_db
                 )
                 
                 if results:
                     st.session_state["indexing_results"] = results
-                    st.session_state["indexed_ids_cache"] = set() # Force refresh of green checks
-                    st.session_state["current_folder_items"] = None # Force complete refresh to update UI
-                    st.success(f"✅ Processed {len(results)} files!")
-                    st.rerun() # Rerun to show new green checks
+                    st.session_state["indexed_ids_cache"] = set()
+                    st.session_state["current_folder_items"] = None
+                    st.sidebar.success(f"✅ Processed {len(results)} files!")
+                    st.rerun()
                 else:
-                    st.warning("No supported files found.")
+                    st.sidebar.warning("No supported files found.")
         except Exception as e:
-            st.error(f"Error: {e}")
-    
-    st.markdown('</div>', unsafe_allow_html=True)  # Close sticky container
+            st.sidebar.error(f"Error: {e}")
 
