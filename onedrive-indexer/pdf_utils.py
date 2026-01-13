@@ -53,17 +53,17 @@ def extract_pdf_text(file_bytes, llm_client=None, prompt=None):
                 # We treat the whole PDF as one multi-modal document context
                 print(f"DEBUG: Vision-First PDF analysis on {len(images)} pages...")
             
-            vision_analysis = llm_client.analyze_document_visuals(
-                image_bytes_list, 
-                prompt=prompt if prompt else "Analyze this document."
-            )
-            
-            return f"### AI Vision Analysis (Source: PDF)\n{vision_analysis}"
-            
-        except Exception as e:
-            # If poppler is missing (e.g. local windows), this will fail.
-            # Fallback seamlessly.
-            print(f"DEBUG: PDF Vision failed (likely missing poppler): {e}. Falling back to text.")
+                vision_analysis = llm_client.analyze_document_visuals(
+                    image_bytes_list, 
+                    prompt=prompt if prompt else "Analyze this document."
+                )
+                
+                return f"### AI Vision Analysis (Source: PDF)\n{vision_analysis}"
+                
+            except Exception as e:
+                # If poppler is missing (e.g. local windows), this will fail.
+                # Fallback seamlessly.
+                print(f"DEBUG: PDF Vision failed (likely missing poppler): {e}. Falling back to text.")
 
     # --- STRATEGY 2: TEXT FALLBACK (pypdf) ---
     try:
