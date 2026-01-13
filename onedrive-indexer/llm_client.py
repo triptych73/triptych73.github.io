@@ -289,8 +289,8 @@ class LLMClient:
         in_tokens = 0
         out_tokens = 0
         if hasattr(response, 'usage_metadata'):
-             in_tokens = response.usage_metadata.prompt_token_count
-             out_tokens = response.usage_metadata.candidates_token_count
+             in_tokens = response.usage_metadata.prompt_token_count or 0
+             out_tokens = response.usage_metadata.candidates_token_count or 0
         else:
              in_tokens = len(image_list) * 258 + len(prompt) # Approximation
              out_tokens = len(response.text) // 4
