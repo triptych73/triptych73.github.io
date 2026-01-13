@@ -414,17 +414,52 @@ with tab3:
                 # Restore AI Client
                 llm_idx = get_ai_client()
                     
-                # Need fresh client logic or just pass the dicts?
-                # indexer_logic handles dicts with 'id' if client is provided.
-                # However, for 'onedrive' it typically needs 'get_drive_item' or similar?
-                # app.py passes `items_to_index` which are dicts. process_selection handles it.
+                # HYDRATION STEP: The AI metadata is just {id, name}. 
+                # We need the full object (downloadUrl, mimeType, etc.) to process it.
+                hydrated_list = []
+                
+                log_container.info("💧 Re-fetching file metadata for download access...")
+                hydration_bar = log_container.progress(0)
+                
+                for idx, item in enumerate(final_list_to_process):
+                    try:
+                        full_item = None
+                        if provider_key == "onedrive":
+                            # Graph API
+                            full_item = client.get_drive_item(item['id'])
+                        elif provider_key in ["google", "google_photos", "googledrive"]:
+                             # Google API
+                             if hasattr(client, 'get_file_metadata'):
+                                 full_item = client.get_file_metadata(item['id'])
+                             elif hasattr(client, 'service'):
+                                 # Fallback manual call if helper missing
+                                 full_item = client.service.files().get(fileId=item['id'], fields="*").execute()
+                             else:
+                                 # Start with basic, maybe indexer handles id-based download for Google?
+                                 # indexer_logic line 178: client.download_file(item_id, mime)
+                                 # Google client usually fetches via ID.
+                                 # But we need mimeType at least.
+                                 full_item = item # Risk if mime missing
+                                 
+                        if full_item:
+                            hydrated_list.append(full_item)
+                        else:
+                            log_container.warning(f"⚠️ Could not fetch metadata for {item['name']}")
+                            
+                    except Exception as e:
+                         log_container.error(f"Error fetching {item['name']}: {e}")
+                    
+                    hydration_bar.progress((idx + 1) / len(final_list_to_process))
+                
+                hydration_bar.empty()
+                log_container.success(f"Metadata refreshed for {len(hydrated_list)} files.")
                 
                 # We need to ensure we have the 'client' object for the download logic inside process_selection
                 # We have 'client' from top defined.
                 
                 processed_results = process_selection(
                     client=client, 
-                    selected_items=final_list_to_process, 
+                    selected_items=hydrated_list, 
                     provider=provider_key, 
                     status_callback=update_status_callback, 
                     recursive=False, 
