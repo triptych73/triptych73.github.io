@@ -19,8 +19,31 @@ try:
 except ImportError:
     genai = None
 
-# Fallback Legacy Google SDK (if user picks old model or mix not supported? 
-# We'll stick to new SDK for 'Google' provider as requested)
+import time
+import random
+
+def retry_with_backoff(func, max_retries=5, initial_delay=2.0, backoff_factor=2.0):
+    """
+    Retry logic for rate limits (429) and transient errors.
+    """
+    def wrapper(*args, **kwargs):
+        delay = initial_delay
+        for i in range(max_retries + 1):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                error_msg = str(e)
+                # Check for rate limit indicators in common provider errors
+                is_rate_limit = "429" in error_msg or "ResourceExhausted" in error_msg or "RESOURCE_EXHAUSTED" in error_msg or "Quota exceeded" in error_msg
+                
+                if is_rate_limit and i < max_retries:
+                    sleep_time = delay + random.uniform(0, 0.5) # Add jitter
+                    print(f"DEBUG: Rate limit hit. Retrying in {sleep_time:.2f}s... (Attempt {i+1}/{max_retries})")
+                    time.sleep(sleep_time)
+                    delay *= backoff_factor
+                else:
+                    raise e
+    return wrapper
 
 class LLMClient:
     def __init__(self, provider, api_key, model_name, cost_tracker):
@@ -111,6 +134,7 @@ class LLMClient:
             self.tracker.track(self.model_name, message.usage.input_tokens, message.usage.output_tokens)
         return message.content[0].text
 
+    @retry_with_backoff
     def _call_google_v2(self, image_bytes, prompt):
         if genai is None: return "[Error: google-genai lib missing]"
         client = self._get_genai_client()
@@ -202,6 +226,7 @@ class LLMClient:
             self.tracker.track(self.model_name, message.usage.input_tokens, message.usage.output_tokens)
         return message.content[0].text
 
+    @retry_with_backoff
     def _call_google_text(self, prompt):
         if genai is None: return "[Error: google-genai lib missing]"
         client = self._get_genai_client()
@@ -243,6 +268,7 @@ class LLMClient:
         except Exception as e:
             return f"[Error calling {self.provider} for visual doc: {str(e)}]"
 
+    @retry_with_backoff
     def _call_google_multi_image(self, image_list, prompt):
         if genai is None: return "[Error: google-genai lib missing]"
         client = self._get_genai_client()
