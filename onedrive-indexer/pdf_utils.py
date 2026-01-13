@@ -1,12 +1,56 @@
 from pypdf import PdfReader
 import io
+import sys
 
-def extract_pdf_text(file_bytes, llm_client=None):
+# Try to import pdf2image for Vision-First approach
+try:
+    from pdf2image import convert_from_bytes
+    PDF2IMAGE_AVAILABLE = True
+except ImportError:
+    PDF2IMAGE_AVAILABLE = False
+
+def extract_pdf_text(file_bytes, llm_client=None, prompt=None):
     """
-    Extracts text from a PDF. 
-    1. Tries standard text extraction.
-    2. If text is sparse and llm_client is provided, attempts OCR/Vision on images (if any).
+    Extracts content from a PDF.
+    
+    1. Vision-First (Preferred): If LLM is present and poppler is installed, 
+       convert pages to images and let AI read them (preserves layout/charts).
+    2. Text Fallback: If no LLM or no poppler, use pypdf to extract raw text.
     """
+    
+    # --- STRATEGY 1: VISION-FIRST (AI + Poppler) ---
+    if llm_client and PDF2IMAGE_AVAILABLE:
+        try:
+            # Convert PDF to images
+            # limits: Analyzed first 5 pages to save cost/time if large? 
+            # For now, let's try all but maybe limit resolution?
+            # 200 dpi is good enough for reading.
+            images = convert_from_bytes(file_bytes, dpi=200, fmt='jpeg')
+            
+            # Convert images to bytes for LLM
+            image_bytes_list = []
+            for img in images:
+                img_byte_arr = io.BytesIO()
+                img.save(img_byte_arr, format='JPEG')
+                image_bytes_list.append(img_byte_arr.getvalue())
+            
+            # Send to LLM
+            # We treat the whole PDF as one multi-modal document context
+            print(f"DEBUG: Vision-First PDF analysis on {len(images)} pages...")
+            
+            vision_analysis = llm_client.analyze_document_visuals(
+                image_bytes_list, 
+                prompt=prompt if prompt else "Analyze this document."
+            )
+            
+            return f"### AI Vision Analysis (Source: PDF)\n{vision_analysis}"
+            
+        except Exception as e:
+            # If poppler is missing (e.g. local windows), this will fail.
+            # Fallback seamlessly.
+            print(f"DEBUG: PDF Vision failed (likely missing poppler): {e}. Falling back to text.")
+
+    # --- STRATEGY 2: TEXT FALLBACK (pypdf) ---
     try:
         pdf_file = io.BytesIO(file_bytes)
         reader = PdfReader(pdf_file)
@@ -14,36 +58,8 @@ def extract_pdf_text(file_bytes, llm_client=None):
         
         for i, page in enumerate(reader.pages):
             text = page.extract_text() or ""
-            
-            # Heuristic: If page has very little text, it might be a scan.
-            # But extracting images from PDF is non-trivial without 'pdf2image' or similar.
-            # pypdf can extract images, but it's complex. 
-            # For now, we will stick to text-only extraction unless the user specifically 
-            # requested the advanced OCR flow which I might have lost.
-            # Rearchitecting for robustness:
-            
-            if len(text.strip()) > 50:
-                text_content.append(f"### Page {i+1}")
-                text_content.append(text)
-            else:
-                # Fallback: Check for images if LLM is available
-                # Note: pypdf image extraction can be buggy. 
-                # Simplest path: If we have bytes, we can try to rely on the fact 
-                # that if it's a pure image PDF, we might need OCR.
-                # Since we don't have 'pdf2image' installed (it requires poppler),
-                # we will just note it.
-                
-                # RECOVERY: The previous code used 'page.images'. Let's try to trust pypdf's image access.
-                if llm_client and hasattr(page, 'images') and len(page.images) > 0:
-                     text_content.append(f"### Page {i+1} (Scanned/Image Analysis via {llm_client.model_name})")
-                     # page.images returns ImageFile objects
-                     for img in page.images:
-                         # img.data is the bytes
-                         description = llm_client.analyze_image(img.data, prompt="Transcribe the text in this image exactly.")
-                         text_content.append(description)
-                else:
-                    text_content.append(f"### Page {i+1}")
-                    text_content.append(text if text.strip() else "[No text or extractable images found]")
+            text_content.append(f"### Page {i+1}")
+            text_content.append(text if text.strip() else "[No extractable text]")
 
         return "\n\n".join(text_content)
     except Exception as e:

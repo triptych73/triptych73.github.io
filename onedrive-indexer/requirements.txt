@@ -14,3 +14,4 @@ anthropic
 google-generativeai
 google-genai
 firebase-admin
+pdf2image

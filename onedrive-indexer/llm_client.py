@@ -145,3 +145,177 @@ class LLMClient:
             
         self.tracker.track(self.model_name, in_tokens, out_tokens)
         return response.text
+
+    def analyze_text(self, text_content, prompt):
+        """
+        Analyzes text content using the configured LLM provider.
+        """
+        if not self.api_key:
+            return "[Error: Missing API Key]"
+
+        # Truncate text if too long (simple safety check, 100k chars ~ 25k tokens)
+        if len(text_content) > 100000:
+             text_content = text_content[:100000] + "\n...[TRUNCATED]..."
+
+        combined_prompt = f"{prompt}\n\nContent to Analyze:\n{text_content}"
+
+        try:
+            if self.provider == "OpenAI":
+                return self._call_openai_text(combined_prompt)
+            elif self.provider == "Anthropic":
+                return self._call_anthropic_text(combined_prompt)
+            elif self.provider == "Google":
+                return self._call_google_text(combined_prompt)
+            else:
+                return "[Error: Unknown Provider]"
+        except Exception as e:
+            return f"[Error calling {self.provider}: {str(e)}]"
+
+    def _call_openai_text(self, prompt):
+        if OpenAI is None: return "[Error: OpenAI lib missing]"
+        client = OpenAI(api_key=self.api_key)
+        
+        response = client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=2000
+        )
+        content = response.choices[0].message.content
+        if response.usage:
+            self.tracker.track(self.model_name, response.usage.prompt_tokens, response.usage.completion_tokens)
+        return content
+
+    def _call_anthropic_text(self, prompt):
+        if Anthropic is None: return "[Error: Anthropic lib missing]"
+        client = Anthropic(api_key=self.api_key)
+        
+        message = client.messages.create(
+            model=self.model_name,
+            max_tokens=2000,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        if message.usage:
+            self.tracker.track(self.model_name, message.usage.input_tokens, message.usage.output_tokens)
+        return message.content[0].text
+
+    def _call_google_text(self, prompt):
+        if genai is None: return "[Error: google-genai lib missing]"
+        client = self._get_genai_client()
+        
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=prompt 
+        )
+        
+        in_tokens = 0
+        out_tokens = 0
+        if hasattr(response, 'usage_metadata'):
+             in_tokens = response.usage_metadata.prompt_token_count
+             out_tokens = response.usage_metadata.candidates_token_count
+        else:
+            in_tokens = len(prompt) // 4
+            out_tokens = len(response.text) // 4
+            
+        self.tracker.track(self.model_name, in_tokens, out_tokens)
+        return response.text
+
+    def analyze_document_visuals(self, image_list, prompt):
+        """
+        Analyzes a list of images (visual pages of a doc) as one context.
+        image_list: list of bytes (JPEG/PNG)
+        """
+        if not self.api_key:
+            return "[Error: Missing API Key]"
+            
+        try:
+            if self.provider == "Google":
+                return self._call_google_multi_image(image_list, prompt)
+            elif self.provider == "OpenAI":
+                return self._call_openai_multi_image(image_list, prompt)
+            elif self.provider == "Anthropic":
+                return self._call_anthropic_multi_image(image_list, prompt)
+            else:
+                return "[Error: Provider does not support multi-image analysis]"
+        except Exception as e:
+            return f"[Error calling {self.provider} for visual doc: {str(e)}]"
+
+    def _call_google_multi_image(self, image_list, prompt):
+        if genai is None: return "[Error: google-genai lib missing]"
+        client = self._get_genai_client()
+        
+        # Google GenAI supports mixing text and images in 'contents'
+        content_parts = []
+        for img_bytes in image_list:
+            content_parts.append(types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"))
+        
+        content_parts.append(types.Part.from_text(text=prompt))
+        
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=[types.Content(parts=content_parts)]
+        )
+        
+        # Usage tracking
+        in_tokens = 0
+        out_tokens = 0
+        if hasattr(response, 'usage_metadata'):
+             in_tokens = response.usage_metadata.prompt_token_count
+             out_tokens = response.usage_metadata.candidates_token_count
+        else:
+             in_tokens = len(image_list) * 258 + len(prompt) # Approximation
+             out_tokens = len(response.text) // 4
+             
+        self.tracker.track(self.model_name, in_tokens, out_tokens)
+        return response.text
+
+    def _call_openai_multi_image(self, image_list, prompt):
+        if OpenAI is None: return "[Error: OpenAI lib missing]"
+        client = OpenAI(api_key=self.api_key)
+        
+        content_list = [{"type": "text", "text": prompt}]
+        for img_bytes in image_list:
+            b64 = base64.b64encode(img_bytes).decode('utf-8')
+            content_list.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
+            })
+            
+        response = client.chat.completions.create(
+            model=self.model_name,
+            messages=[{"role": "user", "content": content_list}],
+            max_tokens=2000
+        )
+        content = response.choices[0].message.content
+        if response.usage:
+            self.tracker.track(self.model_name, response.usage.prompt_tokens, response.usage.completion_tokens)
+        return content
+
+    def _call_anthropic_multi_image(self, image_list, prompt):
+        if Anthropic is None: return "[Error: Anthropic lib missing]"
+        client = Anthropic(api_key=self.api_key)
+        
+        content_list = []
+        for img_bytes in image_list:
+            b64 = base64.b64encode(img_bytes).decode('utf-8')
+            content_list.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": b64
+                }
+            })
+        content_list.append({"type": "text", "text": prompt})
+
+        message = client.messages.create(
+            model=self.model_name,
+            max_tokens=2000,
+            messages=[{"role": "user", "content": content_list}]
+        )
+        if message.usage:
+            self.tracker.track(self.model_name, message.usage.input_tokens, message.usage.output_tokens)
+        return message.content[0].text

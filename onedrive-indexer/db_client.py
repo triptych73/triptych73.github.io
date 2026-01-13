@@ -36,23 +36,29 @@ def get_db():
     
     return firestore.client()
 
-def upsert_document(item_id, data):
+def upsert_document(item_id, data, provider="onedrive"):
     """
     Writes or updates a document in the 'indexer_files' collection.
-    item_id: The permanent OneDrive Item ID.
+    item_id: The permanent Item ID.
+    provider: 'onedrive' or 'gdrive'
     data: Dictionary of metadata and content.
     """
     db = get_db()
     if not db: return False
     
-    doc_ref = db.collection('indexer_files').document(item_id)
+    # Create composite ID to prevent collisions
+    doc_id = f"{provider}_{item_id}"
+    
+    doc_ref = db.collection('indexer_files').document(doc_id)
+    # Add provider to data for query filtering
+    data['provider'] = provider
     doc_ref.set(data, merge=True)
     return True
 
-def get_indexed_status(item_ids):
+def get_indexed_status(item_ids, provider="onedrive"):
     """
-    Given a list of OneDrive Item IDs, returns a set of IDs that exist in the DB.
-    Optimized to use batch queries (chunks of 30 due to Firestore limits).
+    Given a list of Item IDs, returns a set of IDs that exist in the DB.
+    Optimized to use batch queries.
     """
     db = get_db()
     if not db or not item_ids: return set()
@@ -62,28 +68,81 @@ def get_indexed_status(item_ids):
     
     # Firestore 'in' query limit is 30
     chunk_size = 30
+    
     pass_ids = [i for i in item_ids if i] # filter empty
     
-    for i in range(0, len(pass_ids), chunk_size):
-        chunk = pass_ids[i:i + chunk_size]
-        query = collection.where(filter=firestore.FieldFilter("onedrive_id", "in", chunk))
-        docs = query.stream()
+    # Transform to expected doc IDs
+    expected_doc_ids = [f"{provider}_{i}" for i in pass_ids]
+    
+    for i in range(0, len(expected_doc_ids), chunk_size):
+        chunk = expected_doc_ids[i:i + chunk_size]
+        # Query by document ID
+        
+        refs = [collection.document(d) for d in chunk]
+        try:
+            docs = db.get_all(refs)
+        except TypeError:
+            # Fallback if get_all expects unpacked args in this version
+            docs = db.get_all(*refs)
+            
         for doc in docs:
-            found_ids.add(doc.id)
+            if doc.exists:
+                # We want to return the ORIGINAL item_id, so strip prefix
+                original_id = doc.id.split('_', 1)[1]
+                found_ids.add(original_id)
             
     return found_ids
 
-def get_document_content(item_id):
+def get_document_content(item_id, provider="onedrive"):
     """
-    Fetches the full content of a document by OneDrive Item ID.
-    Returns a dict with 'content', 'ai_summary', etc. or None.
+    Fetches the full content.
     """
     db = get_db()
     if not db: return None
     
-    doc_ref = db.collection('indexer_files').document(item_id)
+    doc_id = f"{provider}_{item_id}"
+    doc_ref = db.collection('indexer_files').document(doc_id)
     doc = doc_ref.get()
     
     if doc.exists:
         return doc.to_dict()
     return None
+
+def save_user_tokens(user_id, token_data):
+    """
+    Saves OAuth tokens for a user.
+    """
+    db = get_db()
+    if not db: return False
+    
+    doc_ref = db.collection('auth_tokens').document(user_id)
+    doc_ref.set(token_data, merge=True)
+    return True
+
+def get_user_tokens(user_id):
+    """
+    Retrieves OAuth tokens for a user.
+    """
+    db = get_db()
+    if not db: return None
+    
+    doc_ref = db.collection('auth_tokens').document(user_id)
+    doc = doc_ref.get()
+    
+    if doc.exists:
+        return doc.to_dict()
+    return None
+
+def get_all_documents():
+    """
+    Fetches ALL documents from the indexer_files collection.
+    Warning: This can be expensive if collection is huge.
+    """
+    db = get_db()
+    if not db: return []
+    
+    docs = db.collection('indexer_files').stream()
+    results = []
+    for doc in docs:
+        results.append(doc.to_dict())
+    return results
