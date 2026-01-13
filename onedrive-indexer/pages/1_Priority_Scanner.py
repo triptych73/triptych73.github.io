@@ -195,7 +195,6 @@ with tab2:
             value="Project: St Mary Somerset Tower (5 Lambeth Hill). Focus on agreements, plans, architectural drawings, and legal contracts.",
             height=100)
 
-        # Generate Prompt
         if st.button("📝 Generate Prompt"):
             manifest_sample = json.dumps(st.session_state["scanned_files"], indent=None) # Compact JSON
             
@@ -207,10 +206,11 @@ CONTEXT:
 
 TASK:
 {criteria_text}
-You must analyze file names, paths, and dates to infer importance.
+CRITICAL: Focus on files relevant for a **Strategic Project Overview**. Prioritize high-level agreements, master plans, legal contracts, and architectural summaries. Ignore low-level operational details (e.g., minor invoices, specific sub-contractor correspondence) unless they are critical to the project timeline.
 
 OUTPUT FORMAT:
-Return ONLY a valid JSON List of Objects. Each object must have:
+Return ONLY a valid JSON List of Objects. Do not include any markdown formatting (no ```json blocks), no introductory text.
+Each object must have:
 - "id": The file ID (exact match from input)
 - "name": The file name
 - "reason": A brief reason for selection
@@ -229,31 +229,46 @@ MANIFEST:
                                                 height=300)
             
             if st.button("🤖 Consult AI (Gemini-3-Pro)", type="primary"):
-                llm = get_ai_client(model_override="gemini-1.5-pro") # Using 1.5 Pro as proxy for "3 Pro" High Context or similar
+                llm = get_ai_client(model_override="gemini-1.5-pro") 
                 if not llm:
                     st.error("No AI configured. Please set GOOGLE_API_KEY in .env or Main App.")
                 else:
                     with st.status("AI is thinking...") as status:
                         try:
-                            # analyze_text(text_content, prompt)
-                            # We'll pass the manifest as the 'text_content' and the instructions as 'prompt'
-                            # But wait, our 'user_approved_prompt' has everything concatenated.
-                            # So we can pass it as text_content and a minimal prompt, or split it.
-                            # Simplest fix for the TypeError: pass "" as text_content since prompt has it all.
                             status.write("Sending manifest to Gemini...")
                             response = llm.analyze_text(text_content="", prompt=user_approved_prompt)
                             
                             status.write("Parsing response...")
-                            # Clean markdown code blocks if present
-                            clean_resp = response.replace("```json", "").replace("```", "").strip()
-                            priority_files = json.loads(clean_resp)
+                            import re
                             
+                            # Robust JSON Extraction
+                            try:
+                                # 1. Try finding the first [ and last ]
+                                start_idx = response.find('[')
+                                end_idx = response.rfind(']')
+                                
+                                if start_idx != -1 and end_idx != -1:
+                                    json_str = response[start_idx:end_idx+1]
+                                    priority_files = json.loads(json_str)
+                                else:
+                                    # Fallback: maybe it's just a single object?
+                                    priority_files = json.loads(response)
+
+                            except json.JSONDecodeError:
+                                # 2. Hard cleanup if direct find failed
+                                clean_resp = response.replace("```json", "").replace("```", "").strip()
+                                priority_files = json.loads(clean_resp)
+                            
+                            if not isinstance(priority_files, list):
+                                st.error("AI returned a single object instead of a list. wrapping it.")
+                                priority_files = [priority_files]
+                                
                             st.session_state["to_index_list"] = priority_files
                             status.write(f"✅ AI Selected {len(priority_files)} files!")
                             status.update(state="complete")
                             
                         except Exception as e:
-                            st.error(f"AI Error: {e}")
+                            st.error(f"AI Error: {e} \n\nRaw Response: {response}")
                             st.stop()
                             
                     st.rerun()
