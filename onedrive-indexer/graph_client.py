@@ -39,6 +39,13 @@ class GraphClient:
         """Get children of a specific folder (paginated)."""
         return self._get_all_pages(f"{GRAPH_URI}/me/drive/items/{item_id}/children?top=999")
 
+    def get_drive_item(self, item_id):
+        """Get a single item's metadata."""
+        response = requests.get(f"{GRAPH_URI}/me/drive/items/{item_id}", headers=self.headers)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
     def download_file(self, download_url):
         """Download file content from the @microsoft.graph.downloadUrl."""
         if not download_url: return None
