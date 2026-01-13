@@ -22,6 +22,33 @@ st.info("Agentic Tool: Scan folders, ask AI to prioritize files, and then batch-
 client = None
 provider_key = "onedrive"
 
+# 1. Attempt Restore if missing
+if "access_token" not in st.session_state and "google_creds" not in st.session_state:
+    try:
+        db_tokens = db_client.get_user_tokens("default_user_session")
+        if db_tokens:
+            # Check if it's Google or MS based on structure (Google has refresh_token/client_id fields)
+            if 'client_email' in db_tokens or 'scopes' in db_tokens:
+                # Google
+                from google.oauth2.credentials import Credentials
+                creds = Credentials(
+                    token=db_tokens.get('token'),
+                    refresh_token=db_tokens.get('refresh_token'),
+                    token_uri=db_tokens.get('token_uri'),
+                    client_id=db_tokens.get('client_id'),
+                    client_secret=db_tokens.get('client_secret'),
+                    scopes=db_tokens.get('scopes')
+                )
+                st.session_state["google_creds"] = creds
+                st.toast("Restored session from database!", icon="🎉")
+            else:
+                # OneDrive (simpler token dict usually)
+                if 'access_token' in db_tokens:
+                    st.session_state["access_token"] = db_tokens
+                    st.toast("Restored session from database!", icon="🎉")
+    except Exception as e:
+        print(f"Error restoring session in scanner: {e}")
+
 if "access_token" in st.session_state:
     client = GraphClient(st.session_state["access_token"])
     provider_key = "onedrive"
@@ -130,10 +157,15 @@ with tab1:
         st.session_state["scanned_files"] = [] # Reset
         
         status_box = st.status("Scanning...", expanded=True)
+        # Use a placeholder for the live count update
+        scan_placeholder = status_box.empty()
+        
         all_files_found = []
         
         def scan_recursive(folder_id, path_prefix=""):
             try:
+                # Throttling scan slightly to avoid immediate rate limits on Graph
+                time.sleep(0.1) 
                 children = client.get_drive_item_children(folder_id)
             except Exception as e:
                 st.error(f"Access error: {e}")
@@ -160,11 +192,16 @@ with tab1:
                         "mime": item.get("mimeType", "")
                     }
                     all_files_found.append(meta)
-                    if len(all_files_found) % 10 == 0:
-                        status_box.write(f"Found {len(all_files_found)} files...")
+                    # Live Update in Place
+                    if len(all_files_found) % 5 == 0:
+                        scan_placeholder.info(f"📂 Found **{len(all_files_found)}** files so far...")
         
         scan_recursive(target_id_input if target_id_input else "root")
-        status_box.update(label="✅ Scan Complete!", state="complete", expanded=False)
+        
+        # Final update
+        scan_placeholder.empty() # Clear the info box
+        status_box.write(f"✅ Found {len(all_files_found)} files total.")
+        status_box.update(label="✅ Scan Complete!", state="complete", expanded=True)
         
         st.session_state["scanned_files"] = all_files_found
         st.success(f"Scan complete. Found {len(all_files_found)} files.")
@@ -196,6 +233,11 @@ with tab2:
         else:
             threshold = col_set2.slider("Minimum Relevance Score", 1, 10, 7)
             criteria_text = f"Select ALL files with a relevance score of {threshold} or higher (out of 10)."
+            
+        # Model Preference Option
+        st.markdown("---")
+        model_pref_options = ["Auto (Best)", "Gemini 3 Pro (High Reasoning)", "Gemini 3 Flash (Fast/OCR)"]
+        model_pref = st.radio("🤖 AI Model Preference", model_pref_options, horizontal=True)
 
         user_context_prompt = st.text_area("Additional Context for AI", 
             value="Project: St Mary Somerset Tower (5 Lambeth Hill). Focus on agreements, plans, architectural drawings, and legal contracts.",
@@ -239,19 +281,27 @@ MANIFEST:
             est_tokens = int(est_chars / 4)
             token_fmt = f"{est_tokens:,}"
             
-            # Auto-Select Model
-            # < 1M tokens -> Gemini 3 Flash (Speed/OCR)
-            # > 1M tokens -> Gemini 3 Pro (Complex Reasoning)
-            if est_tokens < 1_000_000:
-                selected_model = "gemini-3-flash-preview"
-                display_model = "Gemini 3 Flash (Preview)"
-                reason = "Speed & Efficiency (< 1M tokens)"
+            # Smart Selection Logic
+            if "Gemini 3 Pro" in model_pref:
+                 selected_model = "gemini-3-pro-preview"
+                 display_model = "Gemini 3 Pro (Forced)"
+                 reason = "User Selection"
+            elif "Gemini 3 Flash" in model_pref:
+                 selected_model = "gemini-3-flash-preview"
+                 display_model = "Gemini 3 Flash (Forced)"
+                 reason = "User Selection"
             else:
-                selected_model = "gemini-3-pro-preview"
-                display_model = "Gemini 3 Pro (Preview)"
-                reason = "High Reasoning (> 1M tokens)"
+                # AUTO Mode
+                if est_tokens < 1_000_000:
+                    selected_model = "gemini-3-flash-preview"
+                    display_model = "Gemini 3 Flash (Auto)"
+                    reason = "Speed & Efficiency (< 1M tokens)"
+                else:
+                    selected_model = "gemini-3-pro-preview"
+                    display_model = "Gemini 3 Pro (Auto)"
+                    reason = "High Reasoning (> 1M tokens)"
 
-            st.info(f"📊 **Context Analysis**: ~{token_fmt} tokens. \n\n🤖 **Auto-Selected Model**: `{display_model}` ({reason})")
+            st.info(f"📊 **Context Analysis**: ~{token_fmt} tokens. \n\n🤖 **Model**: `{display_model}` ({reason})")
             
             if st.button(f"🤖 Consult AI ({display_model})", type="primary"):
                 llm = get_ai_client(model_override=selected_model) 
