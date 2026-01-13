@@ -39,21 +39,27 @@ if not client:
 
 # --- HELPER: GET AI CLIENT ---
 def get_ai_client(model_override=None):
-    # Try to grab keys from env
-    provider = "Google" # Default
-    api_key = os.getenv("GOOGLE_API_KEY")
-    model = model_override or "gemini-3-pro-preview" # Default to latest powerful model
-
-    if not api_key:
-        if os.getenv("OPENAI_API_KEY"):
-            provider = "OpenAI"
-            api_key = os.getenv("OPENAI_API_KEY")
-            model = "gpt-4o"
-        elif os.getenv("ANTHROPIC_API_KEY"):
-            provider = "Anthropic"
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-            model = "claude-3-5-sonnet-20241022"
+    # 1. Check if user selected something globally (in sidebar of Main App)
+    global_provider = st.session_state.get("global_provider_selection")
+    global_model = st.session_state.get("global_model_selection")
     
+    # 2. Defaults if not set
+    provider = global_provider or "Google" 
+    model = model_override or global_model or "gemini-3-pro-preview" 
+
+    # 3. Get API Key from Environment or Session?
+    # app.py doesn't strictly save API key to session state in a "global_api_key" variable usually, 
+    # but relies on env vars or local input. 
+    # Let's try standard env vars first.
+    api_key = None
+    
+    if provider == "Google":
+        api_key = os.getenv("GOOGLE_API_KEY")
+    elif provider == "OpenAI":
+        api_key = os.getenv("OPENAI_API_KEY")
+    elif provider == "Anthropic":
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        
     if api_key:
         return LLMClient(provider=provider, api_key=api_key, model_name=model, cost_tracker=CostEstimator())
     return None

@@ -446,7 +446,7 @@ llm_client = None # Initialize llm_client here
 if st.sidebar.checkbox("Enable AI / OCR", value=True):
     # Provider Selection
     provider_options = ["Google", "OpenAI", "Anthropic"]
-    api_provider = st.sidebar.selectbox("AI Provider", provider_options, index=0)
+    api_provider = st.sidebar.selectbox("AI Provider", provider_options, index=0, key="global_provider_selection")
     
     # API Key Input
     api_key_input = ""
@@ -486,7 +486,7 @@ if st.sidebar.checkbox("Enable AI / OCR", value=True):
     # Custom/Fallback for Google names if previous code had them
     # Removed legacy fallback that was overwriting new models 
 
-    model_name = st.sidebar.selectbox("Model", model_map.get(api_provider, ["default"]))
+    model_name = st.sidebar.selectbox("Model", model_map.get(api_provider, ["default"]), key="global_model_selection")
         
     if api_key_input:
         try:
