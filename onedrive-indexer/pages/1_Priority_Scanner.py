@@ -64,6 +64,11 @@ if not client:
     st.warning("⚠️ Not signed in. Please go to the **Main App** page (sidebar) and sign in first.")
     st.stop()
 
+# --- SIDEBAR OPTIONS (Mirrors App.py) ---
+st.sidebar.header("Indexing Options")
+skip_indexed = st.sidebar.checkbox("Skip Already Indexed Files", value=False, key="skip_indexed_global")
+st.sidebar.divider()
+
 # --- HELPER: GET AI CLIENT ---
 def get_ai_client(model_override=None):
     # 1. Check if user selected something globally (in sidebar of Main App)
