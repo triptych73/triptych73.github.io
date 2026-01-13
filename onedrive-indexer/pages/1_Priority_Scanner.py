@@ -325,58 +325,52 @@ with tab3:
         if st.button("⚡ Start Batch Indexing", type="primary"):
             skip_existing = st.session_state.get("skip_indexed_global", False)
             
-            progress_bar = st.progress(0)
-            log_container = st.container()
-            log_container.write("Starting...")
-            
-            llm_idx = get_ai_client() # Standard client for individual file analysis
-            
-            processed_count = 0
+            # PRE-FILTERING (Skip Indexed)
+            final_list_to_process = []
             skipped_count = 0
             
-            for i, target in enumerate(files_to_index):
-                t_name = target.get("name")
-                t_id = target.get("id")
+            if skip_existing:
+                # Batch check DB
+                all_ids = [f["id"] for f in files_to_index]
+                indexed_set = db_client.get_indexed_status(all_ids, provider=provider_key)
                 
-                # Throttling: Since retry logic was removed, we must pace ourselves to avoiding hitting limits.
-                # Free tier is ~15 RPM, so 4 seconds per request is safe. 
-                # We'll do 2s delay + processing time.
-                if i > 0: 
-                    time.sleep(2.0) 
-                
-                # Skip Logic
-                if skip_existing:
-                    # Check DB
-                    is_indexed = db_client.get_indexed_status([t_id], provider=provider_key)
-                    if t_id in is_indexed:
-                        log_container.write(f"⏭️ Skipped (Already Indexed): {t_name}")
+                for f in files_to_index:
+                    if f["id"] in indexed_set:
                         skipped_count += 1
-                        progress_bar.progress((i + 1) / len(files_to_index))
-                        continue
-
-                # Process
-                log_container.write(f"🔄 Processing: {t_name}...")
-                try:
-                    # Need fresh item for download URL (OneDrive)
-                    full_item = client.get_drive_item(t_id) if hasattr(client, 'get_drive_item') else {"id": t_id, "name": t_name}
-                    
-                    process_selection(
-                        client, 
-                        [full_item], 
-                        provider=provider_key, 
-                        status_callback=None, # Silent in console
-                        recursive=False, 
-                        llm_client=llm_idx, 
-                        sync_db=True
-                    )
-                    processed_count += 1
-                    
-                except Exception as e:
-                    log_container.error(f"Failed {t_name}: {e}")
-                
-                progress_bar.progress((i + 1) / len(files_to_index))
+                        log_container.write(f"⏭️ Skipped (Already Indexed): {f['name']}")
+                    else:
+                        final_list_to_process.append(f)
+            else:
+                final_list_to_process = files_to_index
             
-            st.balloons()
-            st.success(f"Batch Complete! Processed: {processed_count}, Skipped: {skipped_count}")
+            if not final_list_to_process:
+                st.warning("All selected files were already indexed or skipped!")
+            else:
+                # Use the SAME batch function as the Main App
+                def update_status_callback(msg):
+                    log_container.write(msg)
+                    
+                # Need fresh client logic or just pass the dicts?
+                # indexer_logic handles dicts with 'id' if client is provided.
+                # However, for 'onedrive' it typically needs 'get_drive_item' or similar?
+                # app.py passes `items_to_index` which are dicts. process_selection handles it.
+                
+                # We need to ensure we have the 'client' object for the download logic inside process_selection
+                # We have 'client' from top defined.
+                
+                processed_results = process_selection(
+                    client=client, 
+                    selected_items=final_list_to_process, 
+                    provider=provider_key, 
+                    status_callback=update_status_callback, 
+                    recursive=False, 
+                    llm_client=llm_idx, 
+                    sync_db=True
+                )
+                
+                processed_count = len(processed_results)
+                
+                st.balloons()
+                st.success(f"Batch Complete! Processed: {processed_count}, Skipped: {skipped_count}")
     else:
         st.markdown("*Waiting for file selection...*")

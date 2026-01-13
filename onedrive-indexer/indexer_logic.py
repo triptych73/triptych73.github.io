@@ -82,7 +82,13 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
     
     processed_count = 0
     
+    import time # Ensure time is imported
     while queue:
+        # Global Throttle for AI Operations to prevent 429 errors
+        # Only needed if we are using an LLM client
+        if llm_client:
+            time.sleep(2.0)
+            
         item, current_path = queue.pop(0)
         item_name = item.get('name')
         item_id = item.get('id')
