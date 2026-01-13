@@ -544,6 +544,7 @@ st.sidebar.divider()
 st.sidebar.header("Indexing Options")
 recursive_indexing = st.sidebar.checkbox("Recursively Index Subfolders", value=True)
 sync_to_db = st.sidebar.checkbox("Sync to Firebase DB", value=True, help="Save logic/metadata to Firestore")
+skip_indexed = st.sidebar.checkbox("Skip Already Indexed Files", value=False, key="skip_indexed_global")
 
 # --- File Type Filter ---
 st.sidebar.divider()
