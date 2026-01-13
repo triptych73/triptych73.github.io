@@ -338,6 +338,12 @@ with tab3:
                 t_name = target.get("name")
                 t_id = target.get("id")
                 
+                # Throttling: Since retry logic was removed, we must pace ourselves to avoiding hitting limits.
+                # Free tier is ~15 RPM, so 4 seconds per request is safe. 
+                # We'll do 2s delay + processing time.
+                if i > 0: 
+                    time.sleep(2.0) 
+                
                 # Skip Logic
                 if skip_existing:
                     # Check DB
