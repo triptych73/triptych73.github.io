@@ -791,16 +791,53 @@ if items and sort_order:
     key_func = lambda x: x.get('name', '').lower()
     
     if sort_order == "Name (Z-A)":
-        reverse = True
+        # Tuple: (is_folder desc?, name desc) -> but we want folders FIRST.
+        # "name desc" means Z-A. 
+        # To keep folders (True) before files (False), we can sort by is_folder DESC (True > False).
+        # But we want to reverse the whole list? No, explicit key is better.
+        
+        # Sort folders (Z->A) then files (Z->A)
+        # key: (0 if folder, 1 if file), name (desc logic handled by reverse?)
+        # Let's simple use two passes or complex key.
+        # Actually simplest:
+        # Prio: Folder > File.
+        # Within group: Z-A or A-Z.
+        
+        # We'll use a specific key for each case to avoid confusion with `reverse=True`.
+        items.sort(key=lambda x: (not ('folder' in x), x.get('name', '').lower()), reverse=True)
+        # Wait, if reverse=True:
+        # (True, "z") -> comes first? Yes.
+        # (True, "a")
+        # (False, "z")
+        # So `not folder` means: Folder=False, File=True.
+        # Reverse Sort: True (File) comes before False(Folder)? NO.
+        # Python sort is stable.
+        
+        # Let's stick to explicit keys without reverse for clarity if possible, or just be careful.
+        # Folders First = is_folder needs to be "smaller" or "larger" depends on sort direction.
+        
+        # CASE: Name Z-A
+        # We want: Folder Z, Folder A, File Z, File A
+        # Key: (is_file, name) -> with reverse=True -> (True=File, z) > (False=Folder, z)
+        # So Files come first?
+        # WE WANT FOLDERS TOP.
+        # So we want Folder > File in the sort order if desc?
+        # or just sort manually:
+        
+        # Let's just do custom sort.
+        items.sort(key=lambda x: (0 if 'folder' in x else 1, x.get('name', '').lower()), reverse=True)
+        
+    elif sort_order == "Name (A-Z)":
+        # Folders (A-Z) then Files (A-Z)
+        # Simple: (0=Folder, 1=File), Name
+        items.sort(key=lambda x: (0 if 'folder' in x else 1, x.get('name', '').lower()))
+        
     elif sort_order == "Newest First":
-        # Google/Graph API timestamp keys vary, try common ones
         key_func = lambda x: x.get('lastModifiedDateTime', x.get('createdTime', '')) 
-        reverse = True
+        items.sort(key=key_func, reverse=True)
     elif sort_order == "Oldest First":
         key_func = lambda x: x.get('lastModifiedDateTime', x.get('createdTime', ''))
-        reverse = False
-        
-    items.sort(key=key_func, reverse=reverse)
+        items.sort(key=key_func, reverse=False)
 
 st.markdown("---")
 

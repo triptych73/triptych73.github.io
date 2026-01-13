@@ -6,12 +6,37 @@ import datetime
 # Lazy import
 import db_client
 
+import docx
+import pandas as pd
+
 def extract_word(file_bytes):
-    # Placeholder - in real app, use python-docx
-    return "[Word extraction placeholder]" # You might want to implement this properly later
+    try:
+        doc = docx.Document(io.BytesIO(file_bytes))
+        full_text = []
+        for para in doc.paragraphs:
+            if para.text.strip():
+                full_text.append(para.text)
+        return "\n\n".join(full_text)
+    except Exception as e:
+        return f"[Error extracting Word doc: {str(e)}]"
 
 def extract_excel(file_bytes):
-    return "[Excel extraction placeholder]"
+    try:
+        # Read Excel using Pandas
+        # read_excel returns a dictionary of DataFrames if sheet_name=None
+        dfs = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None, engine='openpyxl')
+        output = []
+        for sheet_name, df in dfs.items():
+            output.append(f"## Sheet: {sheet_name}")
+            # Convert to markdown or CSV string
+            # Markdown via to_markdown requires 'tabulate', fallback to csv or string
+            try:
+                output.append(df.to_markdown(index=False))
+            except ImportError:
+                output.append(df.to_string(index=False))
+        return "\n\n".join(output)
+    except Exception as e:
+        return f"[Error extracting Excel: {str(e)}]"
 
 def extract_image_with_llm(image_bytes, llm_client, system_prompt=None):
     if not llm_client:
