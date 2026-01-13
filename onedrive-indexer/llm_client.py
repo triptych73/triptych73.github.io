@@ -134,7 +134,7 @@ class LLMClient:
             self.tracker.track(self.model_name, message.usage.input_tokens, message.usage.output_tokens)
         return message.content[0].text
 
-    @retry_with_backoff
+    # @retry_with_backoff  <-- REVERTED per user request
     def _call_google_v2(self, image_bytes, prompt):
         if genai is None: return "[Error: google-genai lib missing]"
         client = self._get_genai_client()
@@ -226,7 +226,7 @@ class LLMClient:
             self.tracker.track(self.model_name, message.usage.input_tokens, message.usage.output_tokens)
         return message.content[0].text
 
-    @retry_with_backoff
+    # @retry_with_backoff <-- REVERTED
     def _call_google_text(self, prompt):
         if genai is None: return "[Error: google-genai lib missing]"
         client = self._get_genai_client()
@@ -268,7 +268,7 @@ class LLMClient:
         except Exception as e:
             return f"[Error calling {self.provider} for visual doc: {str(e)}]"
 
-    @retry_with_backoff
+    # @retry_with_backoff <-- REVERTED
     def _call_google_multi_image(self, image_list, prompt):
         if genai is None: return "[Error: google-genai lib missing]"
         client = self._get_genai_client()

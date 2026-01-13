@@ -42,7 +42,7 @@ def get_ai_client(model_override=None):
     # Try to grab keys from env
     provider = "Google" # Default
     api_key = os.getenv("GOOGLE_API_KEY")
-    model = model_override or "gemini-1.5-pro" # Default context monster
+    model = model_override or "gemini-3-pro-preview" # Default to latest powerful model
 
     if not api_key:
         if os.getenv("OPENAI_API_KEY"):
@@ -234,16 +234,16 @@ MANIFEST:
             token_fmt = f"{est_tokens:,}"
             
             # Auto-Select Model
-            # < 1M tokens -> Gemini 2.0 Flash (simulating "Gemini 3 Pro")
-            # > 1M tokens -> Gemini 1.5 Pro (2M context)
+            # < 1M tokens -> Gemini 3 Flash (Speed/OCR)
+            # > 1M tokens -> Gemini 3 Pro (Complex Reasoning)
             if est_tokens < 1_000_000:
-                selected_model = "gemini-2.0-flash-exp"
-                display_model = "Gemini 3 Pro (Preview)"
-                reason = "Fast & Smart (< 1M tokens)"
+                selected_model = "gemini-3-flash-preview"
+                display_model = "Gemini 3 Flash (Preview)"
+                reason = "Speed & Efficiency (< 1M tokens)"
             else:
-                selected_model = "gemini-1.5-pro"
-                display_model = "Gemini 1.5 Pro"
-                reason = "High Context (> 1M tokens)"
+                selected_model = "gemini-3-pro-preview"
+                display_model = "Gemini 3 Pro (Preview)"
+                reason = "High Reasoning (> 1M tokens)"
 
             st.info(f"📊 **Context Analysis**: ~{token_fmt} tokens. \n\n🤖 **Auto-Selected Model**: `{display_model}` ({reason})")
             
