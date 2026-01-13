@@ -396,9 +396,18 @@ with tab3:
             if not final_list_to_process:
                 st.warning("All selected files were already indexed or skipped!")
             else:
+                # Define output container first
+                log_container = st.container()
+
                 # Use the SAME batch function as the Main App
                 def update_status_callback(msg):
                     log_container.write(msg)
+                    
+                # Need fresh client logic or just pass the dicts?
+                # indexer_logic handles dicts with 'id' if client is provided.
+                
+                # Restore AI Client
+                llm_idx = get_ai_client()
                     
                 # Need fresh client logic or just pass the dicts?
                 # indexer_logic handles dicts with 'id' if client is provided.
