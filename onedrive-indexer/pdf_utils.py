@@ -19,24 +19,39 @@ def extract_pdf_text(file_bytes, llm_client=None, prompt=None):
     """
     
     # --- STRATEGY 1: VISION-FIRST (AI + Poppler) ---
-    if llm_client and PDF2IMAGE_AVAILABLE:
-        try:
-            # Convert PDF to images
-            # limits: Analyzed first 5 pages to save cost/time if large? 
-            # For now, let's try all but maybe limit resolution?
-            # 200 dpi is good enough for reading.
-            images = convert_from_bytes(file_bytes, dpi=200, fmt='jpeg')
+    # --- STRATEGY 1: VISION-FIRST (AI) ---
+    if llm_client:
+        # A. Try Native PDF Support (Google Gemini)
+        # This avoids needing 'poppler' installed locally
+        print("DEBUG: Attempting Native PDF Analysis (Gemini)...")
+        native_result = llm_client.analyze_document_pdf(
+            file_bytes, 
+            prompt=prompt if prompt else "Analyze this whole document. Summarize it and transcribe key text."
+        )
+        
+        if native_result:
+            return f"### AI Analysis (Source: PDF Native)\n{native_result}"
             
-            # Convert images to bytes for LLM
-            image_bytes_list = []
-            for img in images:
-                img_byte_arr = io.BytesIO()
-                img.save(img_byte_arr, format='JPEG')
-                image_bytes_list.append(img_byte_arr.getvalue())
-            
-            # Send to LLM
-            # We treat the whole PDF as one multi-modal document context
-            print(f"DEBUG: Vision-First PDF analysis on {len(images)} pages...")
+        # B. Fallback to Image Conversion (OpenAI/Anthropic or if Google Native fails? native usually returns string or error string)
+        # Only proceed if we have PDF2IMAGE
+        if PDF2IMAGE_AVAILABLE:
+            try:
+                # Convert PDF to images
+                # limits: Analyzed first 5 pages to save cost/time if large? 
+                # For now, let's try all but maybe limit resolution?
+                # 200 dpi is good enough for reading.
+                images = convert_from_bytes(file_bytes, dpi=200, fmt='jpeg')
+                
+                # Convert images to bytes for LLM
+                image_bytes_list = []
+                for img in images:
+                    img_byte_arr = io.BytesIO()
+                    img.save(img_byte_arr, format='JPEG')
+                    image_bytes_list.append(img_byte_arr.getvalue())
+                
+                # Send to LLM
+                # We treat the whole PDF as one multi-modal document context
+                print(f"DEBUG: Vision-First PDF analysis on {len(images)} pages...")
             
             vision_analysis = llm_client.analyze_document_visuals(
                 image_bytes_list, 

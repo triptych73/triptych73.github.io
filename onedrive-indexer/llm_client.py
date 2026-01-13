@@ -345,3 +345,54 @@ class LLMClient:
         if message.usage:
             self.tracker.track(self.model_name, message.usage.input_tokens, message.usage.output_tokens)
         return message.content[0].text
+    def analyze_document_pdf(self, pdf_bytes, prompt):
+        """
+        Analyzes a PDF file natively (Google) or via conversion (others).
+        """
+        if not self.api_key:
+            return "[Error: Missing API Key]"
+            
+        try:
+            if self.provider == "Google":
+                return self._call_google_pdf_native(pdf_bytes, prompt)
+            else:
+                # Fallback for OpenAI/Anthropic (which don't consume PDF bytes natively in the same way usually)
+                # We return None to signal the caller to try image conversion strategy
+                return None
+        except Exception as e:
+            return f"[Error calling {self.provider} for PDF: {str(e)}]"
+
+    # @retry_with_backoff
+    def _call_google_pdf_native(self, pdf_bytes, prompt):
+        if genai is None: return "[Error: google-genai lib missing]"
+        client = self._get_genai_client()
+        
+        # Google GenAI supports PDF natively!
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=[
+                types.Content(
+                    parts=[
+                        types.Part.from_bytes(
+                            data=pdf_bytes,
+                            mime_type="application/pdf"
+                        ),
+                        types.Part.from_text(text=prompt)
+                    ]
+                )
+            ]
+        )
+        
+        # Usage tracking
+        in_tokens = 0
+        out_tokens = 0
+        if hasattr(response, 'usage_metadata'):
+             in_tokens = response.usage_metadata.prompt_token_count or 0
+             out_tokens = response.usage_metadata.candidates_token_count or 0
+        else:
+             # Rough approx: 1 page ~ 1000 tokens?
+             in_tokens = 2000 
+             out_tokens = len(response.text) // 4
+             
+        self.tracker.track(self.model_name, in_tokens, out_tokens)
+        return response.text
