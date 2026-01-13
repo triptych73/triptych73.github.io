@@ -64,9 +64,36 @@ if not client:
     st.warning("⚠️ Not signed in. Please go to the **Main App** page (sidebar) and sign in first.")
     st.stop()
 
-# --- SIDEBAR OPTIONS (Mirrors App.py) ---
 st.sidebar.header("Indexing Options")
 skip_indexed = st.sidebar.checkbox("Skip Already Indexed Files", value=False, key="skip_indexed_global")
+
+# --- SYSTEM PROMPT (Mirrors App.py) ---
+st.sidebar.divider()
+st.sidebar.markdown("### 🤖 System Prompt")
+default_prompt = """You are an expert archivist.
+Analyze the following content and provide a structured JSON output.
+
+Instructions:
+1. Generate a concise summary.
+2. Generate keyword tags (topics, entities, locations).
+3. Assess relevance to the project (0-10).
+4. Flag high-importance items (contracts, plans, legal).
+
+Output Format:
+Return a Markdown response.
+- Start with a strict "## Summary" section.
+- Follow with a "## Metadata" section containing a JSON block.
+"""
+if "system_prompt" not in st.session_state:
+    st.session_state["system_prompt"] = default_prompt
+
+def reset_prompt():
+    st.session_state["system_prompt"] = default_prompt
+
+with st.sidebar.expander("Edit System Prompt", expanded=False):
+    st.text_area("LLM Instructions", height=150, key="system_prompt")
+    st.button("Restore Default", on_click=reset_prompt, use_container_width=True)
+
 st.sidebar.divider()
 
 # --- HELPER: GET AI CLIENT ---
@@ -464,7 +491,8 @@ with tab3:
                     status_callback=update_status_callback, 
                     recursive=False, 
                     llm_client=llm_idx, 
-                    sync_db=True
+                    sync_db=True,
+                    system_prompt=st.session_state.get("system_prompt")
                 )
                 
                 processed_count = len(processed_results)
