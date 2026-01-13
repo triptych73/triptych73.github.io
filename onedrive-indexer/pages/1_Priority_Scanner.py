@@ -235,10 +235,13 @@ MANIFEST:
                 else:
                     with st.status("AI is thinking...") as status:
                         try:
-                            # Direct text analysis of the JSON string
-                            # Note: 1.5 Pro has huge context, so passing the prompt (which contains the full JSON) works.
+                            # analyze_text(text_content, prompt)
+                            # We'll pass the manifest as the 'text_content' and the instructions as 'prompt'
+                            # But wait, our 'user_approved_prompt' has everything concatenated.
+                            # So we can pass it as text_content and a minimal prompt, or split it.
+                            # Simplest fix for the TypeError: pass "" as text_content since prompt has it all.
                             status.write("Sending manifest to Gemini...")
-                            response = llm.analyze_text(user_approved_prompt)
+                            response = llm.analyze_text(text_content="", prompt=user_approved_prompt)
                             
                             status.write("Parsing response...")
                             # Clean markdown code blocks if present
