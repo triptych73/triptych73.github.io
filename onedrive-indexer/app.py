@@ -443,7 +443,7 @@ elif selected_source in ["Google Drive", "Google Photos"]:
 st.sidebar.divider()
 st.sidebar.title("AI / OCR Configuration")
 llm_client = None # Initialize llm_client here
-if st.sidebar.checkbox("Enable AI / OCR", value=False):
+if st.sidebar.checkbox("Enable AI / OCR", value=True):
     # Provider Selection
     provider_options = ["Google", "OpenAI", "Anthropic"]
     api_provider = st.sidebar.selectbox("AI Provider", provider_options, index=0)
@@ -553,7 +553,7 @@ st.sidebar.header("Indexing Config")
 sort_order = st.sidebar.selectbox("Sort Files By", ["Name (A-Z)", "Name (Z-A)", "Newest First", "Oldest First"])
 
 st.sidebar.subheader("File Types to Index")
-ALL_FILE_TYPES = [".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".md", ".jpg", ".jpeg", ".png"]
+ALL_FILE_TYPES = [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".pptx", ".txt", ".md", ".jpg", ".jpeg", ".png"]
 if "selected_file_types" not in st.session_state:
     st.session_state["selected_file_types"] = ALL_FILE_TYPES.copy()
 selected_file_types = st.sidebar.multiselect(

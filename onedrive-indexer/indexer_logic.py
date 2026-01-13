@@ -20,22 +20,42 @@ def extract_word(file_bytes):
     except Exception as e:
         return f"[Error extracting Word doc: {str(e)}]"
 
-def extract_excel(file_bytes):
+def extract_word_binary(file_bytes):
+    """
+    Best-effort extraction for legacy binary .doc files.
+    Extracts printable ASCII strings.
+    """
     try:
+        # Filter for printable ASCII characters
+        text = "".join(chr(b) for b in file_bytes if 32 <= b < 127 or b in (10, 13))
+        # Basic cleanup: Remove excessive whitespace/garbage
+        import re
+        # Keep sequences of at least 4 meaningful characters to reduce noise
+        # This is very rough but better than nothing for .doc without system tools
+        clean_text = re.sub(r'\s+', ' ', text).strip()
+        return clean_text if len(clean_text) > 20 else "[Legacy .doc format - Minimal text found]"
+    except Exception as e:
+        return f"[Error extracting binary DOC: {str(e)}]"
+
+def extract_excel(file_bytes, is_legacy=False):
+    try:
+        # Use xlrd for .xls, openpyxl for .xlsx
+        engine = 'xlrd' if is_legacy else 'openpyxl'
+        
         # Read Excel using Pandas
-        # read_excel returns a dictionary of DataFrames if sheet_name=None
-        dfs = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None, engine='openpyxl')
+        dfs = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None, engine=engine)
         output = []
         for sheet_name, df in dfs.items():
             output.append(f"## Sheet: {sheet_name}")
-            # Convert to markdown or CSV string
-            # Markdown via to_markdown requires 'tabulate', fallback to csv or string
             try:
                 output.append(df.to_markdown(index=False))
             except ImportError:
                 output.append(df.to_string(index=False))
         return "\n\n".join(output)
     except Exception as e:
+        # Fallback to other engine or error
+        if is_legacy:
+             return f"[Error extracting legacy XLS: {str(e)}]"
         return f"[Error extracting Excel: {str(e)}]"
 
 def extract_image_with_llm(image_bytes, llm_client, system_prompt=None):
@@ -100,7 +120,7 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
             
             # Filter by supported extensions
             supported_extensions = {
-                'docx', 'xlsx', 'xls', 'pdf', 'pptx', 'ppt', 
+                'docx', 'doc', 'xlsx', 'xls', 'pdf', 'pptx', 'ppt', 
                 'jpg', 'jpeg', 'png', 'tiff', 'txt', 'md'
             }
             
@@ -169,9 +189,15 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
             if ext == 'docx':
                 content = extract_word(file_bytes)
                 format_tag = "DOCX"
-            elif ext in ['xlsx', 'xls']:
-                content = extract_excel(file_bytes)
+            elif ext == 'doc':
+                content = extract_word_binary(file_bytes)
+                format_tag = "DOC (LEGACY)"
+            elif ext == 'xlsx':
+                content = extract_excel(file_bytes, is_legacy=False)
                 format_tag = "EXCEL"
+            elif ext == 'xls':
+                content = extract_excel(file_bytes, is_legacy=True)
+                format_tag = "EXCEL (LEGACY)"
             elif ext == 'pdf':
                 content = extract_pdf_text(file_bytes, llm_client=llm_client, prompt=system_prompt)
                 format_tag = "PDF"
