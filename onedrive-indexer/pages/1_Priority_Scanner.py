@@ -54,7 +54,64 @@ with tab1:
     
     st.markdown("This will recursively scan files to build a manifest.")
     
-    start_folder_id = st.text_input("Start Folder ID (leave empty for Root)", value="root")
+    # --- SCANNER NAVIGATOR ---
+    if "scanner_nav_id" not in st.session_state: st.session_state["scanner_nav_id"] = "root"
+    if "scanner_nav_name" not in st.session_state: st.session_state["scanner_nav_name"] = "Root"
+    if "scanner_nav_history" not in st.session_state: st.session_state["scanner_nav_history"] = []
+    
+    # Nav Functions
+    def scanner_enter(nid, nname):
+        st.session_state["scanner_nav_history"].append((st.session_state["scanner_nav_id"], st.session_state["scanner_nav_name"]))
+        st.session_state["scanner_nav_id"] = nid
+        st.session_state["scanner_nav_name"] = nname
+        
+    def scanner_up():
+        if st.session_state["scanner_nav_history"]:
+            pid, pname = st.session_state["scanner_nav_history"].pop()
+            st.session_state["scanner_nav_id"] = pid
+            st.session_state["scanner_nav_name"] = pname
+
+    # Display Current Path
+    hist_names = [n for _, n in st.session_state["scanner_nav_history"]]
+    full_path = " / ".join(hist_names + [st.session_state["scanner_nav_name"]])
+    st.markdown(f"**Current Path:** `{full_path}`")
+    
+    col_nav1, col_nav2 = st.columns([1, 4])
+    if col_nav1.button("⬅️ Up", key="scan_up", disabled=not st.session_state["scanner_nav_history"]):
+        scanner_up()
+        st.rerun()
+        
+    # List Folders for Navigation
+    try:
+        current_children = client.get_drive_item_children(st.session_state["scanner_nav_id"])
+        folders = [c for c in current_children if 'folder' in c]
+        if folders:
+            st.markdown("### Subfolders:")
+            for f in folders:
+                if st.button(f"📂 {f['name']}", key=f"nav_{f['id']}"):
+                    scanner_enter(f['id'], f['name'])
+                    st.rerun()
+        else:
+            st.caption("No subfolders found.")
+            
+    except Exception as e:
+        st.error(f"Error loading path: {e}")
+
+    st.divider()
+    
+    # Selection Mechanism
+    st.markdown("### Set Scan Target")
+    st.write(f"Click below to set **{st.session_state['scanner_nav_name']}** as the start folder.")
+    
+    col_sel1, col_sel2 = st.columns([1, 1])
+    if col_sel1.button("🎯 Select Current Folder", type="primary"):
+        st.session_state["target_folder_id"] = st.session_state["scanner_nav_id"]
+        st.session_state["target_folder_name"] = st.session_state["scanner_nav_name"]
+        st.success(f"Selected: {st.session_state['scanner_nav_name']}")
+
+    # Input Field (Pre-filled)
+    default_val = st.session_state.get("target_folder_id", "root")
+    start_folder_id = st.text_input("Start Folder ID (auto-filled)", value=default_val)
     
     if st.button("🚀 Start Scan"):
         with st.spinner("Recursive scanning... this may take a while..."):
