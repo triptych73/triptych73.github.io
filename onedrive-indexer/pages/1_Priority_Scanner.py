@@ -228,12 +228,31 @@ MANIFEST:
                                                 value=st.session_state["generated_prompt"], 
                                                 height=300)
             
-            if st.button("🤖 Consult AI (Gemini-3-Pro)", type="primary"):
-                llm = get_ai_client(model_override="gemini-1.5-pro") 
+            # --- TOKEN ESTIMATION ---
+            est_chars = len(user_approved_prompt)
+            est_tokens = int(est_chars / 4)
+            token_fmt = f"{est_tokens:,}"
+            
+            # Auto-Select Model
+            # < 1M tokens -> Gemini 2.0 Flash (simulating "Gemini 3 Pro")
+            # > 1M tokens -> Gemini 1.5 Pro (2M context)
+            if est_tokens < 1_000_000:
+                selected_model = "gemini-2.0-flash-exp"
+                display_model = "Gemini 3 Pro (Preview)"
+                reason = "Fast & Smart (< 1M tokens)"
+            else:
+                selected_model = "gemini-1.5-pro"
+                display_model = "Gemini 1.5 Pro"
+                reason = "High Context (> 1M tokens)"
+
+            st.info(f"📊 **Context Analysis**: ~{token_fmt} tokens. \n\n🤖 **Auto-Selected Model**: `{display_model}` ({reason})")
+            
+            if st.button(f"🤖 Consult AI ({display_model})", type="primary"):
+                llm = get_ai_client(model_override=selected_model) 
                 if not llm:
                     st.error("No AI configured. Please set GOOGLE_API_KEY in .env or Main App.")
                 else:
-                    with st.status("AI is thinking...") as status:
+                    with st.status(f"Thinking with {display_model}...") as status:
                         try:
                             status.write("Sending manifest to Gemini...")
                             response = llm.analyze_text(text_content="", prompt=user_approved_prompt)
