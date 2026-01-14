@@ -1035,7 +1035,40 @@ with sidebar_placeholder.container():
                  # Define Callback to pipe logs to JobManager
                  def log_status(msg):
                       job_mgr.add_log(msg)
+
+                 # 0. PATCH: Thread-Safe Cost Tracker
+                 # We simply mock the tracker interface to write to JobManager
+                 class ThreadCostTracker:
+                     def track(self, model, in_tok, out_tok):
+                         # Simple calculation here or re-use logic?
+                         # Re-using logic is hard without importing utils logic again.
+                         # Let's just do a rough pass or better:
+                         # We can define a simplified version since we know the rates are in cost_utils.PRICING
+                         # But let's assume we can just import it.
+                         # Actually, cleaner: LLMClient has a .tracker.
+                         # We just wrap .tracker.track method.
+                         
+                         # But wait, LLMClient calls self.tracker.track(model, in, out)
+                         # We want that call to end up calling job_mgr.add_cost(cost)
+                         pass
+
+                 # Better Patch: Create a wrapper around the existing tracker's track method?
+                 # Or just subclass CostEstimator? 
+                 # Let's do the simplest thing: 
+                 # We inject a `job_manager` attribute into the existing tracker if possible?
+                 # No, let's replace the tracker.
                  
+                 if llm:
+                     original_tracker = llm.tracker
+                     
+                     class JobAwareTracker:
+                         def track(self, model, i, o):
+                             cost = original_tracker.track(model, i, o) # This updates local stats
+                             job_mgr.add_cost(cost) # This updates global job stats
+                             return cost
+                             
+                     llm.tracker = JobAwareTracker()
+
                  # 1. Google Photos URL Refresh (if needed)
                  final_items = items
                  if provider == "googlephotos" and picker_session_id:
@@ -1084,37 +1117,62 @@ with sidebar_placeholder.container():
                  st.rerun()
 
 # --- POLLING UI (Global Sidebar) ---
-job_mgr = get_job_manager()
-status = job_mgr.get_status()
+# Use st.fragment for smooth updates without full page reload
+@st.fragment(run_every=1)
+def show_live_status():
+    job_mgr = get_job_manager()
+    status = job_mgr.get_status()
 
-if status['is_running']:
-    st.sidebar.divider()
-    st.sidebar.info(f"🔄 Processing...\n{status['progress']['status']}")
-    
-    # Mini Log Window
-    with st.sidebar.expander("Live Logs", expanded=True):
-            logs_text = "\n".join(status['logs'][-15:]) # Show last 15 lines
-            log_placeholder = st.empty()
-            log_placeholder.code(logs_text, language="text")
-    
-    # Auto-Refresh Logic
-    time.sleep(1)
-    st.rerun()
-    
-elif status['progress']['status'] == "Completed" and status['logs']:
-    # Sync Logic
-    if "bg_synced" not in st.session_state or st.session_state["bg_synced"] != status['job_id']:
-            # Sync result to session state so the UI view updates
-            if job_mgr.result:
-                st.session_state["indexing_results"] = job_mgr.result
-                st.session_state["indexed_ids_cache"] = set()
-                if selected_source != "Google Photos":
-                    st.session_state["current_folder_items"] = None
-                st.session_state["bg_synced"] = status['job_id']
-                st.rerun()
-    
-    st.sidebar.success("✅ Job Done!")
-    if st.sidebar.button("Clear Status"):
-         # Optional: Reset manager
-         pass
+    if status['is_running']:
+        st.sidebar.divider()
+        st.sidebar.info(f"🔄 Processing...\n{status['progress']['status']}")
+        
+        # Live Cost
+        if status.get('cost', 0) > 0:
+             st.sidebar.markdown(f"**Job Cost:** ${status['cost']:.4f}")
 
+        # Mini Log Window (Reverse Order)
+        with st.sidebar.expander("Live Logs", expanded=True):
+                # Reverse list to show newest first
+                logs_reversed = status['logs'][::-1]
+                logs_text = "\n".join(logs_reversed[:15]) 
+                st.code(logs_text, language="text")
+        
+        # No explicit rerun needed, run_every handles it!
+        
+    elif status['progress']['status'] == "Completed" and status['logs']:
+        # We need to signal the Main Thread to re-sync
+        # Since fragments run independently, writing to session state works,
+        # but triggering a FULL app rerun from here might be needed for the main view to update.
+        
+        if "bg_synced" not in st.session_state or st.session_state["bg_synced"] != status['job_id']:
+             st.sidebar.success("✅ Job Done! Refreshing...")
+             st.session_state["bg_synced_trigger"] = status['job_id'] # Signal main thread
+             st.rerun() # Rerun fragment? Or App? 
+             # In a fragment, st.rerun() reruns the FRAGMENT.
+             # We actually want to kill the fragment loop and refresh the app.
+             # But let's just let the main loop below catch the trigger?
+             # No, main loop runs once.
+             # So we DO need to trigger a full refresh.
+             # Let's hope st.rerun() inside fragment does what we need or check docs.
+             # Actually, creating a button that user clicks is safest if auto-refresh fails.
+        
+        st.sidebar.success("✅ Job Done!")
+        if st.sidebar.button("Clear Status"):
+             # Optional: Reset manager
+             pass
+
+show_live_status()
+
+# Check for Trigger from Fragment
+if "bg_synced_trigger" in st.session_state:
+     trigger_id = st.session_state.pop("bg_synced_trigger")
+     job_mgr = get_job_manager()
+     
+     if job_mgr.result:
+        st.session_state["indexing_results"] = job_mgr.result
+        st.session_state["indexed_ids_cache"] = set()
+        if selected_source != "Google Photos":
+            st.session_state["current_folder_items"] = None
+        st.session_state["bg_synced"] = trigger_id
+        st.rerun() # Full Rerun

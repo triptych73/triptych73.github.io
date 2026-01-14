@@ -12,6 +12,7 @@ class JobManager:
         self.is_running = False
         self.logs = []
         self.progress = {"current": 0, "total": 0, "status": "Idle"}
+        self.cost = 0.0 # Track job-specific cost
         self.result = None
         self.error = None
         self._thread = None
@@ -39,6 +40,7 @@ class JobManager:
             self.is_running = True
             self.logs = [] # Clear old logs
             self.progress = {"current": 0, "total": 0, "status": "Starting..."}
+            self.cost = 0.0
             self.result = None
             self.error = None
             self._stop_event.clear()
@@ -94,6 +96,7 @@ class JobManager:
             "is_running": self.is_running,
             "job_id": self.current_job_id,
             "progress": self.progress,
+            "cost": self.cost,
             "logs": self.logs[-50:], # Return last 50 logs to save bandwidth
             "error": self.error
         }
@@ -106,6 +109,10 @@ class JobManager:
         # Keep list from growing infinite in long jobs
         if len(self.logs) > 1000:
             self.logs.pop(0)
+
+    def add_cost(self, amount):
+        with self._lock:
+            self.cost += amount
 
 # Global Accessor
 def get_job_manager():
