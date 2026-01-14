@@ -1074,7 +1074,7 @@ with sidebar_placeholder.container():
                  items=items_to_index,
                  provider=provider_key,
                  recursive=recursive_indexing,
-                 llm=get_ai_client() if "gemini" in st.session_state.get("global_provider_selection", "").lower() else None, # Simplified LLM check or reuse llm_client if defined
+                 llm=llm_client if llm_client else None, # Pass the actual initialized client
                  prompt=st.session_state.get("system_prompt"),
                  picker_session_id=st.session_state.get("picker_session_id")
              )
