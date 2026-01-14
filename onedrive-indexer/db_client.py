@@ -4,6 +4,8 @@ from firebase_admin import firestore
 import streamlit as st
 import os
 
+import urllib.parse
+
 # Singleton pattern for Firebase App
 def get_db():
     if not firebase_admin._apps:
@@ -36,6 +38,22 @@ def get_db():
     
     return firestore.client()
 
+def _get_safe_doc_id(provider, item_id):
+    """Encodes item_id to be safe for Firestore specific path usage."""
+    # Local paths contain slashes, which confuse Firestore document() references.
+    # URL encoding keeps it reversible and safe.
+    safe_id = urllib.parse.quote(item_id, safe='')
+    return f"{provider}_{safe_id}"
+
+def _decode_doc_id(doc_id):
+    """Extracts original provider and item_id from doc_id."""
+    # doc_id is like "provider_encodedItemId"
+    try:
+        provider, encoded_id = doc_id.split('_', 1)
+        return provider, urllib.parse.unquote(encoded_id)
+    except ValueError:
+        return None, doc_id
+        
 def upsert_document(item_id, data, provider="onedrive"):
     """
     Writes or updates a document in the 'indexer_files' collection.
@@ -47,7 +65,7 @@ def upsert_document(item_id, data, provider="onedrive"):
     if not db: return False
     
     # Create composite ID to prevent collisions
-    doc_id = f"{provider}_{item_id}"
+    doc_id = _get_safe_doc_id(provider, item_id)
     
     doc_ref = db.collection('indexer_files').document(doc_id)
     # Add provider to data for query filtering
@@ -72,7 +90,7 @@ def get_indexed_status(item_ids, provider="onedrive"):
     pass_ids = [i for i in item_ids if i] # filter empty
     
     # Transform to expected doc IDs
-    expected_doc_ids = [f"{provider}_{i}" for i in pass_ids]
+    expected_doc_ids = [_get_safe_doc_id(provider, i) for i in pass_ids]
     
     for i in range(0, len(expected_doc_ids), chunk_size):
         chunk = expected_doc_ids[i:i + chunk_size]
@@ -87,8 +105,8 @@ def get_indexed_status(item_ids, provider="onedrive"):
             
         for doc in docs:
             if doc.exists:
-                # We want to return the ORIGINAL item_id, so strip prefix
-                original_id = doc.id.split('_', 1)[1]
+                # We want to return the ORIGINAL item_id, so decode it
+                _, original_id = _decode_doc_id(doc.id)
                 found_ids.add(original_id)
             
     return found_ids
@@ -100,7 +118,7 @@ def get_document_content(item_id, provider="onedrive"):
     db = get_db()
     if not db: return None
     
-    doc_id = f"{provider}_{item_id}"
+    doc_id = _get_safe_doc_id(provider, item_id)
     doc_ref = db.collection('indexer_files').document(doc_id)
     doc = doc_ref.get()
     
