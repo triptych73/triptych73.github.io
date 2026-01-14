@@ -166,7 +166,7 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
                         # Try without modification first? Or with =d.
                         # Let's verify what we are getting.
                         
-                        resp = requests.get(download_url, headers=headers, allow_redirects=True)
+                        resp = requests.get(download_url, headers=headers, allow_redirects=True, timeout=30)
                         print(f"DEBUG: Resp: Code={resp.status_code}, Headers={dict(resp.headers)}")
                         
                         if resp.status_code == 200 and len(resp.content) > 0:
@@ -176,7 +176,7 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
                         elif '=d' in download_url:
                             print("DEBUG: Zero bytes or non-200 with =d. Retrying RAW baseUrl...")
                             raw_url = download_url.replace('=d', '')
-                            resp = requests.get(raw_url, headers=headers, allow_redirects=True)
+                            resp = requests.get(raw_url, headers=headers, allow_redirects=True, timeout=30)
                             print(f"DEBUG: Resp RAW: Code={resp.status_code}, Headers={dict(resp.headers)}, Len={len(resp.content)}")
                             if resp.status_code == 200 and len(resp.content) > 0:
                                 file_bytes = resp.content

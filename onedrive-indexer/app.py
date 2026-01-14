@@ -1117,8 +1117,9 @@ with sidebar_placeholder.container():
                  st.rerun()
 
 # --- POLLING UI (Global Sidebar) ---
+# --- POLLING UI (Global Sidebar) ---
 # Use st.fragment for smooth updates without full page reload
-@st.fragment(run_every=1)
+@st.fragment(run_every=2)
 def show_live_status():
     job_mgr = get_job_manager()
     status = job_mgr.get_status()
@@ -1138,7 +1139,15 @@ def show_live_status():
                 logs_text = "\n".join(logs_reversed[:15]) 
                 st.code(logs_text, language="text")
         
-        # No explicit rerun needed, run_every handles it!
+        if st.sidebar.button("⛔ Force Stop", type="primary", use_container_width=True):
+             # Force reset
+             import threading
+             with job_mgr._lock:
+                 job_mgr.is_running = False
+                 job_mgr.progress['status'] = "Stopped (Forced)"
+                 job_mgr.logs.append("⚠️ Job forcibly stopped by user.")
+                 job_mgr._stop_event.set()
+             st.rerun()
         
     elif status['progress']['status'] == "Completed" and status['logs']:
         # We need to signal the Main Thread to re-sync
