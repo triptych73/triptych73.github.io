@@ -679,9 +679,9 @@ with st.sidebar.expander("🔐 Auth Debugger", expanded=False):
         else:
             st.info("Not signed in.")
 
-    # --- EXPORT TOOLS ---
-    st.sidebar.divider()
-    with st.sidebar.expander("📤 Export Data", expanded=False):
+# --- EXPORT TOOLS ---
+st.sidebar.divider()
+with st.sidebar.expander("📤 Export Data", expanded=False):
         if st.button("📚 Compile All Notes"):
             with st.spinner("Fetching all documents from Database..."):
                  all_docs = db_client.get_all_documents()
