@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   indexer-app:
     build: .
@@ -11,6 +9,8 @@ services:
       - .:/app
       # Persist the Firebase/Auth token cache if we use local files for that
       - ./data:/data
+      # Mount a local folder for "Local Storage" provider
+      - C:/Users/gregr/OneDrive:/data/local_files
     env_file:
       - .env
     restart: unless-stopped

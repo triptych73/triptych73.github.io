@@ -40,9 +40,11 @@ def get_db():
 
 def _get_safe_doc_id(provider, item_id):
     """Encodes item_id to be safe for Firestore specific path usage."""
-    # Local paths contain slashes, which confuse Firestore document() references.
-    # URL encoding keeps it reversible and safe.
-    safe_id = urllib.parse.quote(item_id, safe='')
+    # Firestore allows most characters except '/'.
+    # Previous full URL encoding broke backward compatibility for IDs with '!' etc.
+    # We only need to escape slashes for Local paths.
+    if not item_id: return f"{provider}_"
+    safe_id = item_id.replace("/", "%2F")
     return f"{provider}_{safe_id}"
 
 def _decode_doc_id(doc_id):
@@ -50,7 +52,7 @@ def _decode_doc_id(doc_id):
     # doc_id is like "provider_encodedItemId"
     try:
         provider, encoded_id = doc_id.split('_', 1)
-        return provider, urllib.parse.unquote(encoded_id)
+        return provider, encoded_id.replace("%2F", "/")
     except ValueError:
         return None, doc_id
         
@@ -72,6 +74,21 @@ def upsert_document(item_id, data, provider="onedrive"):
     data['provider'] = provider
     doc_ref.set(data, merge=True)
     return True
+
+def delete_document(item_id, provider="onedrive"):
+    """
+    Deletes a document from the 'indexer_files' collection.
+    """
+    db = get_db()
+    if not db: return False
+    
+    try:
+        doc_id = _get_safe_doc_id(provider, item_id)
+        db.collection('indexer_files').document(doc_id).delete()
+        return True
+    except Exception as e:
+        print(f"Error deleting document {item_id}: {e}")
+        return False
 
 def get_indexed_status(item_ids, provider="onedrive"):
     """

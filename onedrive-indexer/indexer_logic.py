@@ -142,6 +142,9 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
                     # Backward compat: OneDrive client expects URL
                     url = item.get('@microsoft.graph.downloadUrl')
                     file_bytes = client.download_file(url)
+                elif provider == "local":
+                    # Local Client uses ID as Path
+                    file_bytes = client.download_file(item_id)
                 elif provider in ["google", "google_photos", "googlephotos", "googledrive"]:
                     # Check for direct URL (Picker API)
                     photo_url = item.get('photo_url')

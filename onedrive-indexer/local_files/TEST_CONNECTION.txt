@@ -1,0 +1,2 @@
+This is a test file to verify that the Local Filesystem mount is working correctly.
+If you see this content in the app, it means the /data/local_files mount is active.

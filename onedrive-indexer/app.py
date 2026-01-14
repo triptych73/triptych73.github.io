@@ -973,7 +973,32 @@ with sidebar_placeholder.container():
         count = len(st.session_state["indexing_results"])
         st.success(f"✅ Processed {count} files!")
 
-    if st.button(btn_label, type="primary", use_container_width=True):
+    c_idx, c_del = st.columns([0.7, 0.3])
+    
+    # De-indexing Logic
+    if c_del.button("🗑️ De-index", help="Remove selected files from database", type="secondary", use_container_width=True):
+        if not items_to_index:
+             st.toast("⚠️ No items selected!")
+        else:
+             deleted_count = 0
+             with st.spinner(f"Removing {len(items_to_index)} items..."):
+                 for item in items_to_index:
+                     i_id = item.get('id')
+                     if i_id:
+                         # 1. Delete from DB
+                         if db_client.delete_document(i_id, provider=provider_key):
+                             deleted_count += 1
+                             # 2. Update local cache so UI turns gray immediately
+                             if i_id in st.session_state["indexed_ids_cache"]:
+                                 st.session_state["indexed_ids_cache"].remove(i_id)
+                                 
+             if deleted_count > 0:
+                 st.toast(f"🗑️ De-indexed {deleted_count} files!", icon="✅")
+                 st.rerun()
+             else:
+                 st.toast("⚠️ No indexed files found in selection.")
+
+    if c_idx.button(btn_label, type="primary", use_container_width=True):
         job_mgr = get_job_manager()
         
         if job_mgr.get_status()['is_running']:
