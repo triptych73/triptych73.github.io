@@ -965,6 +965,10 @@ with sidebar_placeholder.container():
              def worker_wrapper(client, items, provider, recursive, llm, prompt, picker_session_id):
                  job_mgr = get_job_manager()
                  
+                 # Define Callback to pipe logs to JobManager
+                 def log_status(msg):
+                      job_mgr.add_log(msg)
+                 
                  # 1. Google Photos URL Refresh (if needed)
                  final_items = items
                  if provider == "googlephotos" and picker_session_id:
@@ -989,7 +993,7 @@ with sidebar_placeholder.container():
                      client=client, 
                      selected_items=final_items, 
                      provider=provider, 
-                     status_callback=None, # JobManager injects its own
+                     status_callback=log_status, # Pipe directly to JobManager
                      recursive=recursive,
                      llm_client=llm,
                      sync_db=True,

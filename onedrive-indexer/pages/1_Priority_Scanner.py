@@ -457,6 +457,11 @@ with tab3:
                                 # 1. Hydration
                                 job_mgr = get_job_manager()
                                 job_mgr.add_log("💧 Hydrating metadata for download access...")
+                                
+                                # Define Callback to pipe logs to JobManager
+                                def log_status(msg):
+                                     job_mgr.add_log(msg)
+                                
                                 hydrated_list = []
                                 for item in items:
                                     try:
@@ -476,6 +481,11 @@ with tab3:
                                             hydrated_list.append(full_item)
                                         else:
                                             job_mgr.add_log(f"⚠️ Could not fetch metadata for {item['name']}")
+                                            
+                                        # Log progress periodically
+                                        if len(hydrated_list) % 5 == 0:
+                                             job_mgr.add_log(f"💧 Hydrated {len(hydrated_list)}/{len(items)} files...")
+                                             
                                     except Exception as e:
                                         job_mgr.add_log(f"❌ Error fetching {item['name']}: {e}")
                                 
@@ -486,7 +496,7 @@ with tab3:
                                     client=client, 
                                     selected_items=hydrated_list, 
                                     provider=provider, 
-                                    status_callback=None, # JobManager injects its own
+                                    status_callback=log_status, # Pipe directly to JobManager
                                     recursive=False, 
                                     llm_client=llm, 
                                     sync_db=True,
