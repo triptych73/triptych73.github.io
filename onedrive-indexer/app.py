@@ -953,54 +953,96 @@ with sidebar_placeholder.container():
         st.success(f"✅ Processed {count} files!")
 
     if st.button(btn_label, type="primary", use_container_width=True):
-        status_area = st.empty() # In sidebar container
-        try:
-            with st.spinner("Indexing & Syncing..."):
-                def update_status(msg): status_area.text(msg)
-                
-                # REFRESH URLs for Google Photos (they expire quickly)
-                final_items = items_to_index
-                if provider_key == "googlephotos" and "picker_session_id" in st.session_state:
-                     try:
-                         # Fetch fresh metadata
-                         fresh_items = client.get_picker_items(st.session_state["picker_session_id"])
-                         fresh_map = {item['id']: item for item in fresh_items}
-                         
-                         # Update only the selected items with fresh URLs
-                         final_items = []
-                         for item in items_to_index:
-                             if item['id'] in fresh_map:
-                                 final_items.append(fresh_map[item['id']])
-                             else:
-                                 # Fallback to existing (unlikely to work if expired, but keep)
-                                 final_items.append(item)
-                     except Exception as e:
-                         print(f"Warning: Failed to refresh Picker URLs: {e}")
+        job_mgr = get_job_manager()
+        
+        if job_mgr.get_status()['is_running']:
+             st.sidebar.warning("⚠️ Background Job Running!")
+        else:
+             st.toast("🚀 Launching Background Job...")
+             
+             # Define the worker wrapper for main app logic
+             def worker_wrapper(client, items, provider, recursive, llm, prompt, picker_session_id):
+                 job_mgr = get_job_manager()
+                 
+                 # 1. Google Photos URL Refresh (if needed)
+                 final_items = items
+                 if provider == "googlephotos" and picker_session_id:
+                      try:
+                          job_mgr.add_log("🔄 Refreshing Google Photos URLs...")
+                          fresh_items = client.get_picker_items(picker_session_id)
+                          fresh_map = {item['id']: item for item in fresh_items}
+                          
+                          new_list = []
+                          for item in items:
+                              if item['id'] in fresh_map:
+                                  new_list.append(fresh_map[item['id']])
+                              else:
+                                  new_list.append(item)
+                          final_items = new_list
+                          job_mgr.add_log(f"✅ Refreshed URLs for {len(final_items)} items.")
+                      except Exception as e:
+                          job_mgr.add_log(f"⚠️ Failed to refresh Picker URLs: {e}")
 
-                results = process_selection(
-                    client, 
-                    final_items,
-                    provider=provider_key,
-                    status_callback=update_status,
-                    recursive=recursive_indexing,
-                    llm_client=llm_client,
-                    sync_db=True,
-                    system_prompt=st.session_state.get("system_prompt")
-                )
-                
-                if results:
-                    st.session_state["indexing_results"] = results
-                    st.session_state["indexed_ids_cache"] = set() # Force refresh of DB status
-                    
-                    # For standard folders, we clear items to force a re-fetch and update status.
-                    # For Picker, we MUST NOT clear, otherwise the list disappears (cannot re-fetch without user action).
-                    if selected_source != "Google Photos":
+                 # 2. Process
+                 return process_selection(
+                     client=client, 
+                     selected_items=final_items, 
+                     provider=provider, 
+                     status_callback=None, # JobManager injects its own
+                     recursive=recursive,
+                     llm_client=llm,
+                     sync_db=True,
+                     system_prompt=prompt
+                 )
+
+             # Launch
+             success, job_id = job_mgr.start_job(
+                 target_func=worker_wrapper,
+                 client=client,
+                 items=items_to_index,
+                 provider=provider_key,
+                 recursive=recursive_indexing,
+                 llm=get_ai_client() if "gemini" in st.session_state.get("global_provider_selection", "").lower() else None, # Simplified LLM check or reuse llm_client if defined
+                 prompt=st.session_state.get("system_prompt"),
+                 picker_session_id=st.session_state.get("picker_session_id")
+             )
+             
+             if success:
+                 st.sidebar.success(f"Started Job {job_id}!")
+                 st.rerun()
+
+    # --- POLLING UI (Sidebar) ---
+    job_mgr = get_job_manager()
+    status = job_mgr.get_status()
+    
+    if status['is_running']:
+        st.sidebar.divider()
+        st.sidebar.info(f"🔄 Processing...\n{status['progress']['status']}")
+        
+        # Mini Log Window
+        with st.sidebar.expander("Live Logs", expanded=True):
+             logs_text = "\n".join(status['logs'][-10:]) # Show last 10 lines
+             st.code(logs_text, language="text")
+        
+        if st.sidebar.button("Refresh"):
+            st.rerun()
+        
+    elif status['progress']['status'] == "Completed" and status['logs']:
+        # Show completion only if we haven't acknowledged it yet (could add a 'seen' flag, but simpler to just show)
+        # Or check if results are fresh?
+        # Actually logic above (line 951) shows "indexing_results" from Session State.
+        # But Background Worker writes to JobManager, NOT Session State.
+        # So we need to sync them!
+        
+        if "bg_synced" not in st.session_state or st.session_state["bg_synced"] != status['job_id']:
+             # Sync result to session state so the UI view updates
+             if job_mgr.result:
+                 st.session_state["indexing_results"] = job_mgr.result
+                 st.session_state["indexed_ids_cache"] = set()
+                 if selected_source != "Google Photos":
                         st.session_state["current_folder_items"] = None
-                    
-                    st.sidebar.success(f"✅ Processed {len(results)} files!")
-                    st.rerun()
-                else:
-                    st.sidebar.warning("No supported files found.")
-        except Exception as e:
-            st.sidebar.error(f"Error: {e}")
+                 st.session_state["bg_synced"] = status['job_id']
+                 st.rerun()
+        
+        st.sidebar.success("✅ Job Done!")
 
