@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  indexer-app:
+    build: .
+    container_name: onedrive_indexer
+    ports:
+      - "8501:8501"
+    volumes:
+      # Mount the current directory to /app so code changes reflect instantly (dev mode)
+      - .:/app
+      # Persist the Firebase/Auth token cache if we use local files for that
+      - ./data:/data
+    env_file:
+      - .env
+    restart: unless-stopped
