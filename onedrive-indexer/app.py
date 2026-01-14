@@ -634,8 +634,10 @@ if user_info:
         st.query_params.clear()
         st.rerun()
     
-    # Session Reset (Hard Logout)
-    if st.sidebar.button("Reset Session (Fix Stuck State)", type="secondary", use_container_width=True):
+    
+
+# Session Reset (Hard Logout)
+if st.sidebar.button("Reset Session (Fix Stuck State)", type="secondary", use_container_width=True):
         # 1. Clear Database Tokens
         if selected_source == "OneDrive":
             db_client.delete_user_tokens("onedrive_user_session")
@@ -650,8 +652,8 @@ if user_info:
         st.query_params.clear()
         st.rerun()
 
-    # --- DEBUG TOOL: Token Scope Verifier ---
-    with st.sidebar.expander("🔐 Auth Debugger", expanded=False):
+# --- DEBUG TOOL: Token Scope Verifier ---
+with st.sidebar.expander("🔐 Auth Debugger", expanded=False):
         if "google_creds" in st.session_state:
             token = st.session_state["google_creds"].token
             if st.button("Check Google Token Scopes"):
