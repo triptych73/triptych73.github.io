@@ -218,10 +218,18 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
                 content = extract_image_with_llm(file_bytes, llm_client, system_prompt=system_prompt)
                 format_tag = "IMAGE"
             
-            # AI Text Analysis for non-image files (SKIP if already analyzed by Vision approach)
-            is_vision_result = content and "### AI Vision Analysis" in content
-            if content and llm_client and ext not in ['jpg', 'jpeg', 'png', 'tiff'] and not is_vision_result:
-                 print(f"DEBUG: Running AI analysis on {ext} content...")
+            # AI Text Analysis for non-image files (SKIP if already analyzed by Vision or Native PDF)
+            # Check for various markers
+            has_existing = False
+            if content:
+                if "### AI Vision Analysis" in content: has_existing = True
+                elif "### AI Analysis" in content: has_existing = True
+                elif "Source: PDF Native" in content: has_existing = True
+            
+            print(f"DEBUG: Checking {ext} for existing analysis. Has header? {has_existing}")
+
+            if content and llm_client and ext not in ['jpg', 'jpeg', 'png', 'tiff'] and not has_existing:
+                 print(f"DEBUG: Running AI text analysis on {ext}...")
                  try:
                      analysis = llm_client.analyze_text(content, prompt=system_prompt)
                      content = f"{content}\n\n---\n### AI Analysis\n{analysis}"
