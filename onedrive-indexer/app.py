@@ -1093,11 +1093,13 @@ if status['is_running']:
     
     # Mini Log Window
     with st.sidebar.expander("Live Logs", expanded=True):
-            logs_text = "\n".join(status['logs'][-10:]) # Show last 10 lines
-            st.code(logs_text, language="text")
+            logs_text = "\n".join(status['logs'][-15:]) # Show last 15 lines
+            log_placeholder = st.empty()
+            log_placeholder.code(logs_text, language="text")
     
-    if st.sidebar.button("Refresh Status"):
-        st.rerun()
+    # Auto-Refresh Logic
+    time.sleep(1)
+    st.rerun()
     
 elif status['progress']['status'] == "Completed" and status['logs']:
     # Sync Logic

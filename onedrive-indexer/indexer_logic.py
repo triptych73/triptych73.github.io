@@ -222,8 +222,14 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
             is_vision_result = content and "### AI Vision Analysis" in content
             if content and llm_client and ext not in ['jpg', 'jpeg', 'png', 'tiff'] and not is_vision_result:
                  print(f"DEBUG: Running AI analysis on {ext} content...")
-                 analysis = llm_client.analyze_text(content, prompt=system_prompt)
-                 content = f"{content}\n\n---\n### AI Analysis\n{analysis}"
+                 try:
+                     analysis = llm_client.analyze_text(content, prompt=system_prompt)
+                     content = f"{content}\n\n---\n### AI Analysis\n{analysis}"
+                 except Exception as e:
+                     error_msg = f"AI Analysis Failed: {str(e)}"
+                     print(f"DEBUG: {error_msg}")
+                     if status_callback: status_callback(f"⚠️ {error_msg}")
+                     content = f"{content}\n\n---\n### AI Analysis\n[Error: {error_msg}]"
             
             print(f"DEBUG: Content after extraction: {'Found' if content else 'None'}")
             print(f"DEBUG: Content Check -> {type(content)}: '{str(content)[:20]}...'")
