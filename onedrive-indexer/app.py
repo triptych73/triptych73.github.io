@@ -325,6 +325,17 @@ if selected_source == "OneDrive":
         AUTHORITY = f"https://login.microsoftonline.com/{tenant_id}"
         msal_app = build_msal_app(client_id, client_secret, AUTHORITY)
         
+        # 0. Try to Restore Session from DB
+        if "access_token" not in st.session_state:
+            try:
+                # Use a fixed session ID for single-user VPS mode
+                stored_tokens = db_client.get_user_tokens("onedrive_user_session")
+                if stored_tokens and "access_token" in stored_tokens:
+                    st.session_state["access_token"] = stored_tokens["access_token"]
+                    st.toast("Restored OneDrive session!", icon="☁️")
+            except Exception as e:
+                print(f"Error restoring OneDrive session: {e}")
+
         # Auth Check
         if "access_token" not in st.session_state:
             code = st.query_params.get("code")
@@ -332,6 +343,17 @@ if selected_source == "OneDrive":
                 result = get_token_from_code(msal_app, code, redirect_uri, SCOPES)
                 if "access_token" in result:
                     st.session_state["access_token"] = result["access_token"]
+                    
+                    # SAVE SESSION to DB
+                    try:
+                        # We save the whole result or just what we need. 
+                        # For MSAL, usually we might want refresh tokens too if we were doing full refresh flow,
+                        # but for now saving the access token helps until it expires.
+                        # Ideally we save the cache, but simple token save is a good start.
+                        db_client.save_user_tokens("onedrive_user_session", result)
+                    except Exception as e:
+                        print(f"Error saving session: {e}")
+
                     st.query_params.clear() # Clear code to clean URL
                     st.rerun()
                 else:
