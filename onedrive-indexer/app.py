@@ -1011,38 +1011,36 @@ with sidebar_placeholder.container():
                  st.sidebar.success(f"Started Job {job_id}!")
                  st.rerun()
 
-    # --- POLLING UI (Sidebar) ---
-    job_mgr = get_job_manager()
-    status = job_mgr.get_status()
+# --- POLLING UI (Global Sidebar) ---
+job_mgr = get_job_manager()
+status = job_mgr.get_status()
+
+if status['is_running']:
+    st.sidebar.divider()
+    st.sidebar.info(f"🔄 Processing...\n{status['progress']['status']}")
     
-    if status['is_running']:
-        st.sidebar.divider()
-        st.sidebar.info(f"🔄 Processing...\n{status['progress']['status']}")
-        
-        # Mini Log Window
-        with st.sidebar.expander("Live Logs", expanded=True):
-             logs_text = "\n".join(status['logs'][-10:]) # Show last 10 lines
-             st.code(logs_text, language="text")
-        
-        if st.sidebar.button("Refresh"):
-            st.rerun()
-        
-    elif status['progress']['status'] == "Completed" and status['logs']:
-        # Show completion only if we haven't acknowledged it yet (could add a 'seen' flag, but simpler to just show)
-        # Or check if results are fresh?
-        # Actually logic above (line 951) shows "indexing_results" from Session State.
-        # But Background Worker writes to JobManager, NOT Session State.
-        # So we need to sync them!
-        
-        if "bg_synced" not in st.session_state or st.session_state["bg_synced"] != status['job_id']:
-             # Sync result to session state so the UI view updates
-             if job_mgr.result:
-                 st.session_state["indexing_results"] = job_mgr.result
-                 st.session_state["indexed_ids_cache"] = set()
-                 if selected_source != "Google Photos":
-                        st.session_state["current_folder_items"] = None
-                 st.session_state["bg_synced"] = status['job_id']
-                 st.rerun()
-        
-        st.sidebar.success("✅ Job Done!")
+    # Mini Log Window
+    with st.sidebar.expander("Live Logs", expanded=True):
+            logs_text = "\n".join(status['logs'][-10:]) # Show last 10 lines
+            st.code(logs_text, language="text")
+    
+    if st.sidebar.button("Refresh Status"):
+        st.rerun()
+    
+elif status['progress']['status'] == "Completed" and status['logs']:
+    # Sync Logic
+    if "bg_synced" not in st.session_state or st.session_state["bg_synced"] != status['job_id']:
+            # Sync result to session state so the UI view updates
+            if job_mgr.result:
+                st.session_state["indexing_results"] = job_mgr.result
+                st.session_state["indexed_ids_cache"] = set()
+                if selected_source != "Google Photos":
+                    st.session_state["current_folder_items"] = None
+                st.session_state["bg_synced"] = status['job_id']
+                st.rerun()
+    
+    st.sidebar.success("✅ Job Done!")
+    if st.sidebar.button("Clear Status"):
+         # Optional: Reset manager
+         pass
 
