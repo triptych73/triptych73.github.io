@@ -1,6 +1,8 @@
+```python
 import streamlit as st
 import io
 import json
+from job_manager import get_job_manager
 import datetime
 import os
 import time
@@ -404,100 +406,139 @@ with tab3:
         st.success(f"Ready to index **{len(files_to_index)}** priority files.")
         st.dataframe(files_to_index)
         
-        if st.button("⚡ Start Batch Indexing", type="primary"):
-            skip_existing = st.session_state.get("skip_indexed_global", False)
-            
-            # PRE-FILTERING (Skip Indexed)
-            final_list_to_process = []
-            skipped_count = 0
-            
-            if skip_existing:
-                # Batch check DB
-                all_ids = [f["id"] for f in files_to_index]
-                indexed_set = db_client.get_indexed_status(all_ids, provider=provider_key)
-                
-                for f in files_to_index:
-                    if f["id"] in indexed_set:
-                        skipped_count += 1
-                        log_container.write(f"⏭️ Skipped (Already Indexed): {f['name']}")
+                if st.button("⚡ Start Batch Indexing (Background)", type="primary"):
+                    skip_existing = st.session_state.get("skip_indexed_global", False)
+                    job_mgr = get_job_manager()
+                    
+                    if job_mgr.get_status()['is_running']:
+                        st.warning("⚠️ A background job is already running!")
                     else:
-                        final_list_to_process.append(f)
-            else:
-                final_list_to_process = files_to_index
-            
-            if not final_list_to_process:
-                st.warning("All selected files were already indexed or skipped!")
-            else:
-                # Define output container first
-                log_container = st.container()
-
-                # Use the SAME batch function as the Main App
-                def update_status_callback(msg):
-                    log_container.write(msg)
-                    
-                # Need fresh client logic or just pass the dicts?
-                # indexer_logic handles dicts with 'id' if client is provided.
-                
-                # Restore AI Client
-                llm_idx = get_ai_client()
-                    
-                # HYDRATION STEP: The AI metadata is just {id, name}. 
-                # We need the full object (downloadUrl, mimeType, etc.) to process it.
-                hydrated_list = []
-                
-                log_container.info("💧 Re-fetching file metadata for download access...")
-                hydration_bar = log_container.progress(0)
-                
-                for idx, item in enumerate(final_list_to_process):
-                    try:
-                        full_item = None
-                        if provider_key == "onedrive":
-                            # Graph API
-                            full_item = client.get_drive_item(item['id'])
-                        elif provider_key in ["google", "google_photos", "googledrive"]:
-                             # Google API
-                             if hasattr(client, 'get_file_metadata'):
-                                 full_item = client.get_file_metadata(item['id'])
-                             elif hasattr(client, 'service'):
-                                 # Fallback manual call if helper missing
-                                 full_item = client.service.files().get(fileId=item['id'], fields="*").execute()
-                             else:
-                                 # Start with basic, maybe indexer handles id-based download for Google?
-                                 # indexer_logic line 178: client.download_file(item_id, mime)
-                                 # Google client usually fetches via ID.
-                                 # But we need mimeType at least.
-                                 full_item = item # Risk if mime missing
-                                 
-                        if full_item:
-                            hydrated_list.append(full_item)
-                        else:
-                            log_container.warning(f"⚠️ Could not fetch metadata for {item['name']}")
+                        # PRE-FILTERING (Skip Indexed)
+                        final_list_to_process = []
+                        skipped_count = 0
+                        
+                        if skip_existing:
+                            # Batch check DB
+                            all_ids = [f["id"] for f in files_to_index]
+                            indexed_set = db_client.get_indexed_status(all_ids, provider=provider_key)
                             
-                    except Exception as e:
-                         log_container.error(f"Error fetching {item['name']}: {e}")
-                    
-                    hydration_bar.progress((idx + 1) / len(final_list_to_process))
-                
-                hydration_bar.empty()
-                log_container.success(f"Metadata refreshed for {len(hydrated_list)} files.")
-                
-                # We need to ensure we have the 'client' object for the download logic inside process_selection
-                # We have 'client' from top defined.
-                
-                processed_results = process_selection(
-                    client=client, 
-                    selected_items=hydrated_list, 
-                    provider=provider_key, 
-                    status_callback=update_status_callback, 
-                    recursive=False, 
-                    llm_client=llm_idx, 
-                    sync_db=True,
-                    system_prompt=st.session_state.get("system_prompt")
-                )
-                
-                processed_count = len(processed_results)
-                
-                st.balloons()
+                            for f in files_to_index:
+                                if f["id"] in indexed_set:
+                                    skipped_count += 1
+                                else:
+                                    final_list_to_process.append(f)
+                            
+                            st.info(f"⏭️ Skipped {skipped_count} already indexed files.")
+                        else:
+                            final_list_to_process = files_to_index
+                        
+                        if not final_list_to_process:
+                            st.warning("All selected files were already indexed or skipped!")
+                        else:
+                            # Define output container first
+                            log_container = st.container()
+
+                            # Restore AI Client
+                            llm_idx = get_ai_client()
+                                
+                            # HYDRATION STEP (Must allow this to block UI for a moment or move to worker?)
+                            # Better: Do hydration in MAIN Logic for now to ensure 'client' works, then pass clean list to worker.
+                            # OR: Just run the whole thing including hydration in the worker?
+                            # Problem: 'client' object (GraphClient) might not be thread-safe or might need token refresh in main thread?
+                            # Usually 'client' is fine to pass. let's try passing it.
+                            
+                            # Log that we are starting
+                            st.toast("🚀 Launching Background Job...")
+                            
+                            # Prepare arguments for the worker
+                            # We need to wrap the logic that includes hydration + processing
+                            
+                            def worker_wrapper(client, items, provider, llm, prompt):
+                                # 1. Hydration
+                                job_mgr = get_job_manager()
+                                job_mgr.add_log("💧 Hydrating metadata for download access...")
+                                hydrated_list = []
+                                for item in items:
+                                    try:
+                                        full_item = None
+                                        if provider == "onedrive":
+                                            full_item = client.get_drive_item(item['id'])
+                                        elif provider in ["google", "google_photos", "googledrive"]:
+                                             # Simplified Google fetch logic
+                                             if hasattr(client, 'get_file_metadata'):
+                                                 full_item = client.get_file_metadata(item['id'])
+                                             elif hasattr(client, 'service'):
+                                                 full_item = client.service.files().get(fileId=item['id'], fields="*").execute()
+                                             else:
+                                                 full_item = item
+                                        
+                                        if full_item:
+                                            hydrated_list.append(full_item)
+                                        else:
+                                            job_mgr.add_log(f"⚠️ Could not fetch metadata for {item['name']}")
+                                    except Exception as e:
+                                        job_mgr.add_log(f"❌ Error fetching {item['name']}: {e}")
+                                
+                                job_mgr.add_log(f"✅ Hydration complete. Starting Indexing of {len(hydrated_list)} files...")
+                                
+                                # 2. Process
+                                return process_selection(
+                                    client=client, 
+                                    selected_items=hydrated_list, 
+                                    provider=provider, 
+                                    status_callback=None, # JobManager injects its own
+                                    recursive=False, 
+                                    llm_client=llm, 
+                                    sync_db=True,
+                                    system_prompt=prompt
+                                )
+
+                            # Launch!
+                            success, job_id = job_mgr.start_job(
+                                target_func=worker_wrapper,
+                                client=client,
+                                items=final_list_to_process,
+                                provider=provider_key,
+                                llm=llm_idx,
+                                prompt=st.session_state.get("system_prompt")
+                            )
+                            
+                            if success:
+                                st.success(f"Job {job_id} Started! Close the tab if you want, it will keep running (in Docker).")
+                                st.rerun()
+
+    # --- POLLING UI (Always visible if job running) ---
+    job_mgr = get_job_manager()
+    status = job_mgr.get_status()
+    
+    if status['is_running']:
+        st.divider()
+        st.subheader("🔄 Background Job Running")
+        st.info(f"Job ID: {status['job_id']}")
+        
+        # Live Log Window
+        st.markdown("### Live Logs")
+        log_box = st.empty()
+        logs_text = "\n".join(status['logs'])
+        log_box.code(logs_text, language="text")
+        
+        if st.button("Refresh Status"):
+            st.rerun()
+        
+        # Auto-refresh using experimental rerun? Or just let user click?
+        # Streamlit cloud kills aggressive loops. Let's rely on manual or slow loop.
+        time.sleep(2)
+        st.rerun()
+        
+    elif status['progress']['status'] == "Completed" and status['logs']:
+        st.divider()
+        st.success("✅ Last Job Completed!")
+        with st.expander("Show Job Logs"):
+            st.code("\n".join(status['logs']))
+            
+        if st.button("Clear Logs"):
+             # Reset? Simple hack: just ignore them or add reset method
+             pass
                 st.success(f"Batch Complete! Processed: {processed_count}, Skipped: {skipped_count}")
     else:
         st.markdown("*Waiting for file selection...*")
