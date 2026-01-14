@@ -812,6 +812,7 @@ else:
             # --- Check DB Status (Standard Flow) ---
             # Moved to common block below
 
+    items = st.session_state.get("current_folder_items")
     if items is None:
         items = []
 
