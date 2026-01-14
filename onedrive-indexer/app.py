@@ -11,6 +11,7 @@ from auth import build_msal_app, get_auth_url, get_token_from_code
 from graph_client import GraphClient
 from google_client import GoogleClient, get_google_auth_url, get_google_token_from_code
 from indexer_logic import process_selection
+from job_manager import get_job_manager
 from cost_utils import CostEstimator
 from llm_client import LLMClient
 import db_client
