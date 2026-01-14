@@ -27,6 +27,7 @@ class GraphClient:
                 results.extend(data.get('value', []))
                 url = data.get('@odata.nextLink') # None if no more pages
             else:
+                print(f"Graph API Error: {response.status_code} - {response.text}")
                 break
         return results
 

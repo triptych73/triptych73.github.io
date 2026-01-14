@@ -812,9 +812,15 @@ else:
             # --- Check DB Status (Standard Flow) ---
             # Moved to common block below
 
-items = st.session_state["current_folder_items"]
-if items is None:
-    items = []
+    if items is None:
+        items = []
+
+    if not items and not st.session_state.get("current_folder_items"):
+         # Empty folder or failed load
+         st.info("Folder is empty or failed to load.")
+         if st.button("🔄 Retry Loading Files"):
+             st.session_state["current_folder_items"] = None
+             st.rerun()
 
 # --- Check DB Status (Common) ---
 # Update indexed status whenever items are loaded/changed
@@ -1119,27 +1125,30 @@ with sidebar_placeholder.container():
 # --- POLLING UI (Global Sidebar) ---
 # --- POLLING UI (Global Sidebar) ---
 # Use st.fragment for smooth updates without full page reload
+# NOTE: Writing to st.sidebar inside a fragment is not supported directly.
+# We must call the fragment function inside a `with st.sidebar` context,
+# and use `st.foo` inside the function.
 @st.fragment(run_every=2)
 def show_live_status():
     job_mgr = get_job_manager()
     status = job_mgr.get_status()
 
     if status['is_running']:
-        st.sidebar.divider()
-        st.sidebar.info(f"🔄 Processing...\n{status['progress']['status']}")
+        st.divider()
+        st.info(f"🔄 Processing...\n{status['progress']['status']}")
         
         # Live Cost
         if status.get('cost', 0) > 0:
-             st.sidebar.markdown(f"**Job Cost:** ${status['cost']:.4f}")
+             st.markdown(f"**Job Cost:** ${status['cost']:.4f}")
 
         # Mini Log Window (Reverse Order)
-        with st.sidebar.expander("Live Logs", expanded=True):
+        with st.expander("Live Logs", expanded=True):
                 # Reverse list to show newest first
                 logs_reversed = status['logs'][::-1]
                 logs_text = "\n".join(logs_reversed[:15]) 
                 st.code(logs_text, language="text")
         
-        if st.sidebar.button("⛔ Force Stop", type="primary", use_container_width=True):
+        if st.button("⛔ Force Stop", type="primary", use_container_width=True):
              # Force reset
              import threading
              with job_mgr._lock:
@@ -1151,11 +1160,9 @@ def show_live_status():
         
     elif status['progress']['status'] == "Completed" and status['logs']:
         # We need to signal the Main Thread to re-sync
-        # Since fragments run independently, writing to session state works,
-        # but triggering a FULL app rerun from here might be needed for the main view to update.
         
         if "bg_synced" not in st.session_state or st.session_state["bg_synced"] != status['job_id']:
-             st.sidebar.success("✅ Job Done! Refreshing...")
+             st.success("✅ Job Done! Refreshing...")
              
              # Sync Cost to Global Total
              if status.get('cost', 0) > 0:
@@ -1163,18 +1170,13 @@ def show_live_status():
                  st.session_state["total_cost"] += status['cost']
              
              st.session_state["bg_synced_trigger"] = status['job_id'] # Signal main thread
-             st.rerun() # Rerun fragment? Or App? 
-             # In a fragment, st.rerun() reruns the FRAGMENT.
-             # We actually want to kill the fragment loop and refresh the app.
-             # But let's just let the main loop below catch the trigger?
-             # No, main loop runs once.
-             # So we DO need to trigger a full refresh.
-             # Let's hope st.rerun() inside fragment does what we need or check docs.
-             # Actually, creating a button that user clicks is safest if auto-refresh fails.
+             st.rerun()
         
-        st.sidebar.success("✅ Job Done!")
+        st.success("✅ Job Done!")
 
-show_live_status()
+# Call fragment inside Sidebar Context
+with st.sidebar:
+    show_live_status()
 
 # Check for Trigger from Fragment
 if "bg_synced_trigger" in st.session_state:
