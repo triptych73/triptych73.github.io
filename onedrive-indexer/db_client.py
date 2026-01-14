@@ -168,6 +168,21 @@ def get_user_tokens(user_id):
         return doc.to_dict()
     return None
 
+def delete_user_tokens(user_id):
+    """
+    Deletes OAuth tokens for a user.
+    """
+    db = get_db()
+    if not db: return False
+    
+    try:
+        doc_ref = db.collection('auth_tokens').document(user_id)
+        doc_ref.delete()
+        return True
+    except Exception as e:
+        print(f"Error deleting tokens for {user_id}: {e}")
+        return False
+
 def get_all_documents():
     """
     Fetches ALL documents from the indexer_files collection.

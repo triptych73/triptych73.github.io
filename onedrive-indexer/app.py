@@ -633,6 +633,22 @@ if user_info:
         st.session_state["current_folder_id"] = "root"
         st.query_params.clear()
         st.rerun()
+    
+    # Session Reset (Hard Logout)
+    if st.sidebar.button("Reset Session (Fix Stuck State)", type="secondary", use_container_width=True):
+        # 1. Clear Database Tokens
+        if selected_source == "OneDrive":
+            db_client.delete_user_tokens("onedrive_user_session")
+        elif selected_source in ["Google Drive", "Google Photos"]:
+            db_client.delete_user_tokens("default_user_session")
+            
+        # 2. Clear Local State
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+            
+        st.cache_data.clear()
+        st.query_params.clear()
+        st.rerun()
 
     # --- DEBUG TOOL: Token Scope Verifier ---
     with st.sidebar.expander("🔐 Auth Debugger", expanded=False):
