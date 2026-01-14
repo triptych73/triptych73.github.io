@@ -21,12 +21,21 @@ PRICING = {
 
 class CostEstimator:
     def __init__(self):
-        if "total_cost" not in st.session_state:
-            st.session_state["total_cost"] = 0.0
-        if "total_tokens_in" not in st.session_state:
-            st.session_state["total_tokens_in"] = 0
-        if "total_tokens_out" not in st.session_state:
-            st.session_state["total_tokens_out"] = 0
+        self._local_cost = 0.0
+        self._local_tokens_in = 0
+        self._local_tokens_out = 0
+        
+        # Try to init session state if available
+        try:
+            if "total_cost" not in st.session_state:
+                st.session_state["total_cost"] = 0.0
+            if "total_tokens_in" not in st.session_state:
+                st.session_state["total_tokens_in"] = 0
+            if "total_tokens_out" not in st.session_state:
+                st.session_state["total_tokens_out"] = 0
+        except Exception:
+            # We are likely in a background thread
+            pass
 
     def track(self, model_name, input_tokens, output_tokens):
         # Normalize model name match
@@ -45,16 +54,32 @@ class CostEstimator:
         cost_out = (output_tokens / 1_000_000) * rates['out']
         total_job_cost = cost_in + cost_out
 
-        st.session_state["total_cost"] += total_job_cost
-        st.session_state["total_tokens_in"] += input_tokens
-        st.session_state["total_tokens_out"] += output_tokens
+        # Update Local (Thread) stats
+        self._local_cost += total_job_cost
+        self._local_tokens_in += input_tokens
+        self._local_tokens_out += output_tokens
+
+        # Try to Update Session State
+        try:
+            st.session_state["total_cost"] += total_job_cost
+            st.session_state["total_tokens_in"] += input_tokens
+            st.session_state["total_tokens_out"] += output_tokens
+        except Exception:
+            pass # Ignore sync error in background thread
         
         return total_job_cost
 
     def get_total_cost(self):
-        return st.session_state["total_cost"]
+        try:
+            return st.session_state["total_cost"]
+        except Exception:
+            return self._local_cost
 
     def reset(self):
-        st.session_state["total_cost"] = 0.0
-        st.session_state["total_tokens_in"] = 0
-        st.session_state["total_tokens_out"] = 0
+        self._local_cost = 0.0
+        try:
+            st.session_state["total_cost"] = 0.0
+            st.session_state["total_tokens_in"] = 0
+            st.session_state["total_tokens_out"] = 0
+        except Exception:
+            pass
