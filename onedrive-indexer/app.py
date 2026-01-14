@@ -9,6 +9,7 @@ import datetime
 from dotenv import load_dotenv
 from auth import build_msal_app, get_auth_url, get_token_from_code
 from graph_client import GraphClient
+from local_client import LocalClient
 from google_client import GoogleClient, get_google_auth_url, get_google_token_from_code
 from indexer_logic import process_selection
 from job_manager import get_job_manager
@@ -285,7 +286,7 @@ def save_key_to_env(key_name, key_value):
 st.sidebar.title("Settings")
 
 # Source Selector
-source_options = ["OneDrive", "Google Drive", "Google Photos"]
+source_options = ["OneDrive", "Google Drive", "Google Photos", "Local Storage"]
 # Persist selection across re-runs (e.g. auth redirects)
 try:
     default_index = source_options.index(st.session_state.get("source_provider", "OneDrive"))
@@ -308,6 +309,7 @@ if selected_source != st.session_state["source_provider"]:
 provider_key = "onedrive"
 if selected_source == "Google Drive": provider_key = "google"
 elif selected_source == "Google Photos": provider_key = "google_photos"
+elif selected_source == "Local Storage": provider_key = "local"
 
 client = None
 user_info = None
@@ -440,6 +442,24 @@ elif selected_source in ["Google Drive", "Google Photos"]:
             creds = st.session_state["google_creds"]
             client = GoogleClient(credentials=creds)
             user_info = client.get_me()
+elif selected_source == "Local Storage":
+    # Initialize Local Client
+    root_path = "/data/local_files"
+    # Ensure directory exists
+    if not os.path.exists(root_path):
+        try:
+             os.makedirs(root_path, exist_ok=True)
+        except Exception as e:
+             st.error(f"Failed to create local data directory: {e}")
+             
+    client = LocalClient(root_path)
+    # Mock user info so the UI welcomes us
+    user_info = {
+        "displayName": "Local User",
+        "mail": "local@localhost",
+        "id": "local_user"
+    }
+
 # --- AI Settings ---
 st.sidebar.divider()
 st.sidebar.title("AI / OCR Configuration")
