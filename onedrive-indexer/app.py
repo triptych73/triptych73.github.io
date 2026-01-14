@@ -1158,9 +1158,6 @@ def show_live_status():
              # Actually, creating a button that user clicks is safest if auto-refresh fails.
         
         st.sidebar.success("✅ Job Done!")
-        if st.sidebar.button("Clear Status"):
-             # Optional: Reset manager
-             pass
 
 show_live_status()
 
