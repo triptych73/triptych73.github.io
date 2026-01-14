@@ -1147,6 +1147,12 @@ def show_live_status():
         
         if "bg_synced" not in st.session_state or st.session_state["bg_synced"] != status['job_id']:
              st.sidebar.success("✅ Job Done! Refreshing...")
+             
+             # Sync Cost to Global Total
+             if status.get('cost', 0) > 0:
+                 if "total_cost" not in st.session_state: st.session_state["total_cost"] = 0.0
+                 st.session_state["total_cost"] += status['cost']
+             
              st.session_state["bg_synced_trigger"] = status['job_id'] # Signal main thread
              st.rerun() # Rerun fragment? Or App? 
              # In a fragment, st.rerun() reruns the FRAGMENT.
