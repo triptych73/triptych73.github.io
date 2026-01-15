@@ -28,7 +28,7 @@ function initZonalListener() {
     console.log("[ZonalLogic] Connecting to document: indexer_analysis/zonal_matrix");
 
     // DIAGNOSTIC: Try a simple GET first
-    db.collection('indexer_analysis').document('zonal_matrix').get()
+    db.collection('indexer_analysis').doc('zonal_matrix').get()
         .then((doc) => {
             console.log("[ZonalLogic] DIAGNOSTIC GET SUCCESS. Exists:", doc.exists);
         })
@@ -38,7 +38,7 @@ function initZonalListener() {
             if (loading) loading.innerHTML += `<br><br><span style="color:red">Diagnostic Access Failed: ${err.message}</span>`;
         });
 
-    db.collection('indexer_analysis').document('zonal_matrix')
+    db.collection('indexer_analysis').doc('zonal_matrix')
         .onSnapshot((doc) => {
             const loading = document.getElementById('zonal-loading');
             const content = document.getElementById('zonal-content');

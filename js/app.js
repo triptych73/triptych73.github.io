@@ -17,11 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const additionalProgress = (checkedItems / totalItems) * REMAINING_PCT;
         const totalProgress = Math.round(BASE_PROGRESS + additionalProgress);
 
-        progressBar.style.width = `${totalProgress}%`;
-        progressText.textContent = `${totalProgress}% Project Complete`;
+        if (progressBar) progressBar.style.width = `${totalProgress}%`;
+        if (progressText) progressText.textContent = `${totalProgress}% Project Complete`;
 
         // Visual flair: Change color if complete
-        if (totalProgress === 100) {
+        if (totalProgress === 100 && progressBar) {
             progressBar.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
         }
     }
