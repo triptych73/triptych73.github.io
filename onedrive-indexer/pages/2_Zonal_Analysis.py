@@ -131,25 +131,39 @@ else:
             try:
                 response = llm.analyze_text(context_text, prompt)
                 
-                # 4. Clean JSON
-                clean_json = response.replace("```json", "").replace("```", "").strip()
-                # Handle potential markdown wrappers or preamble
-                if clean_json.startswith("json\n"): clean_json = clean_json[5:]
+                # 4. Clean & Parse JSON
+                import re
+                # Find the first opening brace and the last closing brace
+                match = re.search(r'\{[\s\S]*\}', response)
                 
-                data = json.loads(clean_json)
-                
-                # 5. Save to Firestore
-                status.write("Saving results indexer_analysis/zonal_matrix...")
-                db.collection('indexer_analysis').document('zonal_matrix').set({
-                    "last_updated": datetime.datetime.utcnow(),
-                    "data": data,
-                    "doc_count": doc_count
-                })
-                
-                status.update(label="Analysis Complete!", state="complete", expanded=False)
-                st.success("✅ Analysis Updated! Check the Portal.")
-                st.json(data)
+                if match:
+                    clean_json = match.group(0)
+                    try:
+                        data = json.loads(clean_json)
+                        
+                        # 5. Save to Firestore
+                        status.write("Saving results indexer_analysis/zonal_matrix...")
+                        db.collection('indexer_analysis').document('zonal_matrix').set({
+                            "last_updated": datetime.datetime.utcnow(),
+                            "data": data,
+                            "doc_count": doc_count
+                        })
+                        
+                        status.update(label="Analysis Complete!", state="complete", expanded=False)
+                        st.success("✅ Analysis Updated! Check the Portal.")
+                        st.json(data)
+                        
+                    except json.JSONDecodeError as je:
+                        status.update(label="JSON Parsing Failed", state="error")
+                        st.error(f"JSON Error: {je}")
+                        with st.expander("View Raw AI Response (Debug)", expanded=True):
+                            st.code(response)
+                else:
+                    status.update(label="No JSON Found in Response", state="error")
+                    st.error("The AI did not return a valid JSON object.")
+                    with st.expander("View Raw AI Response (Debug)", expanded=True):
+                        st.code(response)
                 
             except Exception as e:
                 status.update(label="Analysis Failed", state="error")
-                st.error(f"AI Error: {e}")
+                st.error(f"System Error: {e}")
