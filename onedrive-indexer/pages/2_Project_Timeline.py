@@ -67,6 +67,13 @@ if st.button("🔄 Analyze & Generate Timeline"):
         
         CRITICAL INSTRUCTION:
         Formal stage notices might be missing. You must INTELLIGENTLY INFER the project stage, progress percentage, and status events based on the document dates, types, and summaries provided.
+        
+        You must categorize every event into one of these 4 WORK STREAMS:
+        1. "Structural" (Restoration, masonry, steel, roof, core fabric)
+        2. "Fit-out" (M&E, internal stairs, joinery, finishes, utilities)
+        3. "Compliance" (Building control, fire safety, planning conditions, legal)
+        4. "Design" (Architectural drawings, structural calcs, diagrams, meetings)
+
         - Look for key words like 'Draft', 'Final', 'Approved', 'Submission'.
         - A 'Final Certificate' or 'Sign-off' implies 100% or near completion.
         - 'Initial Plans' implies early stages (10-20%).
@@ -80,13 +87,13 @@ if st.button("🔄 Analyze & Generate Timeline"):
                 "phase": "Current Phase Name (e.g. 'Design Review', 'Construction', 'Final Sign-off')"
             }},
             "stage_notices": [
-                {{ "date": "YYYY-MM-DD", "title": "Notice Title", "status": "Completed/Pending", "icon": "fas fa-check" }}
+                {{ "date": "YYYY-MM-DD", "title": "Notice Title", "status": "Completed/Pending", "icon": "fas fa-check", "stream": "Compliance" }}
             ],
             "design_checks": [
-                 {{ "title": "Check Title", "status": "Approved/Pending/Reviewing", "date": "YYYY-MM-DD" }}
+                 {{ "title": "Check Title", "status": "Approved/Pending/Reviewing", "date": "YYYY-MM-DD", "stream": "Design" }}
             ],
             "submissions": [
-                 {{ "title": "Submission Name", "date": "YYYY-MM-DD", "status": "Submitted/Approved", "link": "#" }}
+                 {{ "title": "Submission Name", "date": "YYYY-MM-DD", "status": "Submitted/Approved", "link": "#", "stream": "Structural" }}
             ]
         }}
         

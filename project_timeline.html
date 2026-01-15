@@ -57,6 +57,7 @@
     <style>
         body {
             background-color: #0F1115;
+            overflow-x: hidden;
         }
 
         .glass-panel {
@@ -74,6 +75,17 @@
             left: 24px;
             width: 1px;
             background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Tab Transition */
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: rgba(154, 140, 116, 0.1);
+            border-color: #9A8C74;
+            color: #9A8C74;
         }
     </style>
 </head>
@@ -106,6 +118,21 @@
                 <div class="text-xs text-white/40 mb-1 font-mono uppercase">Calculated Progress</div>
                 <div class="text-4xl font-serif text-bronze" id="header-progress">--%</div>
             </div>
+        </div>
+
+        <!-- STREAM TABS -->
+        <div class="flex flex-wrap gap-2 mt-6">
+            <button onclick="setFilter('All')"
+                class="tab-btn active px-4 py-2 rounded text-xs font-mono uppercase tracking-widest border border-white/10 text-white/60 hover:text-white hover:border-white/30">All
+                Streams</button>
+            <button onclick="setFilter('Structural')"
+                class="tab-btn px-4 py-2 rounded text-xs font-mono uppercase tracking-widest border border-white/10 text-white/60 hover:text-white hover:border-white/30">Structural</button>
+            <button onclick="setFilter('Fit-out')"
+                class="tab-btn px-4 py-2 rounded text-xs font-mono uppercase tracking-widest border border-white/10 text-white/60 hover:text-white hover:border-white/30">Fit-out</button>
+            <button onclick="setFilter('Compliance')"
+                class="tab-btn px-4 py-2 rounded text-xs font-mono uppercase tracking-widest border border-white/10 text-white/60 hover:text-white hover:border-white/30">Compliance</button>
+            <button onclick="setFilter('Design')"
+                class="tab-btn px-4 py-2 rounded text-xs font-mono uppercase tracking-widest border border-white/10 text-white/60 hover:text-white hover:border-white/30">Design</button>
         </div>
     </header>
 
@@ -243,6 +270,8 @@
 
     <script>
         const db = firebase.firestore();
+        let currentData = null;
+        let currentFilter = 'All';
 
         console.log("Initializing Firestore Snapshot Listener for project_dashboard/summary...");
 
@@ -253,13 +282,8 @@
                     console.log("Snapshot received: Data found.");
                     const data = doc.data();
                     console.log("Data Payload:", data);
-
-                    try {
-                        renderDashboard(data);
-                        console.log("Render complete.");
-                    } catch (e) {
-                        console.error("Render Error:", e);
-                    }
+                    currentData = data;
+                    renderDashboard(data);
                 } else {
                     console.warn("Snapshot received: Document does NOT exist.");
                     document.getElementById('timeline-container').innerHTML = '<div class="text-white/40 ml-10">No timeline data generated yet.</div>';
@@ -268,6 +292,23 @@
                 console.error("Firestore Error:", error);
                 document.getElementById('timeline-container').innerHTML = `<div class="text-red-400 ml-10">Error loading data: ${error.message}</div>`;
             });
+
+        // Filter Logic
+        function setFilter(filter) {
+            console.log("Switching Filter to:", filter);
+            currentFilter = filter;
+
+            // Update Tab UI
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.textContent.includes(filter) || (filter === 'All' && btn.textContent.includes('All'))) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            if (currentData) renderDashboard(currentData);
+        }
 
         function renderDashboard(data) {
             // 1. Status
@@ -298,13 +339,16 @@
             // Sort by Date Descending (Newest Top)
             events.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+            // Filtering
+            const filteredEvents = events.filter(e => currentFilter === 'All' || e.stream === currentFilter);
+
             const timelineContainer = document.getElementById('timeline-container');
             timelineContainer.innerHTML = '';
 
-            if (events.length === 0) {
-                timelineContainer.innerHTML = '<div class="text-white/40 ml-10">No events found.</div>';
+            if (filteredEvents.length === 0) {
+                timelineContainer.innerHTML = `<div class="text-white/40 ml-10">No events found for ${currentFilter}.</div>`;
             } else {
-                events.forEach(event => {
+                filteredEvents.forEach(event => {
                     const el = document.createElement('div');
                     el.className = 'relative flex gap-6 group';
                     el.innerHTML = `
@@ -315,7 +359,10 @@
                         
                         <!-- Content -->
                         <div class="pt-1 pb-8 flex-1">
-                            <div class="text-[10px] text-white/40 font-mono mb-1 uppercase tracking-widest">${event.date} • ${event.type}</div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[10px] text-white/40 font-mono uppercase tracking-widest">${event.date} • ${event.type}</span>
+                                ${getStreamBadge(event.stream)}
+                            </div>
                             <h3 class="text-lg text-white font-serif mb-2 group-hover:text-bronze transition-colors">${event.title}</h3>
                             <div class="inline-flex items-center px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] uppercase tracking-wide ${getStatusColor(event.status)}">
                                 ${event.status || 'Info'}
@@ -326,9 +373,12 @@
                 });
             }
 
-            // 3. Side Lists
-            renderList('list-notices', data.stage_notices, 'fa-flag');
-            renderList('list-submissions', data.submissions, 'fa-file-alt');
+            // 3. Side Lists - Also Filtered? User didn't specify, but safer to keep side lists "All" or filtered. 
+            // Let's filter them too for consistency.
+            const filterList = (list) => (list || []).filter(i => currentFilter === 'All' || i.stream === currentFilter);
+
+            renderList('list-notices', filterList(data.stage_notices), 'fa-flag');
+            renderList('list-submissions', filterList(data.submissions), 'fa-file-alt');
         }
 
         function renderList(elementId, items, defaultIcon) {
@@ -349,10 +399,22 @@
                              <span>${item.date || 'No Date'}</span>
                              <span class="${getStatusColor(item.status)}">${item.status}</span>
                         </div>
+                        <div class="mt-1">${getStreamBadge(item.stream)}</div>
                     </div>
                 `;
                 container.appendChild(el);
             });
+        }
+
+        function getStreamBadge(stream) {
+            if (!stream) return '';
+            let color = 'text-white/20';
+            if (stream === 'Structural') color = 'text-blue-400';
+            if (stream === 'Fit-out') color = 'text-purple-400';
+            if (stream === 'Compliance') color = 'text-red-400';
+            if (stream === 'Design') color = 'text-emerald-400';
+
+            return `<span class="text-[9px] uppercase tracking-wider border border-white/10 px-1.5 py-0.5 rounded ${color}">${stream}</span>`;
         }
 
         function getStatusColor(status) {
