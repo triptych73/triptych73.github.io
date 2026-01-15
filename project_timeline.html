@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Timeline | St Mary Somerset</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Tailwinds -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <!-- Auth Guard -->
+    <script>
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) window.location.href = 'login.html';
+            });
+        }
+    </script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portland': '#F5F5F0',
+                        'midnight': '#0F1115',
+                        'bronze': '#9A8C74',
+                        'success': '#10b981',
+                        'warning': '#f59e0b',
+                    },
+                    fontFamily: {
+                        'serif': ['Cinzel', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0F1115;
+        }
+
+        .glass-panel {
+            background: rgba(26, 29, 35, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Custom Timeline Line */
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 24px;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body
+    class="text-portland bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] min-h-screen flex flex-col font-sans">
+
+    <!-- Navbar -->
+    <nav
+        class="sticky top-0 w-full border-b border-white/5 bg-midnight/95 backdrop-blur-md z-50 px-6 py-3 flex justify-between items-center text-[11px] tracking-widest uppercase font-mono">
+        <div class="flex items-center gap-4 text-bronze">
+            <span class="font-bold">SMS-1694</span>
+            <span class="text-white/20">|</span>
+            <span class="text-white/60">Project Timeline</span>
+        </div>
+        <a href="projectexecutive.html" class="text-white/40 hover:text-white transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+    </nav>
+
+    <!-- Header -->
+    <header class="pt-12 pb-8 px-6 max-w-7xl mx-auto w-full">
+        <div class="flex flex-col md:flex-row justify-between items-end border-b border-white/10 pb-6">
+            <div>
+                <h1 class="font-serif text-3xl md:text-4xl text-portland tracking-tight mb-2">Project Timeline</h1>
+                <p class="text-white/40 font-mono text-xs uppercase tracking-widest">Live Status & Event History</p>
+            </div>
+
+            <div class="mt-6 md:mt-0 text-right">
+                <div class="text-xs text-white/40 mb-1 font-mono uppercase">Calculated Progress</div>
+                <div class="text-4xl font-serif text-bronze" id="header-progress">--%</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="px-6 pb-20 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left: Timeline Stream -->
+        <div class="lg:col-span-8">
+            <div class="glass-panel rounded-lg p-6 min-h-[600px]">
+                <h2 class="font-serif text-lg text-white mb-6 flex items-center gap-2">
+                    <i class="fas fa-stream text-bronze"></i> Event Stream
+                </h2>
+
+                <div id="timeline-container" class="relative timeline-line space-y-8 pl-2">
+                    <!-- Dynamic Content -->
+                    <div class="text-center text-white/30 py-10">
+                        <i class="fas fa-circle-notch fa-spin"></i> Loading Timeline...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Status & Notices -->
+        <div class="lg:col-span-4 space-y-6">
+
+            <!-- Project Status Card -->
+            <div class="glass-panel rounded-lg p-6">
+                <h2 class="font-serif text-lg text-white mb-4">Current Status</h2>
+                <div class="space-y-4">
+                    <div>
+                        <div class="text-[10px] text-white/40 uppercase font-mono mb-1">Phase</div>
+                        <div id="status-phase" class="text-lg text-bronze">Loading...</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-white/40 uppercase font-mono mb-1">Inspector</div>
+                        <div id="status-inspector" class="text-sm text-white/80">Loading...</div>
+                    </div>
+
+                    <!-- Compliance Bar -->
+                    <div class="pt-2">
+                        <div class="flex justify-between text-[10px] text-white/40 uppercase font-mono mb-1">
+                            <span>Completion</span>
+                            <span id="bar-label">0%</span>
+                        </div>
+                        <div class="w-full bg-white/5 rounded-full h-1.5">
+                            <div id="progress-bar"
+                                class="bg-gradient-to-r from-bronze to-warning h-1.5 rounded-full transition-all duration-1000"
+                                style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage Notices -->
+            <div class="glass-panel rounded-lg p-6">
+                <h2 class="font-serif text-lg text-white mb-4">Stage Notices</h2>
+                <div id="list-notices" class="space-y-3">
+                    <div class="text-xs text-white/30">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Submissions -->
+            <div class="glass-panel rounded-lg p-6">
+                <h2 class="font-serif text-lg text-white mb-4">Key Submissions</h2>
+                <div id="list-submissions" class="space-y-3">
+                    <div class="text-xs text-white/30">Loading...</div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- DEBUG CONSOLE -->
+    <div id="debug-toggle"
+        style="position:fixed; bottom:10px; left:10px; z-index:10000; opacity:0.7; cursor:pointer; background:rgba(0,0,0,0.5); color:white; padding:5px 10px; border-radius:4px; font-size:12px;"
+        onclick="document.getElementById('debug-overlay').style.display='flex'">
+        <i class="fas fa-bug"></i> Debug
+    </div>
+
+    <div id="debug-overlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10001; background:rgba(0,0,0,0.8); flex-direction:column; padding:20px;">
+        <div
+            style="background:#1a1a1a; width:100%; height:100%; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; border:1px solid #333;">
+            <div
+                style="background:#333; color:white; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-family:monospace; font-weight:bold;">Detailed System Logs</span>
+                <button onclick="document.getElementById('debug-overlay').style.display='none'"
+                    style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">CLOSE</button>
+            </div>
+            <div id="debug-output"
+                style="flex:1; padding:10px; overflow-y:auto; font-family:monospace; color:#0f0; white-space:pre-wrap; font-size:12px;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+            // --- DEBUG UTILS ---
+            (function () {
+                var oldLog = console.log;
+                var oldError = console.error;
+                var oldWarn = console.warn;
+                var out = document.getElementById('debug-output');
+
+                function write(type, args) {
+                    if (!out) out = document.getElementById('debug-output');
+                    if (!out) return;
+
+                    var msg = Array.from(args).map(a => {
+                        try { return (typeof a === 'object') ? JSON.stringify(a, null, 2) : String(a); }
+                        catch (e) { return String(a); }
+                    }).join(' ');
+
+                    var color = type === 'error' ? '#ff5555' : (type === 'warn' ? '#ffb86c' : '#50fa7b');
+                    var line = document.createElement('div');
+                    line.style.color = color;
+                    line.style.borderBottom = '1px solid #333';
+                    line.style.padding = '4px 0';
+                    line.innerHTML = `<span style="opacity:0.5">[${new Date().toLocaleTimeString()}]</span> <b>${type.toUpperCase()}:</b> ${msg}`;
+
+                    out.appendChild(line);
+                    out.scrollTop = out.scrollHeight;
+                }
+
+                console.log = function () { oldLog.apply(console, arguments); write('log', arguments); };
+                console.error = function () { oldError.apply(console, arguments); write('error', arguments); };
+                console.warn = function () { oldWarn.apply(console, arguments); write('warn', arguments); };
+
+                window.onerror = function (msg, url, line) {
+                    console.error(`Uncaught Error: ${msg} @ ${url}:${line}`);
+                };
+
+                console.log("Debug Console Initialized for Project Timeline.");
+            })();
+    </script>
+
+    <script>
+        const db = firebase.firestore();
+
+        console.log("Initializing Firestore Snapshot Listener for project_dashboard/summary...");
+
+        // Fetch Data
+        db.collection('project_dashboard').doc('summary')
+            .onSnapshot((doc) => {
+                if (doc.exists) {
+                    console.log("Snapshot received: Data found.");
+                    const data = doc.data();
+                    console.log("Data Payload:", data);
+
+                    try {
+                        renderDashboard(data);
+                        console.log("Render complete.");
+                    } catch (e) {
+                        console.error("Render Error:", e);
+                    }
+                } else {
+                    console.warn("Snapshot received: Document does NOT exist.");
+                    document.getElementById('timeline-container').innerHTML = '<div class="text-white/40 ml-10">No timeline data generated yet.</div>';
+                }
+            }, (error) => {
+                console.error("Firestore Error:", error);
+                document.getElementById('timeline-container').innerHTML = `<div class="text-red-400 ml-10">Error loading data: ${error.message}</div>`;
+            });
+
+        function renderDashboard(data) {
+            // 1. Status
+            document.getElementById('header-progress').textContent = (data.project_progress || 0) + '%';
+            document.getElementById('bar-label').textContent = (data.project_progress || 0) + '%';
+            document.getElementById('progress-bar').style.width = (data.project_progress || 0) + '%';
+
+            if (data.project_status) {
+                document.getElementById('status-phase').textContent = data.project_status.phase || "Unknown";
+                document.getElementById('status-inspector').textContent = data.project_status.inspector || "Unknown";
+            }
+
+            // 2. Timeline (Merge events for valid date sorting)
+            const events = [];
+
+            // Helper to add events
+            const addEvents = (list, type, icon) => {
+                if (!list) return;
+                list.forEach(item => {
+                    if (item.date) events.push({ ...item, type, icon });
+                });
+            };
+
+            addEvents(data.stage_notices, 'Notice', 'fa-flag');
+            addEvents(data.design_checks, 'Design Check', 'fa-clipboard-check');
+            addEvents(data.submissions, 'Submission', 'fa-paper-plane');
+
+            // Sort by Date Descending (Newest Top)
+            events.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const timelineContainer = document.getElementById('timeline-container');
+            timelineContainer.innerHTML = '';
+
+            if (events.length === 0) {
+                timelineContainer.innerHTML = '<div class="text-white/40 ml-10">No events found.</div>';
+            } else {
+                events.forEach(event => {
+                    const el = document.createElement('div');
+                    el.className = 'relative flex gap-6 group';
+                    el.innerHTML = `
+                        <!-- Icon Node -->
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full border border-white/10 bg-midnight z-10 flex items-center justify-center group-hover:border-bronze transition-colors">
+                            <i class="fas ${event.icon || 'fa-circle'} text-bronze text-sm"></i>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="pt-1 pb-8 flex-1">
+                            <div class="text-[10px] text-white/40 font-mono mb-1 uppercase tracking-widest">${event.date} • ${event.type}</div>
+                            <h3 class="text-lg text-white font-serif mb-2 group-hover:text-bronze transition-colors">${event.title}</h3>
+                            <div class="inline-flex items-center px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] uppercase tracking-wide ${getStatusColor(event.status)}">
+                                ${event.status || 'Info'}
+                            </div>
+                        </div>
+                    `;
+                    timelineContainer.appendChild(el);
+                });
+            }
+
+            // 3. Side Lists
+            renderList('list-notices', data.stage_notices, 'fa-flag');
+            renderList('list-submissions', data.submissions, 'fa-file-alt');
+        }
+
+        function renderList(elementId, items, defaultIcon) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            if (!items || items.length === 0) {
+                container.innerHTML = '<div class="text-xs text-white/30 italic">None recorded</div>';
+                return;
+            }
+            items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'flex items-start gap-3 p-3 bg-white/[0.02] rounded border border-white/5 hover:border-bronze/30 transition-colors';
+                el.innerHTML = `
+                    <div class="mt-1 text-bronze/60"><i class="fas ${item.icon || defaultIcon} text-xs"></i></div>
+                    <div>
+                        <div class="text-sm text-white/90">${item.title}</div>
+                        <div class="text-[10px] text-white/40 font-mono mt-0.5 flex items-center gap-2">
+                             <span>${item.date || 'No Date'}</span>
+                             <span class="${getStatusColor(item.status)}">${item.status}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function getStatusColor(status) {
+            if (!status) return 'text-white/40';
+            const s = status.toLowerCase();
+            if (s.includes('approve') || s.includes('complete') || s.includes('done')) return 'text-success';
+            if (s.includes('pending') || s.includes('review')) return 'text-warning';
+            return 'text-white/60';
+        }
+    </script>
+</body>
+
+</html>
