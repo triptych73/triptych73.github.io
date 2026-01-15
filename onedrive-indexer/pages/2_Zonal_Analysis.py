@@ -49,9 +49,8 @@ else:
     class MockTracker:
         def track(self, *args): pass
     
-    # Use best available model (Flash is faster/cheaper for large contexts)
-    # model_name="gemini-1.5-flash" is usually more reliable for general access
-    llm = LLMClient(provider="Google", api_key=api_key, model_name="gemini-1.5-flash", cost_tracker=MockTracker())
+    # Use Gemini 3 Pro Preview for advanced reasoning (as requested)
+    llm = LLMClient(provider="Google", api_key=api_key, model_name="gemini-3-pro-preview", cost_tracker=MockTracker())
 
     if st.button("🚀 Run Full Zonal Analysis", type="primary"):
         with st.status("Running Analysis...", expanded=True) as status:
