@@ -563,6 +563,7 @@ Following the transcription:
 2. Generate keyword tags (topics, entities, locations).
 3. Assess relevance to the St Mary Somerset Tower project (0-10).
 4. Flag high-importance items (contracts, plans, legal).
+5. Extract File Metadata (Last Modified, Created) from the provided Context if available.
 
 Output Format:
 Return a Markdown response.
@@ -584,6 +585,8 @@ Example:
   "tags": ["tag1", "tag2"],
   "relevance_score": 8,
   "relevance_reasoning": "...",
+  "last_modified": "YYYY-MM-DD",
+  "created_at": "YYYY-MM-DD",
   "document_date": "YYYY-MM-DD"
 }
 ```"""

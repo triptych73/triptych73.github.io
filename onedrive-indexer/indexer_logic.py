@@ -135,6 +135,19 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
 
             if status_callback: status_callback(f"Checking: {current_path}")
 
+            # --- Metadata Injection ---
+            # Construct a context string with file metadata to help the LLM
+            meta_str = f"File Context:\n- Name: {item_name}\n- Path: {current_path}\n"
+            if item.get('lastModifiedDateTime'):
+                meta_str += f"- Last Modified: {item.get('lastModifiedDateTime')}\n"
+            if item.get('createdDateTime'):
+                meta_str += f"- Created: {item.get('createdDateTime')}\n"
+            
+            # Prepend to user-defined prompt
+            # We use a distinct separator so the LLM knows this is system context
+            context_enhanced_prompt = f"{meta_str}\n\nInstructions:\n{system_prompt}" if system_prompt else meta_str
+            # --------------------------
+
             # Download
             file_bytes = None
             try:
@@ -208,14 +221,14 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
                 content = extract_excel(file_bytes, is_legacy=True)
                 format_tag = "EXCEL (LEGACY)"
             elif ext == 'pdf':
-                content = extract_pdf_text(file_bytes, llm_client=llm_client, prompt=system_prompt)
+                content = extract_pdf_text(file_bytes, llm_client=llm_client, prompt=context_enhanced_prompt)
                 format_tag = "PDF"
             elif ext in ['pptx', 'ppt']:
                 content = extract_pptx(file_bytes)
                 format_tag = "PPTX"
             if ext in ['jpg', 'jpeg', 'png', 'tiff']:
                 print("DEBUG: Extracting image...")
-                content = extract_image_with_llm(file_bytes, llm_client, system_prompt=system_prompt)
+                content = extract_image_with_llm(file_bytes, llm_client, system_prompt=context_enhanced_prompt)
                 format_tag = "IMAGE"
             
             # AI Text Analysis for non-image files (SKIP if already analyzed by Vision or Native PDF)
@@ -231,7 +244,7 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
             if content and llm_client and ext not in ['jpg', 'jpeg', 'png', 'tiff'] and not has_existing:
                  print(f"DEBUG: Running AI text analysis on {ext}...")
                  try:
-                     analysis = llm_client.analyze_text(content, prompt=system_prompt)
+                     analysis = llm_client.analyze_text(content, prompt=context_enhanced_prompt)
                      content = f"{content}\n\n---\n### AI Analysis\n{analysis}"
                  except Exception as e:
                      error_msg = f"AI Analysis Failed: {str(e)}"
