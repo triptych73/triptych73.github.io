@@ -5,6 +5,7 @@
     <!-- Firebase Auth Guard -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
     <script src="firebase-config.js"></script>
     <script>
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
@@ -24,6 +25,103 @@
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Viewer Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-primary);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--accent-gold);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: var(--highlight-red);
+        }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            line-height: 1.6;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .modal-body h1,
+        .modal-body h2,
+        .modal-body h3 {
+            color: var(--text-primary);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        .modal-body p {
+            margin-bottom: 1em;
+            color: var(--text-secondary);
+        }
+
+        .modal-body pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        /* Dynamic Section Headers */
+        .dynamic-section-header {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 5px;
+        }
+    </style>
 </head>
 
 <body>
@@ -42,146 +140,274 @@
         </header>
 
         <div class="dashboard-grid">
-            <!-- Left: Status -->
+            <!-- Left: Stage Notices -->
             <aside>
                 <div class="glass-card">
-                    <div class="card-title"><i class="fas fa-church"></i> Status</div>
-                    <ul class="info-list">
-                        <li class="info-item">
-                            <span class="info-label">Lower 60%</span>
-                            <span class="info-value highlight-green">Signed Off <i class="fas fa-check"></i></span>
-                        </li>
-                        <li class="info-item">
-                            <span class="info-label">Current</span>
-                            <span class="info-value">Upper Floors</span>
-                        </li>
-                        <li class="info-item">
-                            <span class="info-label">Type</span>
-                            <span class="info-value">Change of Use</span>
-                        </li>
-                        <li class="info-item">
-                            <span class="info-label">Inspector</span>
-                            <span class="info-value">Assigned</span>
-                        </li>
-                    </ul>
+                    <div class="card-title"><i class="fas fa-flag"></i> Stage Notices</div>
+                    <div id="list-stage-notices" class="info-list">
+                        <!-- Dynamic Content -->
+                        <div style="text-align:center; padding: 20px; color: var(--text-muted);">
+                            <i class="fas fa-circle-notch fa-spin"></i> Loading...
+                        </div>
+                    </div>
                 </div>
 
-                <div class="glass-card">
-                    <div class="card-title"><i class="fas fa-fire-extinguisher"></i> Safety</div>
+                <!-- Keeping existing status logic summary if needed, or moving it -->
+                <div class="glass-card" style="margin-top: 20px;">
+                    <div class="card-title"><i class="fas fa-church"></i> Project Status</div>
                     <ul class="info-list">
                         <li class="info-item">
-                            <span class="info-label">Sprinklers</span>
-                            <span class="info-value highlight-orange">BS 9251</span>
+                            <span class="info-label">Inspector</span>
+                            <span class="info-value">Wilkinson CC</span>
                         </li>
                         <li class="info-item">
-                            <span class="info-label">Strategy</span>
-                            <span class="info-value">Engineered</span>
+                            <span class="info-label">Phase</span>
+                            <span class="info-value">Final Sign-off</span>
                         </li>
                     </ul>
                 </div>
             </aside>
 
-            <!-- Center: Checklist -->
+            <!-- Center: Design Checks -->
             <main>
                 <div class="glass-card">
-                    <div class="card-title"><i class="fas fa-tasks"></i> Compliance Checklist</div>
-
-                    <div class="checklist-section">
-                        <div class="section-header"><i class="fas fa-fire"></i> Part B: Fire Safety</div>
-                        <div class="checklist-item">
-                            <div class="checkbox"><i class="fas fa-check"></i></div>
-                            <div class="item-content"><span class="item-title">Sprinkler Commissioning (BS 9251)</span>
-                            </div>
-                        </div>
-                        <div class="checklist-item">
-                            <div class="checkbox"><i class="fas fa-check"></i></div>
-                            <div class="item-content"><span class="item-title">Fire Alarm (LD1/Grade A)</span></div>
-                        </div>
-                        <div class="checklist-item">
-                            <div class="checkbox"><i class="fas fa-check"></i></div>
-                            <div class="item-content"><span class="item-title">Emergency Lighting</span></div>
-                        </div>
-                        <div class="checklist-item">
-                            <div class="checkbox"><i class="fas fa-check"></i></div>
-                            <div class="item-content"><span class="item-title">Fire Door Certs (FD30S)</span></div>
-                        </div>
-                    </div>
-
-                    <div class="checklist-section">
-                        <div class="section-header"><i class="fas fa-leaf"></i> Part L: Conservation</div>
-                        <div class="checklist-item">
-                            <div class="checkbox"><i class="fas fa-check"></i></div>
-                            <div class="item-content"><span class="item-title">EPC Assessment</span></div>
-                        </div>
-                        <div class="checklist-item">
-                            <div class="checkbox"><i class="fas fa-check"></i></div>
-                            <div class="item-content"><span class="item-title">Thermal Element Upgrades</span></div>
-                        </div>
-                    </div>
-
-                    <div class="checklist-section">
-                        <div class="section-header"><i class="fas fa-bolt"></i> Services & Structure</div>
-                        <div class="checklist-item">
-                            <div class="checkbox"><i class="fas fa-check"></i></div>
-                            <div class="item-content"><span class="item-title">Electrical Cert (NICEIC)</span></div>
-                        </div>
-                        <div class="checklist-item">
-                            <div class="checkbox"><i class="fas fa-check"></i></div>
-                            <div class="item-content"><span class="item-title">Structural Sign-off</span></div>
+                    <div class="card-title"><i class="fas fa-clipboard-check"></i> Design Checks</div>
+                    <div id="list-design-checks" class="checklist-section">
+                        <!-- Dynamic Content -->
+                        <div style="text-align:center; padding: 20px; color: var(--text-muted);">
+                            <i class="fas fa-circle-notch fa-spin"></i> Loading...
                         </div>
                     </div>
                 </div>
             </main>
 
-            <!-- Right: Documents -->
+            <!-- Right: Documents & General -->
             <aside>
                 <div class="glass-card">
-                    <div class="card-title"><i class="fas fa-book"></i> Approved Docs</div>
-                    <a href="https://assets.publishing.service.gov.uk/media/637a2ccb8fa8f55ba15be0fd/ADS_B1_v1.pdf"
-                        target="_blank" class="doc-link">
-                        <div class="doc-icon"><i class="fas fa-fire"></i></div>
-                        <div>
-                            <div class="doc-name">Doc B</div>
-                            <div class="doc-sub">Fire Safety</div>
-                        </div>
-                    </a>
-                    <a href="https://assets.publishing.service.gov.uk/media/63d91dcdd3bf7f251e6047e2/ADL1_2021_with_2023_amendments.pdf"
-                        target="_blank" class="doc-link">
-                        <div class="doc-icon"><i class="fas fa-leaf"></i></div>
-                        <div>
-                            <div class="doc-name">Doc L</div>
-                            <div class="doc-sub">Conservation</div>
-                        </div>
-                    </a>
-                    <a href="https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/540330/BR_PDF_AD_M1_2015_with_2016_amendments_V3.pdf"
-                        target="_blank" class="doc-link">
-                        <div class="doc-icon"><i class="fas fa-wheelchair"></i></div>
-                        <div>
-                            <div class="doc-name">Doc M</div>
-                            <div class="doc-sub">Access</div>
-                        </div>
-                    </a>
-                    <a href="https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/441872/BR_PDF_AD_P_2013.pdf"
-                        target="_blank" class="doc-link">
-                        <div class="doc-icon"><i class="fas fa-bolt"></i></div>
-                        <div>
-                            <div class="doc-name">Doc P</div>
-                            <div class="doc-sub">Electrical</div>
-                        </div>
-                    </a>
+                    <div class="card-title"><i class="fas fa-book"></i> Statutory Docs</div>
+                    <!-- Existing hardcoded links -->
+                    <div class="info-list" style="max-height: 300px; overflow-y: auto;">
+                        <a href="https://www.gov.uk/government/publications/structure-approved-document-a"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-building"></i></div>
+                            <div>
+                                <div class="doc-name">Part A</div>
+                                <div class="doc-sub">Structure</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/fire-safety-approved-document-b"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-fire"></i></div>
+                            <div>
+                                <div class="doc-name">Part B</div>
+                                <div class="doc-sub">Fire Safety</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/site-preparation-and-resistance-to-contaminants-and-moisture-approved-document-c"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-water"></i></div>
+                            <div>
+                                <div class="doc-name">Part C</div>
+                                <div class="doc-sub">Contaminants & Moisture</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/toxic-substances-approved-document-d"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-skull-crossbones"></i></div>
+                            <div>
+                                <div class="doc-name">Part D</div>
+                                <div class="doc-sub">Toxic Substances</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/resistance-to-sound-approved-document-e"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-volume-up"></i></div>
+                            <div>
+                                <div class="doc-name">Part E</div>
+                                <div class="doc-sub">Sound</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/ventilation-approved-document-f"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-wind"></i></div>
+                            <div>
+                                <div class="doc-name">Part F</div>
+                                <div class="doc-sub">Ventilation</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/sanitation-hot-water-safety-and-water-efficiency-approved-document-g"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-faucet"></i></div>
+                            <div>
+                                <div class="doc-name">Part G</div>
+                                <div class="doc-sub">Sanitation & Water</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/drainage-and-waste-disposal-approved-document-h"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-toilet"></i></div>
+                            <div>
+                                <div class="doc-name">Part H</div>
+                                <div class="doc-sub">Drainage</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/combustion-appliances-and-fuel-storage-systems-approved-document-j"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-burn"></i></div>
+                            <div>
+                                <div class="doc-name">Part J</div>
+                                <div class="doc-sub">Combustion</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/protection-from-falling-collision-and-impact-approved-document-k"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-step-forward" style="transform: rotate(90deg);"></i>
+                            </div>
+                            <div>
+                                <div class="doc-name">Part K</div>
+                                <div class="doc-sub">Protection from Falling</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/conservation-of-fuel-and-power-approved-document-l"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-leaf"></i></div>
+                            <div>
+                                <div class="doc-name">Part L</div>
+                                <div class="doc-sub">Fuel & Power</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/access-to-and-use-of-buildings-approved-document-m"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-wheelchair"></i></div>
+                            <div>
+                                <div class="doc-name">Part M</div>
+                                <div class="doc-sub">Access</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/overheating-approved-document-o"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-sun"></i></div>
+                            <div>
+                                <div class="doc-name">Part O</div>
+                                <div class="doc-sub">Overheating</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/electrical-safety-approved-document-p"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-bolt"></i></div>
+                            <div>
+                                <div class="doc-name">Part P</div>
+                                <div class="doc-sub">Electrical Safety</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/security-dwellings-approved-document-q"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-lock"></i></div>
+                            <div>
+                                <div class="doc-name">Part Q</div>
+                                <div class="doc-sub">Security</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/physical-infrastructure-for-high-speed-electronic-communications-networks-approved-document-r"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-wifi"></i></div>
+                            <div>
+                                <div class="doc-name">Part R</div>
+                                <div class="doc-sub">High-Speed Comms</div>
+                            </div>
+                        </a>
+                        <a href="https://www.gov.uk/government/publications/infrastructure-for-charging-electric-vehicles-approved-document-s"
+                            target="_blank" class="doc-link">
+                            <div class="doc-icon"><i class="fas fa-charging-station"></i></div>
+                            <div>
+                                <div class="doc-name">Part S</div>
+                                <div class="doc-sub">EV Charging</div>
+                            </div>
+                        </a>
+                    </div>
                 </div>
 
                 <div class="glass-card">
-                    <div class="card-title"><i class="fas fa-file-upload"></i> Upload</div>
-                    <div class="upload-area">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <div>Drop certificates here</div>
+                    <div class="card-title"><i class="fas fa-paper-plane"></i> Submissions</div>
+                    <div id="list-submissions">
+                        <!-- Dynamic Content -->
+                        <div style="text-align:center; padding: 20px; color: var(--text-muted);">
+                            <i class="fas fa-circle-notch fa-spin"></i> Loading...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-title"><i class="fas fa-folder-open"></i> General Docs</div>
+                    <div id="list-general-docs">
+                        <!-- Dynamic Content -->
+                        <div style="text-align:center; padding: 20px; color: var(--text-muted);">
+                            <i class="fas fa-circle-notch fa-spin"></i> Loading...
+                        </div>
                     </div>
                 </div>
             </aside>
         </div>
     </div>
+
+    <!-- Viewer Modal -->
+    <div id="doc-viewer-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modal-doc-title" class="modal-title">Document Viewer</span>
+                <button class="modal-close" onclick="closeDocViewer()">&times;</button>
+            </div>
+            <div id="modal-doc-body" class="modal-body">
+                <!-- Content goes here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Zonal View Modal / Overlay (Alternative View) -->
+    <div id="zonal-view-overlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--background-color); z-index:900; overflow-y:auto;">
+        <div class="container" style="padding-top:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h1><i class="fas fa-building"></i> Zonal Compliance</h1>
+                <button onclick="toggleZonalView()"
+                    style="background:none; border:1px solid var(--accent-gold); color:var(--accent-gold); padding:8px 16px; cursor:pointer; font-family:'Cinzel';">
+                    <i class="fas fa-times"></i> Close View
+                </button>
+            </div>
+
+            <div id="zonal-loading" style="text-align:center; padding:50px; color:var(--text-muted);">
+                <i class="fas fa-circle-notch fa-spin fa-2x"></i><br><br>Loading Analysis...
+            </div>
+
+            <div id="zonal-content" class="dashboard-grid" style="display:none; grid-template-columns: 200px 1fr;">
+                <!-- Sidebar: Levels -->
+                <div class="glass-card" style="height: fit-content; sticky: top;">
+                    <div id="zonal-nav" style="display:flex; flex-direction:column; gap:5px;">
+                        <!-- Generated JS -->
+                    </div>
+                </div>
+
+                <!-- Main: Details -->
+                <div class="glass-card">
+                    <h2 id="zone-title"
+                        style="border-bottom:1px solid var(--glass-border); padding-bottom:10px; margin-bottom:20px;">
+                        Select a Zone</h2>
+                    <div id="zone-details"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button for Zonal View -->
+    <button onclick="toggleZonalView()"
+        style="position:fixed; bottom:30px; right:30px; background:var(--primary-color); color:var(--text-inv); border:none; width:60px; height:60px; border-radius:30px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:800; display:flex; align-items:center; justify-content:center; font-size:1.5rem;"
+        title="Open Zonal View">
+        <i class="fas fa-layer-group"></i>
+    </button>
+
     <script src="js/app.js"></script>
+    <script src="js/firestore-docs.js"></script>
+    <script src="js/zonal-logic.js"></script>
 </body>
 
 </html>
