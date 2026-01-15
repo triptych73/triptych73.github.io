@@ -1188,6 +1188,9 @@ def show_live_status():
                  if "total_cost" not in st.session_state: st.session_state["total_cost"] = 0.0
                  st.session_state["total_cost"] += status['cost']
              
+             # CRITICAL FIX: Mark as synced IMMEDIATELY to prevent infinite fragment loop
+             st.session_state["bg_synced"] = status['job_id']
+             
              st.session_state["bg_synced_trigger"] = status['job_id'] # Signal main thread
              st.rerun()
         
