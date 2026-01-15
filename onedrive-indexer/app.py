@@ -340,7 +340,15 @@ if selected_source == "OneDrive":
                             temp_client = GraphClient(st.session_state["access_token"])
                             st.session_state["current_folder_items"] = temp_client.get_drive_root_children()
                         except Exception as e:
-                            print(f"Auto-fetch failed: {e}")
+                            # Robust handling for expired/invalid tokens
+                            err_str = str(e)
+                            if "401" in err_str or "InvalidAuthenticationToken" in err_str:
+                                print(f"Auto-fetch 401: Invalid Token. Clearing session. {e}")
+                                st.session_state.pop("access_token", None)
+                                db_client.delete_user_tokens("onedrive_user_session")
+                                st.rerun()
+                            else:
+                                print(f"Auto-fetch failed: {e}")
             except Exception as e:
                 print(f"Error restoring OneDrive session: {e}")
 
