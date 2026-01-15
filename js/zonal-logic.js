@@ -1,15 +1,11 @@
 // js/zonal-logic.js
-console.log("[ZonalLogic] Script Source Loaded");
-
 let zonalData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("[ZonalLogic] DOM Content Loaded - Calling initZonalListener");
     initZonalListener();
 });
 
 function toggleZonalView() {
-    console.log("[ZonalLogic] Toggling Zonal View");
     const el = document.getElementById('zonal-view-overlay');
     const isHidden = el.style.display === 'none';
     el.style.display = isHidden ? 'block' : 'none';
@@ -17,26 +13,8 @@ function toggleZonalView() {
 }
 
 function initZonalListener() {
-    console.log("[ZonalLogic] initZonalListener started");
-    if (typeof firebase === 'undefined') {
-        console.error("[ZonalLogic] FATAL: Firebase is undefined!");
-        const loading = document.getElementById('zonal-loading');
-        if (loading) loading.innerHTML = "Error: Firebase SDK not loaded.";
-        return;
-    }
+    if (typeof firebase === 'undefined') return;
     const db = firebase.firestore();
-    console.log("[ZonalLogic] Connecting to document: indexer_analysis/zonal_matrix");
-
-    // DIAGNOSTIC: Try a simple GET first
-    db.collection('indexer_analysis').doc('zonal_matrix').get()
-        .then((doc) => {
-            console.log("[ZonalLogic] DIAGNOSTIC GET SUCCESS. Exists:", doc.exists);
-        })
-        .catch((err) => {
-            console.error("[ZonalLogic] DIAGNOSTIC GET FAILED:", err);
-            const loading = document.getElementById('zonal-loading');
-            if (loading) loading.innerHTML += `<br><br><span style="color:red">Diagnostic Access Failed: ${err.message}</span>`;
-        });
 
     db.collection('indexer_analysis').doc('zonal_matrix')
         .onSnapshot((doc) => {
