@@ -16,7 +16,10 @@ PRICING = {
     # Google (Gemini pricing is complex/free tier, using approx commercial rates)
     'gemini-1.5-pro': {'in': 3.50, 'out': 10.50},
     'gemini-1.5-flash': {'in': 0.075, 'out': 0.30},
-    'gemini-2.0': {'in': 0.00, 'out': 0.00}, # Experimental often free
+    'gemini-2.0': {'in': 0.00, 'out': 0.00}, 
+    'gemini-3-flash-preview': {'in': 0.075, 'out': 0.30},
+    'gemini-3-pro-preview': {'in': 3.50, 'out': 10.50},
+    'gemini-3-deep-think': {'in': 5.00, 'out': 15.00}, # estimate
 }
 
 import datetime

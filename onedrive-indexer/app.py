@@ -563,7 +563,7 @@ if st.sidebar.checkbox("Enable AI / OCR", value=True):
 
     # Model Selection
     model_map = {
-        "Google": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
+        "Google": ["gemini-3-flash-preview", "gemini-3-pro-preview", "gemini-3-deep-think", "gemini-2.0-flash-exp", "gemini-1.5-flash"],
         "OpenAI": ["gpt-4o", "gpt-4o-mini", "o1-preview", "o1-mini"],
         "Anthropic": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"]
     }
@@ -572,7 +572,7 @@ if st.sidebar.checkbox("Enable AI / OCR", value=True):
     # Custom/Fallback for Google names if previous code had them
     # Removed legacy fallback that was overwriting new models 
 
-    model_name = st.sidebar.selectbox("Model", model_map.get(api_provider, ["default"]), key="global_model_selection")
+    model_name = st.sidebar.selectbox("Model", model_map.get(api_provider, ["default"]), index=0, key="global_model_selection")
         
     if api_key_input:
         try:

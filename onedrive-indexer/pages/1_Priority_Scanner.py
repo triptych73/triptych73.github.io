@@ -106,7 +106,7 @@ def get_ai_client(model_override=None):
     
     # 2. Defaults if not set
     provider = global_provider or "Google" 
-    model = model_override or global_model or "gemini-3-pro-preview" 
+    model = model_override or global_model or "gemini-3-flash-preview" 
 
     # 3. Get API Key from Environment or Session?
     # app.py doesn't strictly save API key to session state in a "global_api_key" variable usually, 
