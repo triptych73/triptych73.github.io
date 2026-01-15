@@ -553,7 +553,7 @@ if st.sidebar.checkbox("Enable AI / OCR", value=True):
         # Assuming save_key_to_env is available or we just rely on .env
         # The previous code had a save function, let's just leave it for now or assume user sets env vars
         # But wait, I see `save_key_to_env` is not imported or defined in the snippet I saw? 
-        # Actually I saw `from indexer_logic import ...` maybe it's there? 
+        # Actually I saw `from indexer_logic` maybe it's there? 
         # Or maybe it was in app.py utils? 
         # I'll enable the button if I can find the function, otherwise I'll skip it to avoid NameError.
         # The previous view of app.py didn't show `save_key_to_env` definition in the snippet.
@@ -563,13 +563,7 @@ if st.sidebar.checkbox("Enable AI / OCR", value=True):
 
     # Model Selection
     model_map = {
-        "Google": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"], 
-        # Updated Google models to likely available ones or keep previous if known
-        # Previous known: ["gemini-3-flash-preview"?? No that looks wrong.]
-        # Let's use the ones from the regression diff if available?
-        # The regression diff showed: "gemini-3-flash-preview", "gemini-3-pro-preview"... 
-        # I will use safe defaults:
-        "Google": ["gemini-3-flash-preview", "gemini-3-pro-preview", "gemini-3-deep-think", "gemini-2.0-flash-exp", "gemini-1.5-flash"],
+        "Google": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
         "OpenAI": ["gpt-4o", "gpt-4o-mini", "o1-preview", "o1-mini"],
         "Anthropic": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"]
     }
