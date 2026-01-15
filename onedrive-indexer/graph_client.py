@@ -27,8 +27,9 @@ class GraphClient:
                 results.extend(data.get('value', []))
                 url = data.get('@odata.nextLink') # None if no more pages
             else:
-                print(f"Graph API Error: {response.status_code} - {response.text}")
-                break
+                error_msg = f"Graph API Error: {response.status_code} - {response.text}"
+                print(error_msg)
+                raise Exception(error_msg)
         return results
 
     def get_drive_root_children(self):
