@@ -22,24 +22,45 @@ function initZonalListener() {
             const loading = document.getElementById('zonal-loading');
             const content = document.getElementById('zonal-content');
 
-            if (doc.exists) {
-                zonalData = doc.data().data; // The 'data' field has the JSON
-                renderZonalNav();
-                loading.style.display = 'none';
-                content.style.display = 'grid';
+            try {
+                if (doc.exists) {
+                    // console.log("Doc found:", doc.data());
+                    const raw = doc.data();
+                    zonalData = raw.data; // The 'data' field has the JSON
 
-                // Select first zone by default
-                if (zonalData && zonalData.zones) {
-                    const firstZone = Object.keys(zonalData.zones)[0];
-                    selectZone(firstZone);
+                    if (!zonalData) {
+                        throw new Error("Document exists but 'data' field is missing.");
+                    }
+
+                    renderZonalNav();
+                    loading.style.display = 'none';
+                    content.style.display = 'grid';
+
+                    // Select first zone by default
+                    if (zonalData && zonalData.zones) {
+                        const firstZone = Object.keys(zonalData.zones)[0];
+                        selectZone(firstZone);
+                    }
+                } else {
+                    loading.innerHTML = '<div style="color:var(--highlight-red); padding:20px;">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x"></i><br><br>' +
+                        '<strong>Analysis Not Found</strong><br>' +
+                        '<span style="font-size:0.9em; opacity:0.8;">Run "Zonal Analysis" on the Indexer App to generate data.</span>' +
+                        '</div>';
                 }
-            } else {
-                loading.innerHTML = '<div style="color:var(--highlight-red); padding:20px;">' +
-                    '<i class="fas fa-exclamation-triangle fa-2x"></i><br><br>' +
-                    '<strong>Analysis Not Found</strong><br>' +
-                    '<span style="font-size:0.9em; opacity:0.8;">Run "Zonal Analysis" on the Indexer App to generate data.</span>' +
-                    '</div>';
+            } catch (err) {
+                console.error("Zonal Render Error:", err);
+                loading.innerHTML = `<div style="color:red; padding:20px;">
+                    <i class="fas fa-bug"></i> <strong>Render Error</strong><br>
+                    <small>${err.message}</small>
+                </div>`;
             }
+        }, (error) => {
+            console.error("Firestore Error:", error);
+            loading.innerHTML = `<div style="color:red; padding:20px;">
+                <i class="fas fa-ban"></i> <strong>Access Error</strong><br>
+                <small>${error.message}</small>
+            </div>`;
         });
 }
 
