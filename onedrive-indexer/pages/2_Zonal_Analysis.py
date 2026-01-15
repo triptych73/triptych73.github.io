@@ -49,8 +49,9 @@ else:
     class MockTracker:
         def track(self, *args): pass
     
-    # Use best available model
-    llm = LLMClient(provider="Google", api_key=api_key, model_name="gemini-1.5-pro", cost_tracker=MockTracker())
+    # Use best available model (Flash is faster/cheaper for large contexts)
+    # model_name="gemini-1.5-flash" is usually more reliable for general access
+    llm = LLMClient(provider="Google", api_key=api_key, model_name="gemini-1.5-flash", cost_tracker=MockTracker())
 
     if st.button("🚀 Run Full Zonal Analysis", type="primary"):
         with st.status("Running Analysis...", expanded=True) as status:
@@ -81,7 +82,7 @@ else:
             
             status.write(f"Processed {doc_count} documents. Sending to AI...")
             
-            # 2. Construct Prompt
+            # 2. Construct Prompt (Same as before)
             prompt = """
             You are a Building Control expert. Analyze the provided list of project documents.
             
@@ -123,6 +124,12 @@ else:
             # 3. Call AI
             try:
                 response = llm.analyze_text(context_text, prompt)
+                
+                # Check for LLM Client Error String
+                if response.startswith("[Error"):
+                    status.update(label="AI Request Failed", state="error")
+                    st.error(f"The AI Request returned an error:\n{response}")
+                    st.stop()
                 
                 # 4. Clean & Parse JSON
                 import re
