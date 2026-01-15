@@ -99,6 +99,18 @@ else:
             - "Sound" (Part E)
             - "Ventilation" (Part F)
             - "Access" (Part M)
+
+            PROJECT TRUTH (These facts are absolute):
+            - Entrance to Lambeth Hill is on Level 2.
+            - Garden Entrance is on Level 1.
+            - Lift serves Levels 2-5 (But buttons labels are 0-3).
+            - Lift Pit is on Level 1.
+            - The "Extension" comprises Levels 1-5.
+            
+            CONFLICT RESOLUTION:
+            - If documents conflict (e.g., an old plan vs a new plan), the document with the LATEST DATE is the truth.
+            - Explicitly note if an earlier design appears to be superseded by a later one.
+            - If a design feature is mentioned in an old doc but missing in a new doc for the same zone, assume it was removed/not implemented.
             
             Instructions:
             1. Identify which Zone each document belongs to based on its Name and Path.

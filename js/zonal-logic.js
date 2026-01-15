@@ -133,7 +133,20 @@ function selectZone(zoneName) {
         grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(250px, 1fr))';
         grid.style.gap = '15px';
 
-        Object.entries(zoneInfo.regulations).forEach(([regName, statusObj]) => {
+        // Define Strict Order for Regulations
+        const regOrder = ['Structure', 'Fire Safety', 'Sound', 'Ventilation', 'Access'];
+
+        // Sort keys based on defined order, unknown keys go last
+        const sortedKeys = Object.keys(zoneInfo.regulations).sort((a, b) => {
+            let idxA = regOrder.indexOf(a);
+            let idxB = regOrder.indexOf(b);
+            if (idxA === -1) idxA = 100;
+            if (idxB === -1) idxB = 100;
+            return idxA - idxB;
+        });
+
+        sortedKeys.forEach(regName => {
+            const statusObj = zoneInfo.regulations[regName];
             const card = document.createElement('div');
             card.style.background = 'rgba(255,255,255,0.5)';
             card.style.padding = '15px';
