@@ -23,28 +23,21 @@ st.title("🏢 Zonal Compliance Analysis")
 st.markdown("Use AI to scan all indexed documents and map them to building zones/levels against regulations.")
 
 # --- Firestore Setup ---
-if not firebase_admin._apps:
-    # Try local service account if available, else standard init
-    import glob
-    cred = None
-    # Look in parent dir or current dir
-    search_paths = ["*.json", "../*.json"]
-    found_key = False
-    for pattern in search_paths:
-        json_files = glob.glob(pattern)
-        for f in json_files:
-            if "firebase-adminsdk" in f:
-                from firebase_admin import credentials
-                cred = credentials.Certificate(f)
-                firebase_admin.initialize_app(cred)
-                found_key = True
-                break
-        if found_key: break
-            
-    if not firebase_admin._apps and not found_key:
-         firebase_admin.initialize_app()
+import db_client
 
-db = firestore.client()
+# Use the centralized client which handles Env Vars and Local Files
+db = db_client.get_db()
+
+if not db:
+    st.error("""
+    ❌ **Firebase Not Connected**
+    
+    Could not find credentials. Please ensure:
+    1. `FIREBASE_CREDENTIALS` environment variable is set (with JSON content).
+    2. OR `firebase-adminsdk.json` file is present in the directory.
+    """)
+    st.stop()
+
 
 # --- AI Client Setup ---
 api_key = os.getenv("GOOGLE_API_KEY") 
