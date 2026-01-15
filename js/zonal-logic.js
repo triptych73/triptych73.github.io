@@ -1,12 +1,15 @@
 // js/zonal-logic.js
+console.log("[ZonalLogic] Script Source Loaded");
 
 let zonalData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("[ZonalLogic] DOM Content Loaded - Calling initZonalListener");
     initZonalListener();
 });
 
 function toggleZonalView() {
+    console.log("[ZonalLogic] Toggling Zonal View");
     const el = document.getElementById('zonal-view-overlay');
     const isHidden = el.style.display === 'none';
     el.style.display = isHidden ? 'block' : 'none';
@@ -14,8 +17,15 @@ function toggleZonalView() {
 }
 
 function initZonalListener() {
-    if (typeof firebase === 'undefined') return;
+    console.log("[ZonalLogic] initZonalListener started");
+    if (typeof firebase === 'undefined') {
+        console.error("[ZonalLogic] FATAL: Firebase is undefined!");
+        const loading = document.getElementById('zonal-loading');
+        if (loading) loading.innerHTML = "Error: Firebase SDK not loaded.";
+        return;
+    }
     const db = firebase.firestore();
+    console.log("[ZonalLogic] Connecting to document: indexer_analysis/zonal_matrix");
 
     db.collection('indexer_analysis').document('zonal_matrix')
         .onSnapshot((doc) => {
