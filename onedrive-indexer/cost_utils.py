@@ -19,23 +19,58 @@ PRICING = {
     'gemini-2.0': {'in': 0.00, 'out': 0.00}, # Experimental often free
 }
 
+import datetime
+import db_client
+
 class CostEstimator:
     def __init__(self):
         self._local_cost = 0.0
         self._local_tokens_in = 0
         self._local_tokens_out = 0
+        self.day_key = self._get_current_day_key()
         
         # Try to init session state if available
         try:
+            # Check if we need to load persistent daily total
+            # We do this once per session init effectively
             if "total_cost" not in st.session_state:
-                st.session_state["total_cost"] = 0.0
+                # Load from DB
+                saved_cost = db_client.get_daily_cost(self.day_key)
+                st.session_state["total_cost"] = saved_cost
+                
             if "total_tokens_in" not in st.session_state:
                 st.session_state["total_tokens_in"] = 0
             if "total_tokens_out" not in st.session_state:
                 st.session_state["total_tokens_out"] = 0
+                
+            # Double check: If the day key has changed since last session use (in memory), reset?
+            # Session State persists as long as tab is open. 
+            # If user leaves tab open overnight, we might need to reset.
+            # Only way is to check stored date vs current date.
+            if "cost_day_key" not in st.session_state:
+                 st.session_state["cost_day_key"] = self.day_key
+            
+            if st.session_state["cost_day_key"] != self.day_key:
+                 # It's a new "5AM" day. Reset view.
+                 st.session_state["total_cost"] = 0.0
+                 st.session_state["cost_day_key"] = self.day_key
+                 
         except Exception:
             # We are likely in a background thread
             pass
+
+    def _get_current_day_key(self):
+        """
+        Returns a string key for the current logical day.
+        Day starts at 05:00 GMT.
+        """
+        now = datetime.datetime.now(datetime.timezone.utc)
+        
+        # If before 5AM, belong to previous day
+        if now.hour < 5:
+            now = now - datetime.timedelta(days=1)
+            
+        return now.strftime("%Y-%m-%d")
 
     def track(self, model_name, input_tokens, output_tokens):
         # Normalize model name match
@@ -52,12 +87,21 @@ class CostEstimator:
         rates = PRICING[price_key]
         cost_in = (input_tokens / 1_000_000) * rates['in']
         cost_out = (output_tokens / 1_000_000) * rates['out']
-        total_job_cost = cost_in + cost_out
+        
+        # USER REQUEST: X10 Multiplier (Safety buffer / Service Fee)
+        raw_cost = cost_in + cost_out
+        total_job_cost = raw_cost * 10.0
 
         # Update Local (Thread) stats
         self._local_cost += total_job_cost
         self._local_tokens_in += input_tokens
         self._local_tokens_out += output_tokens
+
+        # Persist to DB (Atomic Increment)
+        try:
+             db_client.add_daily_cost(self.day_key, total_job_cost)
+        except Exception as e:
+             print(f"Failed to persist cost: {e}")
 
         # Try to Update Session State
         try:
@@ -78,6 +122,7 @@ class CostEstimator:
     def reset(self):
         self._local_cost = 0.0
         try:
+            # We don't reset DB here, only local session if requested manually
             st.session_state["total_cost"] = 0.0
             st.session_state["total_tokens_in"] = 0
             st.session_state["total_tokens_out"] = 0

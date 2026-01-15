@@ -196,3 +196,31 @@ def get_all_documents():
     for doc in docs:
         results.append(doc.to_dict())
     return results
+
+def get_daily_cost(day_key):
+    """
+    Retrieves the cost for a specific day key.
+    """
+    db = get_db()
+    if not db: return 0.0
+    
+    doc_ref = db.collection('stats').document('daily_cost_tracking')
+    doc = doc_ref.get()
+    
+    if doc.exists:
+        data = doc.to_dict()
+        return data.get(day_key, 0.0)
+    return 0.0
+
+def add_daily_cost(day_key, amount):
+    """
+    Atomically increments the cost for a specific day key.
+    """
+    db = get_db()
+    if not db: return
+    
+    doc_ref = db.collection('stats').document('daily_cost_tracking')
+    doc_ref.set({
+        day_key: firestore.Increment(amount),
+        'last_updated': firestore.SERVER_TIMESTAMP
+    }, merge=True)

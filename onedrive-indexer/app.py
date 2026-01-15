@@ -333,6 +333,14 @@ if selected_source == "OneDrive":
                 if stored_tokens and "access_token" in stored_tokens:
                     st.session_state["access_token"] = stored_tokens["access_token"]
                     st.toast("Restored OneDrive session!", icon="☁️")
+
+                    # FIX: Auto-populate file list if empty (Fixes blank list on restore)
+                    if st.session_state.get("current_folder_items") is None:
+                        try:
+                            temp_client = GraphClient(st.session_state["access_token"])
+                            st.session_state["current_folder_items"] = temp_client.get_drive_root_children()
+                        except Exception as e:
+                            print(f"Auto-fetch failed: {e}")
             except Exception as e:
                 print(f"Error restoring OneDrive session: {e}")
 
@@ -542,14 +550,15 @@ if st.sidebar.checkbox("Enable AI / OCR", value=True):
     # System Prompt Editor
     st.sidebar.markdown("### 🤖 System Prompt")
     default_prompt = """You are an expert archivist for the "St Mary Somerset Tower" project.
-Analyze the following content and provide a structured JSON output.
 
 Context:
 - Project: St Mary Somerset Tower
 - Company: STMS Ltd
 - Address: 5 Lambeth Hill, EC4V 4AG
 
-Instructions:
+Analyze this document page by page. For each page, provide a header '### Page X' and a transcription of the text plain and simple.
+
+Following the transcription:
 1. Generate a concise summary.
 2. Generate keyword tags (topics, entities, locations).
 3. Assess relevance to the St Mary Somerset Tower project (0-10).
@@ -557,10 +566,15 @@ Instructions:
 
 Output Format:
 Return a Markdown response.
-- Start with a strict "## Summary" section.
+- Start with the transcription if appropriate (not for images unless there is text within)
+- Follow with a "## Summary" section
 - Follow with a "## Metadata" section containing a JSON block.
 
 Example:
+## Page 1
+[transcribed text]
+## Page 2.....
+
 ## Summary
 [Concise summary text...]
 
@@ -1013,7 +1027,7 @@ with sidebar_placeholder.container():
     current_cost = cost_estimator.get_total_cost() # This updates as items might change? Actually cost is static unless recalculated
     # Note: cost_estimator doesn't change based on selection unless we recalc. 
     # But let's show it.
-    st.markdown(f"<div class='cost-box'>💰 Est. Cost: ${current_cost:.4f}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='cost-box'>💰 Daily Cost (5AM GMT): ${current_cost:.4f}</div>", unsafe_allow_html=True)
 
     # Show success message if results exist from previous run
     if "indexing_results" in st.session_state and st.session_state["indexing_results"]:
@@ -1164,8 +1178,10 @@ def show_live_status():
         with st.expander("Live Logs", expanded=True):
                 # Reverse list to show newest first
                 logs_reversed = status['logs'][::-1]
-                logs_text = "\n".join(logs_reversed[:15]) 
-                st.code(logs_text, language="text")
+                # Show ALL logs now that we scroll, or at least a healthy amount (e.g. 50)
+                logs_text = "\n".join(logs_reversed[:50]) 
+                with st.container(height=300):
+                    st.code(logs_text, language="text")
         
         if st.button("⛔ Force Stop", type="primary", use_container_width=True):
              # Force reset

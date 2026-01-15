@@ -262,6 +262,7 @@ def process_selection(client, selected_items, provider="onedrive", status_callba
                         "content": content,
                         "file_type": ext,
                         "last_indexed_at": datetime.datetime.utcnow(),
+                        "last_modified_at": item.get('lastModifiedDateTime') or item.get('modifiedTime'),
                         "ai_model": llm_client.model_name if llm_client else "none"
                     }
                     if status_callback: status_callback(f"Syncing to DB: {item_name}...")
