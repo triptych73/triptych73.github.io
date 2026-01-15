@@ -334,12 +334,45 @@ if selected_source == "OneDrive":
                     st.session_state["access_token"] = stored_tokens["access_token"]
                     st.toast("Restored OneDrive session!", icon="☁️")
 
+                    # FEATURE: Default Start Folder "Documents/SMS Documents"
+                    # Only do this if we are at root and haven't navigated yet
+                    if st.session_state.get("current_folder_id") == "root" and "default_path_checked" not in st.session_state:
+                         st.session_state["default_path_checked"] = True
+                         try:
+                             temp_client = GraphClient(st.session_state["access_token"])
+                             target_path = "Documents/SMS Documents"
+                             node = temp_client.get_item_by_path(target_path)
+                             if node:
+                                 # We found it!
+                                 # 1. We need to construct a history so "Up" works.
+                                 # Ideally we'd look up "Documents" too, but that costs an API call.
+                                 # Shortcut: Just put ("root", "Root") in history. 
+                                 # If user clicks "Up", they go to Root. Good enough.
+                                 st.session_state["history"] = [("root", "Root")]
+                                 st.session_state["current_folder_id"] = node['id']
+                                 st.session_state["current_folder_name"] = node.get('name', 'SMS Documents')
+                                 st.session_state["current_folder_items"] = None # Force fetch of new folder children
+                                 st.toast(f"📂 Opened {target_path}")
+                                 
+                         except Exception as e:
+                             print(f"Default folder nav failed: {e}")
+
                     # FIX: Auto-populate file list if empty (Fixes blank list on restore)
+                    # If we just navigated, current_folder_items is None, so this will fetch the NEW folder.
+                    # If nav failed, current_folder_id is root, so this fetches root.
                     if st.session_state.get("current_folder_items") is None:
                         try:
-                            temp_client = GraphClient(st.session_state["access_token"])
-                            st.session_state["current_folder_items"] = temp_client.get_drive_root_children()
+                            # Re-init client if needed or use temp
+                            t_client = GraphClient(st.session_state["access_token"])
+                            
+                            if st.session_state["current_folder_id"] == "root":
+                                st.session_state["current_folder_items"] = t_client.get_drive_root_children()
+                            else:
+                                # Fetch children of the default folder we just jumped to
+                                st.session_state["current_folder_items"] = t_client.get_drive_item_children(st.session_state["current_folder_id"])
+                                
                         except Exception as e:
+                            # Robust handling for expired/invalid tokens
                             # Robust handling for expired/invalid tokens
                             err_str = str(e)
                             if "401" in err_str or "InvalidAuthenticationToken" in err_str:

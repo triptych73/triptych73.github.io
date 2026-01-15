@@ -48,6 +48,16 @@ class GraphClient:
             return response.json()
         return None
 
+    def get_item_by_path(self, path_str):
+        """Get item metadata by path (e.g. 'Documents/MyFolder')."""
+        # Encode path parts? The API expects /root:/path/to/file
+        # simple path usually works.
+        url = f"{GRAPH_URI}/me/drive/root:/{path_str}"
+        response = requests.get(url, headers=self.headers)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
     def download_file(self, download_url):
         """Download file content from the @microsoft.graph.downloadUrl."""
         if not download_url: return None
