@@ -66,7 +66,9 @@ if st.button("🔄 Analyze & Generate Timeline"):
         Task: Analyze the following document list to reconstruct the project timeline and status.
         
         CRITICAL INSTRUCTION:
-        Formal stage notices might be missing. You must INTELLIGENTLY INFER the project stage, progress percentage, and status events based on the document dates, types, and summaries provided.
+        1. OUTPUT FORMAT: Return ONLY valid JSON. Do not include markdown formatting (```json), introductory text, or explanations.
+        2. EVENT QUANTITY: Aim for 10-15 events per category. Use your intelligence to extract "looser" events from correspondence, site notes, and draft documents.
+        3. "STAGE NOTICES" DEFINITION: Do not limit this to formal Building Control forms. Include ANY significant project milestone, site start, completion of specific works, or major decisions as a "Stage Notice".
         
         You must categorize every event into one of these 4 WORK STREAMS:
         1. "Structural" (Restoration, masonry, steel, roof, core fabric)
@@ -74,7 +76,7 @@ if st.button("🔄 Analyze & Generate Timeline"):
         3. "Compliance" (Building control, fire safety, planning conditions, legal)
         4. "Design" (Architectural drawings, structural calcs, diagrams, meetings)
 
-        - Look for key words like 'Draft', 'Final', 'Approved', 'Submission'.
+        - Look for key words like 'Draft', 'Final', 'Approved', 'Submission', 'Email', 'Note'.
         - A 'Final Certificate' or 'Sign-off' implies 100% or near completion.
         - 'Initial Plans' implies early stages (10-20%).
         - Pay close attention to DATES to order events correctly.
@@ -87,7 +89,7 @@ if st.button("🔄 Analyze & Generate Timeline"):
                 "phase": "Current Phase Name (e.g. 'Design Review', 'Construction', 'Final Sign-off')"
             }},
             "stage_notices": [
-                {{ "date": "YYYY-MM-DD", "title": "Notice Title", "status": "Completed/Pending", "icon": "fas fa-check", "stream": "Compliance" }}
+                {{ "date": "YYYY-MM-DD", "title": "Event/Notice Title", "status": "Completed/Pending", "icon": "fas fa-check", "stream": "Compliance" }}
             ],
             "design_checks": [
                  {{ "title": "Check Title", "status": "Approved/Pending/Reviewing", "date": "YYYY-MM-DD", "stream": "Design" }}
@@ -111,16 +113,29 @@ if st.button("🔄 Analyze & Generate Timeline"):
                 # We use analyze_text which handles basic prompting
                 response_text = llm.analyze_text(text_content="", prompt=prompt)
                 
-                # Cleanup JSON (strip markdown fences if present)
-                clean_json = response_text.replace("```json", "").replace("```", "").strip()
-                
+                # Cleanup and Parse JSON
                 try:
+                    # 1. Try pure clean
+                    clean_json = response_text.replace("```json", "").replace("```", "").strip()
                     data = json.loads(clean_json)
-                    st.session_state["timeline_json"] = data
-                    st.success("Analysis Complete!")
                 except json.JSONDecodeError:
-                    st.error("Failed to parse JSON response.")
-                    st.text(response_text)
+                    # 2. Regex Fallback (Find first { and last })
+                    import re
+                    match = re.search(r'\{.*\}', response_text.replace('\n', ' '), re.DOTALL)
+                    if match:
+                        try:
+                            data = json.loads(match.group(0))
+                        except:
+                             st.error("Regex extraction failed. Raw output below.")
+                             st.text(response_text)
+                             st.stop()
+                    else:
+                        st.error("No JSON object found in response.")
+                        st.text(response_text)
+                        st.stop()
+
+                st.session_state["timeline_json"] = data
+                st.success(f"Analysis Complete! Found {len(data.get('stage_notices', [])) + len(data.get('submissions', [])) + len(data.get('design_checks', []))} events.")
                     
             except Exception as e:
                 st.error(f"AI Error: {e}")
