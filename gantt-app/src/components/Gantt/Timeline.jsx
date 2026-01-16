@@ -8,7 +8,8 @@ export const Timeline = ({
     projectStartDate,
     onScroll,
     onTaskDragStart,
-    onEditTask
+    onEditTask,
+    scrollRef
 }) => {
 
     const headerRef = useRef(null);
