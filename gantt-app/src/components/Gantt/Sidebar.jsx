@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { GripVertical } from 'lucide-react';
 import clsx from 'clsx';
 
-export const Sidebar = ({ tasks, onEditTask, onReorderTasks }) => {
+export const Sidebar = ({ tasks, selectedTaskId, onSelectTask, onEditTask, onReorderTasks, scrollRef, onScroll }) => {
 
     // State to track drop target: { index: number, position: 'top' | 'bottom' }
     const [dropTarget, setDropTarget] = useState(null);
@@ -47,11 +47,6 @@ export const Sidebar = ({ tasks, onEditTask, onReorderTasks }) => {
                 finalIndex = targetIndex + 1;
             }
 
-            // Adjust for removal if moving down
-            // But usually the parent handler just needs (dragIndex, dropIndex)
-            // Let's pass the calculated intended index
-
-            // Should valid check?
             if (dragIndex !== finalIndex && dragIndex !== finalIndex - 1) {
                 onReorderTasks(dragIndex, finalIndex);
             }
@@ -68,48 +63,74 @@ export const Sidebar = ({ tasks, onEditTask, onReorderTasks }) => {
                 <div className="w-16 text-right">Dur.</div>
             </div>
 
-            <div className="flex-1 overflow-y-auto overflow-x-hidden relative" onDragLeave={() => setDropTarget(null)}>
-                {tasks.map((task, index) => (
-                    <div
-                        key={task.id}
-                        className="h-14 flex items-center px-2 cursor-pointer border-b border-border hover:bg-white/5 transition-colors relative"
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, index)}
-                        onDragEnd={handleDragEnd}
-                        onDragOver={(e) => handleDragOver(e, index)}
-                        onDrop={(e) => handleDrop(e, index)}
-                        onDoubleClick={(e) => {
-                            e.stopPropagation();
-                            onEditTask(task);
-                        }}
-                    >
-                        {/* Insertion Line Indicator */}
-                        {dropTarget && dropTarget.index === index && dropTarget.position === 'top' && (
-                            <div className="absolute top-0 left-0 right-0 h-0.5 bg-bronze z-50 shadow-[0_0_10px_rgba(217,119,6,0.8)] pointer-events-none" />
-                        )}
-                        {dropTarget && dropTarget.index === index && dropTarget.position === 'bottom' && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-bronze z-50 shadow-[0_0_10px_rgba(217,119,6,0.8)] pointer-events-none" />
-                        )}
+            <div
+                className="flex-1 overflow-y-auto overflow-x-hidden relative"
+                onDragLeave={() => setDropTarget(null)}
+                ref={scrollRef}
+                onScroll={onScroll}
+            >
+                {tasks.map((task, index) => {
+                    const isSummary = task.isSummary;
+                    const isSelected = task.id === selectedTaskId;
 
-                        <div className="w-8 h-full flex items-center justify-center text-bronze/50 cursor-grab active:cursor-grabbing hover:text-bronze pointer-events-none">
-                            <GripVertical size={14} />
-                        </div>
+                    // Indent Styles based on Level
+                    const indentClass = task.level === 0 ? "pl-2 font-bold uppercase tracking-wider text-bronze" :
+                        task.level === 1 ? "pl-6 font-semibold text-stone" :
+                            "pl-10 text-stone/80 text-xs";
 
+                    return (
                         <div
-                            className="flex-1 flex items-center h-full pointer-events-none"
+                            key={task.id}
+                            className={clsx(
+                                "h-14 flex items-center px-2 cursor-pointer border-b border-border transition-colors relative",
+                                isSummary ? "bg-white/5" : "hover:bg-white/5",
+                                isSelected ? "bg-bronze/20 border-l-2 border-l-bronze" : "border-l-2 border-l-transparent",
+                                dropTarget && dropTarget.index === index ? "bg-bronze/10" : ""
+                            )}
+                            draggable={true} // Allow dragging everything now (Summary View handles block moves)
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onClick={() => onSelectTask(task.id)}
+                            onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                onEditTask(task);
+                            }}
                         >
-                            <div className="w-6 text-center text-xs text-gray-500 font-mono select-none">
-                                {index + 1}
+                            {/* Insertion Line Indicator */}
+                            {dropTarget && dropTarget.index === index && dropTarget.position === 'top' && (
+                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-bronze z-50 shadow-[0_0_10px_rgba(217,119,6,0.8)] pointer-events-none" />
+                            )}
+                            {dropTarget && dropTarget.index === index && dropTarget.position === 'bottom' && (
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-bronze z-50 shadow-[0_0_10px_rgba(217,119,6,0.8)] pointer-events-none" />
+                            )}
+
+                            <div className="w-8 h-full flex items-center justify-center text-bronze/50 cursor-grab active:cursor-grabbing hover:text-bronze pointer-events-none">
+                                <GripVertical size={14} />
                             </div>
-                            <div className="flex-1 pl-2 truncate text-sm text-gray-300 font-ui select-none">
-                                {task.name}
-                            </div>
-                            <div className="w-12 text-right font-mono text-xs text-bronze select-none">
-                                {task.duration}d
+
+                            <div
+                                className="flex-1 flex items-center h-full pointer-events-none overflow-hidden"
+                            >
+                                <div className="w-12 text-center text-xs text-gray-500 font-mono select-none flex-shrink-0">
+                                    {task.wbs}
+                                </div>
+                                <div
+                                    className={clsx(
+                                        "flex-1 truncate select-none",
+                                        indentClass
+                                    )}
+                                >
+                                    {task.name}
+                                </div>
+                                <div className="w-12 text-right font-mono text-xs text-bronze select-none flex-shrink-0">
+                                    {task.duration}d
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

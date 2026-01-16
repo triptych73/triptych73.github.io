@@ -16,13 +16,22 @@ export const GanttHeader = ({ viewMode, setViewMode, onAddTask, ...props }) => {
                     <div className="flex items-center gap-2 text-xs text-gray-400 font-mono tracking-wider">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span>ONLINE</span>
-                        <span className="text-gray-600 pl-2">v1.1.0</span>
+                        <span className="text-gray-600 pl-2">v1.2.1</span>
                     </div>
                 </div>
             </div>
 
             {/* Controls */}
             <div className="flex items-center gap-6">
+
+                {/* Data Migration Trigger */}
+                <button
+                    onClick={props.onImportData}
+                    className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded transition-colors"
+                    title="Overwrite current data with 2021 Programme v2"
+                >
+                    IMPORT DATA
+                </button>
 
                 {/* Undo/Redo */}
                 <div className="flex items-center gap-2">
@@ -59,13 +68,49 @@ export const GanttHeader = ({ viewMode, setViewMode, onAddTask, ...props }) => {
                     ))}
                 </div>
 
+                {/* Summary View Toggle */}
                 <button
-                    onClick={onAddTask}
-                    className="bg-bronze hover:bg-bronzeDark text-midnight font-bold px-4 py-2 rounded font-header text-sm tracking-wide transition-colors flex items-center gap-2"
+                    onClick={() => props.setShowSummaryOnly(!props.showSummaryOnly)}
+                    className={clsx(
+                        "text-xs font-mono px-3 py-1 rounded border transition-colors uppercase",
+                        props.showSummaryOnly
+                            ? "bg-bronze text-midnight border-bronze font-bold"
+                            : "bg-transparent text-gray-400 border-border hover:border-bronze/50"
+                    )}
                 >
-                    <Plus size={16} />
-                    NEW PHASE
+                    SUMMARIES
                 </button>
+
+                {/* Add Menu Dropdown */}
+                <div className="relative group">
+                    <button
+                        className="bg-bronze hover:bg-bronzeDark text-midnight font-bold px-4 py-2 rounded font-header text-sm tracking-wide transition-colors flex items-center gap-2"
+                    >
+                        <Plus size={16} />
+                        ADD
+                    </button>
+                    {/* Hover Dropdown */}
+                    <div className="absolute top-full right-0 mt-1 w-48 bg-panel border border-border shadow-xl rounded overflow-hidden hidden group-hover:block z-50">
+                        <button
+                            onClick={() => onAddTask('phase')}
+                            className="w-full text-left px-4 py-3 hover:bg-white/5 text-gray-300 hover:text-bronze text-xs font-mono border-b border-white/5 transition-colors"
+                        >
+                            + NEW PHASE (Root)
+                        </button>
+                        <button
+                            onClick={() => onAddTask('task')}
+                            className="w-full text-left px-4 py-3 hover:bg-white/5 text-gray-300 hover:text-bronze text-xs font-mono border-b border-white/5 transition-colors"
+                        >
+                            + NEW TASK (Sibling)
+                        </button>
+                        <button
+                            onClick={() => onAddTask('subtask')}
+                            className="w-full text-left px-4 py-3 hover:bg-white/5 text-gray-300 hover:text-bronze text-xs font-mono transition-colors"
+                        >
+                            + NEW SUBTASK (Child)
+                        </button>
+                    </div>
+                </div>
 
                 <button className="text-gray-400 hover:text-white transition-colors p-2">
                     <Settings size={20} />

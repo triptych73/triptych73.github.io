@@ -1,0 +1,28 @@
+.container {
+    display: flex;
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2px;
+}
+
+.button {
+    background: transparent;
+    border: none;
+    color: var(--color-text);
+    padding: 0.5rem 1.5rem;
+    font-family: var(--font-main);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.active {
+    background: var(--color-text);
+    color: var(--color-bg);
+    opacity: 1;
+    font-weight: 700;
+}

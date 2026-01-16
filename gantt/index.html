@@ -1,34 +1,17 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <!-- Firebase Auth Guard -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
-  <script src="../firebase-config.js"></script>
-  <script>
-    if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
-      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-      firebase.auth().onAuthStateChanged((user) => {
-        if (!user) window.location.href = '../login.html';
-      });
-    }
-  </script>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/gantt/vite.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>St Mary Somerset | Gantt</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap"
-    rel="stylesheet">
-  <script type="module" crossorigin src="/gantt/assets/index-BYgjfZFg.js"></script>
-  <link rel="stylesheet" crossorigin href="/gantt/assets/index-B_aALqpG.css">
-</head>
-
-<body>
-  <div id="root"></div>
-</body>
-
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/gantt/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>St Mary Somerset | Gantt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/gantt/assets/index-BTd0oxH-.js"></script>
+    <link rel="stylesheet" crossorigin href="/gantt/assets/index-L3Az33oD.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

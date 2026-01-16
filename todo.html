@@ -25,21 +25,24 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        'portland': '#F5F5F0',
-                        'midnight': '#0F1115',
+                        'portland': 'var(--color-text)',
+                        'midnight': 'var(--color-bg)',
                         'bronze': '#9A8C74',
                         'bronze-dark': '#5c5240',
                         'alert': '#ef4444',
                         'warning': '#f59e0b',
                         'success': '#10b981',
-                        'surface': '#1A1D23',
-                        'surface-light': '#252932'
+                        'surface': 'var(--color-surface)',
+                        'surface-light': 'var(--color-surface-light)',
+                        'subtle': 'var(--color-border)'
                     },
                     fontFamily: {
                         'serif': ['Cinzel', 'serif'],
@@ -55,16 +58,56 @@
     </script>
 
     <style>
+        :root {
+            /* Dark Mode (Default) */
+            --color-bg: #0F1115;
+            --color-text: #F5F5F0;
+            --color-surface: #1A1D23;
+            --color-surface-light: #252932;
+            --color-border: rgba(154, 140, 116, 0.05);
+            /* Bronze tint instead of white */
+            --glass-bg: rgba(26, 29, 35, 0.6);
+            --glass-border: rgba(154, 140, 116, 0.05);
+            /* Bronze tint instead of white */
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-hover: rgba(255, 255, 255, 0.06);
+            --grid-line: rgba(154, 140, 116, 0.02);
+            --scrollbar-track: rgba(26, 29, 35, 0.5);
+            --scrollbar-thumb: #333;
+        }
+
+        .light-mode {
+            /* Light Mode (Paper/Technical Drawing style) */
+            --color-bg: #F0F0ED;
+            /* Warm aesthetic white */
+            --color-text: #1A1D23;
+            /* Dark ink */
+            --color-surface: #E6E6E3;
+            --color-surface-light: #FFFFFF;
+            --color-border: rgba(0, 0, 0, 0.08);
+            --glass-bg: rgba(240, 240, 237, 0.85);
+            /* Frosty white */
+            --glass-border: rgba(0, 0, 0, 0.05);
+            --card-bg: #FFFFFF;
+            --card-hover: #FAFAFA;
+            --grid-line: rgba(154, 140, 116, 0.08);
+            /* Darker grid for light mode */
+            --scrollbar-track: rgba(0, 0, 0, 0.05);
+            --scrollbar-thumb: #CCC;
+        }
+
         body {
-            background-color: #0F1115;
+            background-color: var(--color-bg);
+            color: var(--color-text);
             cursor: default;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* Blueprint Grid Effect */
         .bg-grid-pattern {
             background-size: 40px 40px;
-            background-image: linear-gradient(to right, rgba(154, 140, 116, 0.03) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(154, 140, 116, 0.03) 1px, transparent 1px);
+            background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
         }
 
         /* Custom Scrollbar */
@@ -74,11 +117,11 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: rgba(26, 29, 35, 0.5);
+            background: var(--scrollbar-track);
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #333;
+            background: var(--scrollbar-thumb);
             border-radius: 3px;
         }
 
@@ -87,22 +130,24 @@
         }
 
         .glass-panel {
-            background: rgba(26, 29, 35, 0.6);
+            background: var(--glass-bg);
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            transition: background 0.3s, border 0.3s;
         }
 
         .task-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
             transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .task-card:hover {
-            background: rgba(255, 255, 255, 0.06);
+            background: var(--card-hover);
             border-color: rgba(154, 140, 116, 0.3);
-            /* Bronze hint */
             transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .task-card.dragging {
@@ -136,44 +181,56 @@
         .toast.show {
             transform: translateY(0) translateX(-50%);
         }
+
+        /* Multi-line support */
+        .task-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
     </style>
 </head>
 
 <body
-    class="text-portland selection:bg-bronze selection:text-white h-screen bg-grid-pattern flex flex-col font-sans overflow-hidden">
+    class="text-portland selection:bg-bronze selection:text-portland h-screen bg-grid-pattern flex flex-col font-sans overflow-hidden">
 
     <canvas id="confetti-canvas"></canvas>
 
     <!-- Navbar -->
     <nav
-        class="sticky top-0 w-full border-b border-white/5 bg-midnight/95 backdrop-blur-md z-50 px-6 py-3 flex justify-between items-center text-[11px] tracking-widest uppercase font-mono shrink-0">
+        class="sticky top-0 w-full border-b border-subtle bg-midnight/95 backdrop-blur-md z-50 px-6 py-3 flex justify-between items-center text-[11px] tracking-widest uppercase font-mono shrink-0">
         <div class="flex items-center gap-4 text-bronze">
             <span class="font-bold">SMS-1694</span>
-            <span class="text-white/20">|</span>
+            <span class="text-portland/20">|</span>
             <span class="text-portland/80">Site Tasks</span>
         </div>
+
         <div class="flex items-center gap-6">
+            <button id="theme-toggle" class="text-portland/40 hover:text-portland transition-colors focus:outline-none"
+                title="Toggle Light Mode">
+                <i class="fas fa-sun"></i>
+            </button>
+
             <div id="connection-status"
                 class="hidden text-xs px-2 py-1 rounded bg-red-900/20 text-red-400 font-bold flex items-center gap-1 border border-red-900/50">
                 <i class="fas fa-wifi"></i> Offline
             </div>
 
             <a href="projectexecutive.html"
-                class="hover:text-bronze transition-colors ml-4 text-white/20 hover:text-white/60">Back
+                class="hover:text-bronze transition-colors ml-4 text-portland/20 hover:text-portland/60">Back
                 to Portal</a>
         </div>
     </nav>
 
     <!-- Board Header -->
-    <header class="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-surface/30 shrink-0">
+    <header class="h-16 flex items-center justify-between px-6 border-b border-subtle bg-surface/30 shrink-0">
         <div>
             <h1 class="font-serif text-xl tracking-wide text-portland">Kanban Board</h1>
-            <p class="text-[10px] text-white/40 font-mono uppercase tracking-widest" id="date-display">...</p>
+            <p class="text-[10px] text-portland/40 font-mono uppercase tracking-widest" id="date-display">...</p>
         </div>
 
         <div class="flex items-center gap-3">
             <button id="add-btn-main"
-                class="bg-bronze hover:bg-bronze-dark text-white px-4 py-1.5 rounded text-xs font-mono uppercase tracking-widest transition-colors flex items-center gap-2">
+                class="bg-bronze hover:bg-bronze-dark text-portland px-4 py-1.5 rounded text-xs font-mono uppercase tracking-widest transition-colors flex items-center gap-2">
                 <i class="fas fa-plus"></i> New Task
             </button>
         </div>
@@ -185,11 +242,11 @@
 
             <!-- Column: To Do -->
             <div class="glass-panel rounded-xl flex flex-col h-full w-[350px]">
-                <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                <div class="p-4 border-b border-subtle flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <div class="w-1.5 h-1.5 rounded-full bg-white/40"></div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-portland/40"></div>
                         <h2 class="font-serif text-sm text-bronze tracking-wide">To Do</h2>
-                        <span class="bg-white/5 text-white/40 text-[10px] font-mono px-2 py-0.5 rounded"
+                        <span class="bg-portland/5 text-portland/40 text-[10px] font-mono px-2 py-0.5 rounded"
                             id="count-todo">0</span>
                     </div>
                 </div>
@@ -201,11 +258,11 @@
 
             <!-- Column: In Progress -->
             <div class="glass-panel rounded-xl flex flex-col h-full w-[350px]">
-                <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                <div class="p-4 border-b border-subtle flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-1.5 h-1.5 rounded-full bg-warning"></div>
                         <h2 class="font-serif text-sm text-bronze tracking-wide">In Progress</h2>
-                        <span class="bg-white/5 text-white/40 text-[10px] font-mono px-2 py-0.5 rounded"
+                        <span class="bg-portland/5 text-portland/40 text-[10px] font-mono px-2 py-0.5 rounded"
                             id="count-doing">0</span>
                     </div>
                 </div>
@@ -217,14 +274,14 @@
 
             <!-- Column: Done -->
             <div class="glass-panel rounded-xl flex flex-col h-full w-[350px]">
-                <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                <div class="p-4 border-b border-subtle flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
                         <h2 class="font-serif text-sm text-bronze tracking-wide">Complete</h2>
-                        <span class="bg-white/5 text-white/40 text-[10px] font-mono px-2 py-0.5 rounded"
+                        <span class="bg-portland/5 text-portland/40 text-[10px] font-mono px-2 py-0.5 rounded"
                             id="count-done">0</span>
                     </div>
-                    <button class="text-white/20 hover:text-alert transition-colors text-xs" onclick="clearDone()"
+                    <button class="text-portland/20 hover:text-alert transition-colors text-xs" onclick="clearDone()"
                         title="Clear Completed"><i class="fas fa-trash-alt"></i></button>
                 </div>
                 <div class="kanban-list flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar" id="col-done"
@@ -241,38 +298,38 @@
         class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 opacity-0 transition-opacity duration-200">
         <div class="glass-panel p-6 rounded-lg w-full max-w-md transform scale-95 transition-transform duration-200"
             id="modal-content">
-            <h3 class="font-serif text-xl text-portland mb-6">New Site Task</h3>
+            <h3 class="font-serif text-xl text-portland mb-6" id="modal-title">New Site Task</h3>
             <form id="modal-form">
                 <input type="hidden" id="modal-status" value="todo">
 
                 <div class="mb-6">
                     <label
-                        class="block text-[10px] font-mono text-white/40 uppercase tracking-widest mb-2">Description</label>
+                        class="block text-[10px] font-mono text-portland/40 uppercase tracking-widest mb-2">Description</label>
                     <input type="text" id="modal-input"
-                        class="w-full bg-surface-light border border-white/10 rounded px-4 py-3 text-portland focus:outline-none focus:border-bronze focus:ring-1 focus:ring-bronze transition-colors"
+                        class="w-full bg-surface-light border border-portland/10 rounded px-4 py-3 text-portland focus:outline-none focus:border-bronze focus:ring-1 focus:ring-bronze transition-colors"
                         placeholder="Task details..." required autocomplete="off">
                 </div>
 
                 <div class="mb-8">
                     <label
-                        class="block text-[10px] font-mono text-white/40 uppercase tracking-widest mb-2">Category</label>
+                        class="block text-[10px] font-mono text-portland/40 uppercase tracking-widest mb-2">Category</label>
                     <div class="flex gap-2">
                         <label class="cursor-pointer">
                             <input type="radio" name="category" value="site" checked class="peer sr-only">
                             <div
-                                class="px-3 py-2 rounded border border-white/10 text-xs font-mono uppercase tracking-wider text-white/60 peer-checked:bg-bronze/20 peer-checked:text-bronze peer-checked:border-bronze hover:bg-white/5 transition-all">
+                                class="px-3 py-2 rounded border border-portland/10 text-xs font-mono uppercase tracking-wider text-portland/60 peer-checked:bg-bronze/20 peer-checked:text-bronze peer-checked:border-bronze hover:bg-portland/5 transition-all">
                                 Site</div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="category" value="office" class="peer sr-only">
                             <div
-                                class="px-3 py-2 rounded border border-white/10 text-xs font-mono uppercase tracking-wider text-white/60 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:border-blue-500 hover:bg-white/5 transition-all">
+                                class="px-3 py-2 rounded border border-portland/10 text-xs font-mono uppercase tracking-wider text-portland/60 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:border-blue-500 hover:bg-portland/5 transition-all">
                                 Office</div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="category" value="critical" class="peer sr-only">
                             <div
-                                class="px-3 py-2 rounded border border-white/10 text-xs font-mono uppercase tracking-wider text-white/60 peer-checked:bg-red-500/20 peer-checked:text-red-300 peer-checked:border-red-500 hover:bg-white/5 transition-all">
+                                class="px-3 py-2 rounded border border-portland/10 text-xs font-mono uppercase tracking-wider text-portland/60 peer-checked:bg-red-500/20 peer-checked:text-red-300 peer-checked:border-red-500 hover:bg-portland/5 transition-all">
                                 Critical</div>
                         </label>
                     </div>
@@ -280,9 +337,9 @@
 
                 <div class="flex justify-end gap-3">
                     <button type="button" onclick="closeModal()"
-                        class="px-4 py-2 text-xs font-mono uppercase tracking-widest text-white/40 hover:text-white transition-colors">Cancel</button>
+                        class="px-4 py-2 text-xs font-mono uppercase tracking-widest text-portland/40 hover:text-portland transition-colors">Cancel</button>
                     <button type="submit"
-                        class="bg-bronze hover:bg-bronze-dark text-white px-6 py-2 rounded text-xs font-mono uppercase tracking-widest transition-colors shadow-lg shadow-black/20">Add
+                        class="bg-bronze hover:bg-bronze-dark text-portland px-6 py-2 rounded text-xs font-mono uppercase tracking-widest transition-colors shadow-lg shadow-black/20">Add
                         Task</button>
                 </div>
             </form>
@@ -397,7 +454,7 @@
                 card.dataset.id = t.id;
 
                 // Categories
-                let catClass = 'bg-white/10 text-white/60';
+                let catClass = 'bg-portland/10 text-portland/60';
                 if (t.category === 'critical') catClass = 'bg-alert/10 text-alert border border-alert/20';
                 else if (t.category === 'office') catClass = 'bg-blue-500/10 text-blue-300 border border-blue-500/20';
                 else if (t.category === 'site') catClass = 'bg-bronze/10 text-bronze border border-bronze/20';
@@ -408,13 +465,13 @@
                     <div class="flex justify-between items-center mb-1.5">
                         <span class="text-[10px] font-mono tracking-wider px-1.5 py-0.5 rounded ${catClass}">${catLabel}</span>
                         <div class="flex items-center gap-2">
-                            <span class="text-[9px] text-white/30 font-mono">${t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Today'}</span>
-                            <button onclick="askDelete('${t.id}')" class="text-white/20 hover:text-alert opacity-0 group-hover:opacity-100 transition-all p-1 -mr-1">
+                            <span class="text-[9px] text-portland/30 font-mono">${t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Today'}</span>
+                            <button onclick="askDelete('${t.id}')" class="text-portland/20 hover:text-alert opacity-0 group-hover:opacity-100 transition-all p-1 -mr-1">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                     </div>
-                    <p class="text-white/90 font-light leading-snug" 
+                    <p class="text-portland/90 font-light leading-snug task-content" 
                        contenteditable="false" 
                        ondblclick="editTask(this, '${t.id}')"
                        title="Double click to edit">${escapeHtml(t.text)}</p>
@@ -592,11 +649,11 @@
         window.editTask = (el, id) => {
             el.contentEditable = true;
             el.focus();
-            el.classList.add('bg-white/5', 'rounded', 'px-1', 'outline-none', 'ring-1', 'ring-bronze');
+            el.classList.add('bg-portland/5', 'rounded', 'px-1', 'outline-none', 'ring-1', 'ring-bronze');
 
             const save = async () => {
                 el.contentEditable = false;
-                el.classList.remove('bg-white/5', 'rounded', 'px-1', 'outline-none', 'ring-1', 'ring-bronze');
+                el.classList.remove('bg-portland/5', 'rounded', 'px-1', 'outline-none', 'ring-1', 'ring-bronze');
                 const val = el.innerText.trim();
                 const original = todos.find(t => t.id === id).text;
 
@@ -616,7 +673,7 @@
         // Show a new toast for a deletion event
         function showUndoToast(taskId) {
             const el = document.createElement('div');
-            el.className = 'bg-white text-midnight px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 toast pointer-events-auto min-w-[300px] justify-between';
+            el.className = 'bg-portland text-midnight px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 toast pointer-events-auto min-w-[300px] justify-between';
             el.innerHTML = `
                 <span class="font-medium text-sm">Task moved to trash</span>
                 <button class="text-bronze-dark font-bold text-sm hover:underline uppercase tracking-wide">Undo</button>
@@ -720,6 +777,120 @@
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
+
+        // --- New Features Logic ---
+
+        // 1. Light Mode Toggle
+        const toggleBtn = document.getElementById('theme-toggle');
+        const body = document.body;
+        // Check local storage or system preference
+        let isLight = localStorage.getItem('theme') === 'light';
+
+        function setTheme(light) {
+            if (light) {
+                body.classList.add('light-mode');
+                toggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+            } else {
+                body.classList.remove('light-mode');
+                toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+            }
+            localStorage.setItem('theme', light ? 'light' : 'dark');
+            isLight = light;
+        }
+
+        // Initialize
+        setTheme(isLight);
+        toggleBtn.onclick = () => setTheme(!isLight);
+
+        // 2. Keyboard Shortcuts ('n' for new task)
+        document.addEventListener('keydown', (e) => {
+            // Ignore if typing
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+            if (e.key.toLowerCase() === 'n') {
+                e.preventDefault();
+                openAddModal('todo');
+            }
+        });
+
+        // 3. Double Click on Panel/List to Add
+        Object.entries(cols).forEach(([status, col]) => {
+            // We want to catch clicks on the glass-panel or empty space, not on cards
+            // The col is the list container. The parent is the glass panel.
+            const panel = col.parentElement;
+            panel.addEventListener('dblclick', (e) => {
+                // Should not trigger if clicked on a card (which has its own logic or bubbles up)
+                // But we want to avoid triggering if we dblclick text to select it?
+                // For now, simple check if target is the container or panel
+                if (e.target.closest('.task-card')) return;
+
+                openAddModal(status);
+            });
+        });
+
+        // 4. Update Edit Logic for Multi-line (Shift+Enter)
+        // Redefine the existing window.editTask to support Shift+Enter
+        const originalEditTask = window.editTask;
+        window.editTask = (el, id) => {
+            el.contentEditable = true;
+            el.focus();
+            el.classList.add('bg-portland/5', 'rounded', 'px-1', 'outline-none', 'ring-1', 'ring-bronze');
+            // Ensure pre-wrap class is there (it is added in CSS class .task-card p but let's be sure)
+
+            const save = async () => {
+                el.contentEditable = false;
+                el.classList.remove('bg-portland/5', 'rounded', 'px-1', 'outline-none', 'ring-1', 'ring-bronze');
+                const val = el.innerText.trim(); // innerText preserves newlines as \n usually
+                const original = todos.find(t => t.id === id).text;
+
+                if (val && val !== original) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id), { text: val });
+                } else {
+                    el.innerText = original;
+                }
+            };
+
+            el.onblur = save;
+            el.onkeydown = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    el.blur();
+                }
+            };
+        };
+
+        // 5. Dynamic Modal Header
+        const modalTitle = document.getElementById('modal-title');
+        const categoryInputs = document.querySelectorAll('input[name="category"]');
+
+        categoryInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                const cat = e.target.value;
+                // Capitalize first letter
+                const catName = cat.charAt(0).toUpperCase() + cat.slice(1);
+                modalTitle.textContent = `New ${catName} Task`;
+            });
+        });
+
+        // Reset title when opening modal (defaults to Site usually, but let's be safe)
+        const ORIGINAL_OPEN_MODAL = window.openAddModal;
+        window.openAddModal = (status) => {
+            // Call original logic (we can't easily hook into the previous function without redefining, 
+            // but we can just update the title based on the currently checked radio)
+            const currentCat = document.querySelector('input[name="category"]:checked').value;
+            const catName = currentCat.charAt(0).toUpperCase() + currentCat.slice(1);
+            modalTitle.textContent = `New ${catName} Task`;
+
+            // Re-run the show logic from previous step manually since we are not wrapping cleanly
+            // Actually, simpler to just copy the logic or ensure we don't break scope
+            modalStatus.value = status;
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalInput.focus();
+            });
+        };
 
     </script>
 </body>

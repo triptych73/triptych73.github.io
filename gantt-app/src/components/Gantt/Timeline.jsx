@@ -10,7 +10,7 @@ export const Timeline = ({
     onTaskDragStart,
     onEditTask
 }) => {
-    const containerRef = useRef(null);
+
     const headerRef = useRef(null);
 
     // Configuration based on ViewMode
@@ -69,14 +69,17 @@ export const Timeline = ({
         width: (daysToRender * colWidth) - monthStartLeft
     });
 
-    // Handle Local Scroll (Horizontal Sync) + Parent Scroll (Vertical Sync)
+    // Handle Local Scroll (Horizontal Sync Only) + Parent Vertical Sync
     const handleScroll = (e) => {
         // Horizontal Sync for Header
         if (headerRef.current) {
             headerRef.current.scrollLeft = e.target.scrollLeft;
         }
-        // Vertical Sync for Sidebar (passed via prop)
-        onScroll(e);
+
+        // Parent Vertical Sync
+        if (onScroll) {
+            onScroll(e);
+        }
     };
 
     // Calculate Task Positions
@@ -174,9 +177,9 @@ export const Timeline = ({
 
             {/* Main Grid */}
             <div
-                ref={containerRef}
                 className="flex-1 overflow-auto relative bg-grid-pattern bg-[length:40px_40px]"
                 onScroll={handleScroll}
+                ref={scrollRef}
             >
                 <div style={{ width: totalWidth, height: totalHeight }} className="relative">
 
@@ -196,7 +199,11 @@ export const Timeline = ({
                             key={task.id}
                             task={task}
                             style={getTaskStyle(task, index)}
-                            onMouseDown={(e) => onTaskDragStart(e, task)}
+                            isSummary={task.isSummary} // Pass summary flag
+                            onMouseDown={(e) => {
+                                if (task.isSummary) return; // Explicit disable
+                                onTaskDragStart(e, task);
+                            }}
                             onDoubleClick={() => onEditTask(task)}
                         />
                     ))}

@@ -1,0 +1,75 @@
+.appContainer {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.hudOverlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.hudContent {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    /* Enable clicks on HUD */
+}
+
+/* Ensure HUD clicks don't pass through unless explicitly handled? 
+   Actually, we want clicks to pass through to the 3D stream if not on a button.
+   So hudContent should probably be pointer-events: none, and children auto.
+*/
+.hudContent {
+    pointer-events: none;
+}
+
+.topBar {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    pointer-events: auto;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-sandstone);
+    margin: 0;
+}
+
+.subtitle {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+    margin-top: 0.25rem;
+}
+
+.topCenter {
+    position: absolute;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: auto;
+}
+
+.rightSidebar {
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: auto;
+}
+
+.bottomBar {
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
+    pointer-events: auto;
+}

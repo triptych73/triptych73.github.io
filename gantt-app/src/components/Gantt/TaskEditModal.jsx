@@ -78,27 +78,39 @@ export const TaskEditModal = ({ task, onClose, onSave }) => {
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-border bg-void/30 flex justify-end gap-2">
-                    <button onClick={onClose} className="px-4 py-2 hover:bg-white/5 rounded text-stone transition-colors">Cancel</button>
+                <div className="p-4 border-t border-border bg-void/30 flex justify-between gap-2">
                     <button
                         onClick={() => {
-                            // Validation
-                            const date = new Date(formData.startDate);
-                            const year = date.getFullYear();
-                            if (isNaN(year) || year < 2000 || year > 2100) {
-                                alert("Please enter a valid year between 2000 and 2100.");
-                                return;
-                            }
-                            if (formData.duration < 1) {
-                                alert("Duration must be at least 1 day.");
-                                return;
-                            }
-                            onSave(formData);
+                            onClose();
+                            onSave(null, true); // Signal delete? Or cleaner to use onDelete prop
                         }}
-                        className="px-4 py-2 bg-bronze hover:bg-bronzeDark text-midnight font-bold rounded font-header tracking-wide transition-colors"
+                        className="px-4 py-2 hover:bg-red-500/10 text-red-400 border border-red-500/20 rounded transition-colors text-xs font-bold"
                     >
-                        Confirm Updates
+                        DELETE
                     </button>
+
+                    <div className="flex gap-2">
+                        <button onClick={onClose} className="px-4 py-2 hover:bg-white/5 rounded text-stone transition-colors">Cancel</button>
+                        <button
+                            onClick={() => {
+                                // Validation
+                                const date = new Date(formData.startDate);
+                                const year = date.getFullYear();
+                                if (isNaN(year) || year < 2000 || year > 2100) {
+                                    alert("Please enter a valid year between 2000 and 2100.");
+                                    return;
+                                }
+                                if (formData.duration < 1) {
+                                    alert("Duration must be at least 1 day.");
+                                    return;
+                                }
+                                onSave(formData);
+                            }}
+                            className="px-4 py-2 bg-bronze hover:bg-bronzeDark text-midnight font-bold rounded font-header tracking-wide transition-colors"
+                        >
+                            Confirm Updates
+                        </button>
+                    </div>
                 </div>
 
             </div>

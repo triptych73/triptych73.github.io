@@ -6,12 +6,18 @@ import { TaskEditModal } from './components/Gantt/TaskEditModal';
 import { initialTasks } from './lib/data';
 import { signIn, subscribeToData, saveData } from './lib/firebase';
 import { getEarliestStart, cascadeMoves, hasCycle } from './lib/dependencies';
+import { processTasks } from './lib/helpers'; // Import helper
 
 function App() {
   const [tasks, setTasks] = useState([]); // Start empty, load from FB
   const [editingTask, setEditingTask] = useState(null);
   const [viewMode, setViewMode] = useState('week');
   const [projectStartDate, setProjectStartDate] = useState(new Date('2024-01-01'));
+
+  // Advanced View States
+  const [showSummaryOnly, setShowSummaryOnly] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+
   // Mobile View State
   const [mobileView, setMobileView] = useState('list'); // 'list' or 'chart'
   const [isMobile, setIsMobile] = useState(false);
@@ -29,7 +35,9 @@ function App() {
     const unsubscribe = subscribeToData((data) => {
       if (data) {
         setProjectStartDate(new Date(data.projectStartDate));
-        setTasks(data.tasks);
+        // Process tasks on load to ensure valid WBS/Summary usage
+        const processed = processTasks(data.tasks);
+        setTasks(processed);
       }
     });
     return () => unsubscribe && unsubscribe();
@@ -47,11 +55,20 @@ function App() {
   // Scroll Sync
   const handleScroll = (source) => (e) => {
     if (isScrolling.current) return;
-    isScrolling.current = true;
-    const { scrollTop } = e.target;
-    if (source === 'sidebar' && timelineRef.current) timelineRef.current.scrollTop = scrollTop;
-    else if (source === 'timeline' && sidebarRef.current) sidebarRef.current.scrollTop = scrollTop;
-    setTimeout(() => { isScrolling.current = false; }, 50);
+    isScrolling.current = true; // Lock
+
+    // We strictly sync scrollTop
+    const scrollTop = e.target.scrollTop;
+
+    if (source === 'sidebar' && timelineRef.current) {
+      timelineRef.current.scrollTop = scrollTop;
+    }
+    else if (source === 'timeline' && sidebarRef.current) {
+      sidebarRef.current.scrollTop = scrollTop;
+    }
+
+    // Small timeout to prevent feedback loop
+    setTimeout(() => { isScrolling.current = false; }, 10);
   };
 
   // Undo/Redo State
@@ -60,12 +77,15 @@ function App() {
 
   // Wrapper to set tasks with history
   const updateTasks = (newTasks, addToHistory = true) => {
+    // Process hierarchy first!
+    const processed = processTasks(newTasks);
+
     if (addToHistory) {
       setHistory(prev => [...prev, tasks]);
       setFuture([]);
     }
-    setTasks(newTasks);
-    persistData(newTasks);
+    setTasks(processed);
+    persistData(processed);
   };
 
   const handleUndo = () => {
@@ -75,7 +95,8 @@ function App() {
 
     setFuture(prev => [tasks, ...prev]);
     setHistory(newHistory);
-    setTasks(previous);
+    // Process effectively idempotent but safe
+    setTasks(processTasks(previous));
     persistData(previous);
   };
 
@@ -86,90 +107,262 @@ function App() {
 
     setHistory(prev => [...prev, tasks]);
     setFuture(newFuture);
-    setTasks(next);
+    setTasks(processTasks(next));
     persistData(next);
   };
 
-  const handleAddTask = () => {
-    const newTask = {
-      id: `t${Date.now()}`,
-      name: 'New Phase',
-      startDate: new Date().toISOString(),
-      duration: 5,
-      progress: 0,
-      type: 'task',
-      dependencies: []
+  const handleAddTask = (mode = 'phase') => {
+    // Mode: 'phase' (Root+Child), 'task' (Sibling), 'subtask' (Child)
+
+    let parentId = null;
+    let insertIndex = tasks.length;
+    let selectedTask = null;
+
+    if (selectedTaskId) {
+      selectedTask = tasks.find(t => t.id === selectedTaskId);
+    }
+
+    // Determine Parent & Position based on Mode & Selection
+    if (mode === 'subtask') {
+      if (selectedTask) {
+        parentId = selectedTask.id;
+        // Append to end of children? Finding last descendant index is tricky in flat list.
+        // Simplest: Push to end of list, let hierarchy helper sort? 
+        // Helper sorts by ID? No, preserves list order.
+        // We ideally want it immediately after the selected task block.
+        // For now, let's just push to end for safety, or splice after selected if no children.
+        insertIndex = tasks.length;
+      } else {
+        alert("Select a task to add a subtask to.");
+        return;
+      }
+    } else if (mode === 'task') {
+      if (selectedTask) {
+        parentId = selectedTask.parentId;
+        insertIndex = tasks.indexOf(selectedTask) + 1;
+      } else {
+        // Treat as root
+        parentId = null;
+        insertIndex = tasks.length;
+      }
+    } else {
+      // 'phase' - Always Root
+      parentId = null;
+      insertIndex = tasks.length;
+    }
+
+    const newTasks = [...tasks];
+
+    if (mode === 'phase') {
+      // Adding New Phase (Root + Child)
+      const phaseId = `t${Date.now()}`;
+      const childId = `t${Date.now() + 1}`;
+
+      const newPhase = {
+        id: phaseId,
+        name: 'New Phase',
+        startDate: new Date().toISOString(),
+        duration: 1,
+        progress: 0,
+        type: 'task',
+        dependencies: [],
+        parentId: null
+      };
+
+      const newChild = {
+        id: childId,
+        name: 'Phase Task 1',
+        startDate: new Date().toISOString(),
+        duration: 5,
+        progress: 0,
+        type: 'task',
+        dependencies: [],
+        parentId: phaseId
+      };
+
+      if (insertIndex === tasks.length) {
+        newTasks.push(newPhase, newChild);
+      } else {
+        newTasks.splice(insertIndex, 0, newPhase, newChild);
+      }
+    } else {
+      // Single Task (Sibling or Subtask)
+      const newTask = {
+        id: `t${Date.now()}`,
+        name: 'New Task',
+        startDate: new Date().toISOString(),
+        duration: 5,
+        progress: 0,
+        type: 'task',
+        dependencies: [],
+        parentId: parentId
+      };
+
+      if (insertIndex === tasks.length) {
+        newTasks.push(newTask);
+      } else {
+        newTasks.splice(insertIndex, 0, newTask);
+      }
+    }
+
+    updateTasks(newTasks);
+  };
+
+  const handleDeleteTask = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const getDescendants = (rootId) => {
+      return tasks.filter(t => t.id !== rootId && t.wbs && t.wbs.startsWith(tasks.find(x => x.id === rootId)?.wbs + '.'));
     };
-    const newTaskList = [...tasks, newTask];
-    updateTasks(newTaskList);
+
+    const descendants = getDescendants(taskId);
+    const count = descendants.length;
+
+    if (confirm(`Delete "${task.name}"? ${count > 0 ? `(Includes ${count} subtasks)` : ''}`)) {
+      const idsToDelete = new Set([taskId, ...descendants.map(t => t.id)]);
+      const newTasks = tasks.filter(t => !idsToDelete.has(t.id));
+      updateTasks(newTasks);
+    }
   };
 
   const handleTaskReorder = (dragIndex, dropIndex) => {
     if (dragIndex === dropIndex) return;
 
+    // View-Dependent Reorder Logic
+    // If in Summary Only mode, we are moving BLOCKS of tasks.
+    // If in Full Mode, we are moving single rows (which might break hierarchy if we aren't careful, 
+    // but users asked for reordering to auto-update numbers).
+
+    // Visual Indices (passed from UI) -> Real Indices in 'tasks' array
+    // We need to map the visible items back to real items.
+
+    let activeList = tasks;
+    if (showSummaryOnly) {
+      activeList = tasks.filter(t => t.isSummary);
+    }
+
+    const dragTask = activeList[dragIndex];
+
+    // We want to insert AFTER the target drop index if moving down, etc.
+    // Sidebar logic usually gives us the visual index swap. 
+    // But dropping 'on' index 5 when dragging 2 means 2 goes to 5.
+
+    // However, in Summary Mode, if we move Summary A to position of Summary B,
+    // we effectively want to move All of A's descendants to allow A to take B's spot.
+
     const newTasks = [...tasks];
 
-    // Safety check
-    if (dragIndex < 0 || dragIndex >= newTasks.length) {
-      console.error("Invalid drag index:", dragIndex);
-      return;
+    if (showSummaryOnly) {
+      // Block Move Logic
+      // 1. Identify Drag Block (Parent + Descendants)
+      // 2. Identify Drop Target Block
+      // 3. Move Drag Block before/after Drop Block
+
+      // Helper to find descendants in linear list
+      const getDescendants = (rootId) => {
+        const indices = [];
+        // Simple approach: processTasks builds tree, but we have flat list.
+        // Descendants are usually contiguous after processTasks? Yes.
+        // But let's be robust: find all with parentId recursively?
+        // Or just trust the WBS prefix if we are confident? 
+        // "1.1" is child of "1". "1.1.2" is child of "1".
+        // Let's use the flat list WBS for speed if available.
+
+        const root = tasks.find(t => t.id === rootId);
+        if (!root) return [];
+
+        return tasks.filter(t => t.id !== rootId && t.wbs.startsWith(root.wbs + '.'));
+      };
+
+      const dragBlock = [dragTask, ...getDescendants(dragTask.id)];
+
+      // Remove Drag Block
+      const dragIds = new Set(dragBlock.map(t => t.id));
+      const limitTasks = newTasks.filter(t => !dragIds.has(t.id));
+
+      // Find insertion point
+      // The DropIndex tells us which SUMMARY task we dropped on/near.
+      const dropTargetSummary = activeList[dropIndex];
+
+      // We need to find where 'dropTargetSummary' is in the 'limitTasks' list
+      // and insert our block relative to it.
+      const realDropIndex = limitTasks.findIndex(t => t.id === dropTargetSummary.id);
+
+      let finalIndex = realDropIndex;
+      if (dragIndex < dropIndex) {
+        // Moving down, put after target block? 
+        // Sidebar returns just row indices. 
+        // If dragging row 0 to row 1, we want row 0 to be after row 1.
+        // So we insert AFTER dropTargetSummary + its descendants.
+        const targetDescendants = getDescendants(dropTargetSummary.id);
+        finalIndex = limitTasks.indexOf(targetDescendants[targetDescendants.length - 1] || dropTargetSummary) + 1;
+      }
+
+      // Insert
+      limitTasks.splice(finalIndex, 0, ...dragBlock);
+      updateTasks(limitTasks);
+
+    } else {
+      // Standard Reorder (Single Item)
+      // Note: Moving a parent in Full View breaks hierarchy unless we move children too?
+      // User asked: "When summary tasks are reordered... numbers reordered... children numbers reordered"
+      // Implies Block Move is desired even in Full View if dragging a Parent?
+      // Let's stick to standard single row move for specific tweaks, 
+      // unless it is a Summary, then we might strictly enforce Block Move?
+      // For now, let's implement standard List Move, but relying on processTasks 
+      // to fix WBS. If you move a Parent away from children, they become orphans 
+      // (promote to root) or get adopted by new neighbor? 
+      // Current 'processTasks' relies on 'parentId'. 
+      // Reordering the list DOES NOT change 'parentId' automatically.
+      // We effectively just change the 'sort order'. 
+      // processTasks iterates flat list. If parentId links exist, logic holds.
+      // WBS is generated by Tree Traversal. Tree structure depends on parentId.
+      // So list order ONLY affects sibling order (e.g., 1.1 vs 1.2).
+
+      // CORRECT LOGIC:
+      // Just move the row. 
+      // 'processTasks' builds tree from parentIds. 
+      // Then it traverses tree. Sibling order is determined by... insertion order into children array?
+      // Yes: `taskMap.get(parentId).children.push(node)`. 
+      // So list order MATTERS for sibling order.
+
+      // So, simple row move works for reordering siblings!
+
+      if (dragIndex < 0 || dragIndex >= newTasks.length) return;
+      const [removed] = newTasks.splice(dragIndex, 1);
+
+      let finalIndex = dropIndex;
+      if (finalIndex > dragIndex) finalIndex -= 1;
+      finalIndex = Math.max(0, Math.min(finalIndex, newTasks.length));
+
+      newTasks.splice(finalIndex, 0, removed);
+      updateTasks(newTasks);
     }
-
-    const [removed] = newTasks.splice(dragIndex, 1);
-
-    // Double check removal
-    if (!removed) {
-      console.error("Failed to remove task at index:", dragIndex);
-      return;
-    }
-
-    let finalIndex = dropIndex;
-    if (finalIndex > dragIndex) {
-      finalIndex -= 1;
-    }
-
-    // Clamp
-    finalIndex = Math.max(0, Math.min(finalIndex, newTasks.length));
-
-    newTasks.splice(finalIndex, 0, removed);
-    setTasks(newTasks);
-    persistData(newTasks);
   };
 
-  // Drag & Resize State
-  const [dragState, setDragState] = useState(null); // { task, startX, originalDate, originalDuration, type: 'move' | 'resize' }
+  const [dragState, setDragState] = useState(null);
 
   const handleDragStart = (e, task) => {
-    // Check if resizing (based on data attribute set in TaskBar)
-    const isResize = e.target.getAttribute('data-resize') === 'right';
-    const startX = e.clientX;
-
+    e.stopPropagation(); // prevent row selection
     setDragState({
       task,
-      startX,
-      originalDate: new Date(task.startDate),
+      startX: e.clientX,
+      originalStartDate: new Date(task.startDate),
       originalDuration: task.duration,
-      type: isResize ? 'resize' : 'move',
-      snapshot: [...tasks] // Capture state before drag
+      type: e.shiftKey ? 'resize' : 'move' // Shift to resize
     });
-
-    e.preventDefault();
   };
 
   const handleMouseMove = (e) => {
     if (!dragState) return;
 
-    const diffX = e.clientX - dragState.startX;
-    // 1 day = 40px (assuming week view)
-    // TODO: Dynamic colWidth based on viewMode
-    const colWidth = viewMode === 'day' ? 60 : viewMode === 'week' ? 40 : 20;
-    const daysDiff = Math.round(diffX / colWidth);
+    const daysDiff = Math.round((e.clientX - dragState.startX) / (viewMode === 'day' ? 60 : viewMode === 'week' ? 40 : 20));
 
     if (dragState.type === 'move') {
-      let newDate = new Date(dragState.originalDate);
-      newDate.setDate(newDate.getDate() + daysDiff);
+      let newDate = addDays(dragState.originalStartDate, daysDiff);
 
-      // 1. Clamping: Check predecessors
+      // Constraint: Can't move before dependencies
       const earliestStart = getEarliestStart(dragState.task, tasks);
       if (earliestStart && newDate < earliestStart) {
         newDate = earliestStart;
@@ -198,17 +391,10 @@ function App() {
       const modifiedTask = tasks.find(t => t.id === dragState.task.id);
 
       if (modifiedTask) {
+        // Cascade changes to dependents
         const cascadedTasks = cascadeMoves(modifiedTask, tasks);
-
-        // Check if anything actually changed from the snapshot
-        // Simple length check or JSON compare (optimization)
-        // For safety, we always push if we reached this stage (drag start implies intent)
-
-        setHistory(prev => [...prev, dragState.snapshot]);
-        setFuture([]);
-
-        setTasks(cascadedTasks);
-        persistData(cascadedTasks);
+        // Process to update summaries
+        updateTasks(cascadedTasks);
       }
     }
     setDragState(null);
@@ -229,6 +415,31 @@ function App() {
         canUndo={history.length > 0}
         canRedo={future.length > 0}
         status={status}
+        showSummaryOnly={showSummaryOnly}
+        setShowSummaryOnly={setShowSummaryOnly}
+        onImportData={() => {
+          if (confirm('Verify: This will OVERWRITE all current tasks with the Excel data. Continue?')) {
+            // Auto-calculate start date based on earliest task
+            const minDate = initialTasks.reduce((min, t) => {
+              const d = new Date(t.startDate);
+              return d < min ? d : min;
+            }, new Date(8640000000000000));
+
+            // Buffer of 7 days
+            const newStartDate = new Date(minDate);
+            newStartDate.setDate(newStartDate.getDate() - 7);
+
+            setProjectStartDate(newStartDate);
+            // Process Initial Tasks through Engine
+            console.log("Importing Tasks (Raw):", initialTasks);
+            const processed = processTasks(initialTasks);
+            console.log("Importing Tasks (Processed):", processed);
+            setTasks(processed);
+            saveData(processed, newStartDate);
+
+            alert('Data reset to v1.2.1 (Excel Import) & Timeline adjusted.');
+          }
+        }}
       />
 
       {/* Mobile Toggles */}
@@ -251,37 +462,42 @@ function App() {
 
       <div className="flex-1 flex overflow-hidden relative">
         <div
-          className={`w-full lg:w-80 flex-shrink-0 h-full overflow-y-auto overflow-x-hidden border-r border-border transition-all ${isMobile && mobileView !== 'list' ? 'hidden' : 'block'}`}
-          ref={sidebarRef}
-          onScroll={handleScroll('sidebar')}
+          className={`w-full lg:w-80 flex-shrink-0 h-full overflow-y-auto no-scrollbar border-r border-border transition-all ${isMobile && mobileView !== 'list' ? 'hidden' : 'block'}`}
         >
           <Sidebar
-            tasks={tasks}
+            tasks={showSummaryOnly ? tasks.filter(t => t.isSummary) : tasks}
+            selectedTaskId={selectedTaskId}
+            onSelectTask={setSelectedTaskId}
             onEditTask={setEditingTask}
             onReorderTasks={handleTaskReorder}
+            scrollRef={sidebarRef}
+            onScroll={handleScroll('sidebar')}
           />
         </div>
 
-        <div
-          className={`flex-1 h-full overflow-hidden transition-all ${isMobile && mobileView !== 'chart' ? 'hidden' : 'block'}`}
-          ref={timelineRef}
-        >
-          <Timeline
-            tasks={tasks}
-            viewMode={viewMode}
-            projectStartDate={projectStartDate}
-            onScroll={handleScroll('timeline')}
-            onTaskDragStart={handleDragStart}
-            onEditTask={setEditingTask}
-          />
-        </div>
+        {/* Timeline Area */}
+        <Timeline
+          tasks={showSummaryOnly ? tasks.filter(t => t.isSummary) : tasks}
+          viewMode={viewMode}
+          projectStartDate={projectStartDate}
+          onTaskDragStart={handleDragStart}
+          onEditTask={setEditingTask}
+          scrollRef={timelineRef}
+          onScroll={handleScroll('timeline')}
+        />
       </div>
 
       {editingTask && (
         <TaskEditModal
           task={editingTask}
           onClose={() => setEditingTask(null)}
-          onSave={(updatedTask) => {
+          onSave={(updatedTask, isDelete) => {
+            if (isDelete) {
+              handleDeleteTask(editingTask.id);
+              setEditingTask(null);
+              return;
+            }
+
             // Cycle Check
             let hasError = false;
             if (updatedTask.dependencies) {

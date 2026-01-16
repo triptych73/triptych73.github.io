@@ -1,0 +1,72 @@
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(4px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem 0 0 0.75rem;
+}
+
+.header {
+    font-size: 0.625rem;
+    /* 10px */
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-sandstone);
+    margin-bottom: 1rem;
+}
+
+.floorButton {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    justify-content: flex-end;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+.floorButton:hover {
+    opacity: 0.8;
+}
+
+.floorButton.active {
+    opacity: 1;
+}
+
+.labelGroup {
+    text-align: right;
+}
+
+.labelMain {
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: monospace;
+}
+
+.labelSub {
+    font-size: 0.56rem;
+    /* 9px */
+    text-transform: uppercase;
+    color: #888;
+}
+
+.indicator {
+    width: 4px;
+    height: 2rem;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: background-color 0.3s ease;
+}
+
+.active .indicator {
+    background-color: var(--color-accent-copper);
+    box-shadow: 0 0 10px var(--color-accent-copper);
+}

@@ -3,3 +3,5 @@
 __pycache__/
 *.zip
 onedrive-indexer/st-mary-somerset-firebase-adminsdk-fbsvc-f2f14ec558.json
+*.xlsx
+*.xlsm
