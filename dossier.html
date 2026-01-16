@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St Mary Somerset | The Private Dossier</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@300;400&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portland': '#F5F5F0',
+                        'midnight': '#0F1115',
+                        'bronze': '#9A8C74',
+                        'paper': '#F0F0EB'
+                    },
+                    fontFamily: {
+                        'serif': ['Cinzel', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['Courier Prime', 'monospace'] // For dossier feel
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F0F0EB;
+            color: #0F1115;
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* Custom Cursor */
+        .cursor-dot,
+        .cursor-outline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .cursor-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #0F1115;
+        }
+
+        .cursor-outline {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(15, 17, 21, 0.3);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+        }
+
+        .smooth-text {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .typewriter {
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+
+<body class="smooth-text selection:bg-midnight selection:text-white">
+
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+
+    <nav
+        class="fixed top-0 w-full p-8 z-40 flex justify-between items-center bg-paper/80 backdrop-blur-sm border-b border-midnight/10">
+        <a href="index.html" class="font-serif tracking-widest text-sm uppercase text-midnight">SMS • 1694 <span
+                class="opacity-50 mx-2">|</span> RESTRICTED</a>
+        <div class="group cursor-pointer">
+            <span
+                class="font-sans text-[10px] tracking-[0.2em] uppercase text-red-800 border border-red-800/30 px-3 py-1 bg-red-800/5">Confidential</span>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="pt-40 pb-20 px-6 md:px-20 max-w-7xl mx-auto border-b border-midnight/10">
+        <div class="flex flex-col md:flex-row justify-between items-end gap-8">
+            <div>
+                <span class="block font-sans text-xs tracking-[0.3em] text-bronze uppercase mb-4">Internal
+                    Specification</span>
+                <h1 class="font-serif text-5xl md:text-7xl text-midnight mb-6">The Dossier</h1>
+                <p class="typewriter text-xs text-midnight/60 max-w-md">
+                    DOC REF: SMS-1694-PRIV<br>
+                    AUTH LEVEL: 1 (HIGHEST)<br>
+                    DATE GENERATED: <span id="current-date"></span>
+                </p>
+            </div>
+            <div
+                class="w-24 h-24 border border-bronze flex items-center justify-center rounded-full animate-spin-slow opacity-20">
+                <span class="font-serif text-2xl">S</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Grid -->
+    <div class="max-w-7xl mx-auto px-6 md:px-20 py-20 grid grid-cols-1 md:grid-cols-12 gap-16">
+
+        <!-- Sidebar Navigation -->
+        <aside class="md:col-span-3 sticky top-32 h-fit space-y-8 hidden md:block">
+            <div class="space-y-4 border-l-2 border-midnight/10 pl-6">
+                <a href="#specs"
+                    class="block font-sans text-xs tracking-[0.2em] uppercase text-midnight hover:text-bronze transition-colors">01.
+                    Technical Specs</a>
+                <a href="#floorplans"
+                    class="block font-sans text-xs tracking-[0.2em] uppercase text-midnight/40 hover:text-bronze transition-colors">02.
+                    Floorplans</a>
+                <a href="#services"
+                    class="block font-sans text-xs tracking-[0.2em] uppercase text-midnight/40 hover:text-bronze transition-colors">03.
+                    Concierge</a>
+            </div>
+            <div class="p-6 bg-white border border-midnight/5 shadow-sm">
+                <p class="font-serif text-sm italic text-midnight mb-2">Agent Note:</p>
+                <p class="font-sans text-xs text-midnight/60 leading-relaxed">
+                    This document is not for public distribution. Client discretion is paramount.
+                </p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="md:col-span-9 space-y-32">
+
+            <!-- Section 01: Specs -->
+            <section id="specs" class="space-y-12">
+                <h2 class="font-serif text-3xl text-midnight border-b border-midnight/10 pb-6">01. Technical
+                    Specifications</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div class="space-y-6">
+                        <h3 class="font-sans text-sm tracking-[0.2em] uppercase text-bronze">Structure & Preservation
+                        </h3>
+                        <ul class="space-y-4 font-sans text-sm text-midnight/70 leading-relaxed list-disc pl-4">
+                            <li>Grade I Listed Portland Stone façade (Circa 1694).</li>
+                            <li>Restoration by specialist masons (St Paul's Cathedral team).</li>
+                            <li>New internal steel frame independent of historic fabric.</li>
+                            <li>Seismic-grade foundation reinforcement.</li>
+                        </ul>
+                    </div>
+                    <div class="space-y-6">
+                        <h3 class="font-sans text-sm tracking-[0.2em] uppercase text-bronze">Environmental Control</h3>
+                        <ul class="space-y-4 font-sans text-sm text-midnight/70 leading-relaxed list-disc pl-4">
+                            <li>Hospital-grade MVHR air filtration (HEPA 13).</li>
+                            <li>Invisible humidity control for art preservation.</li>
+                            <li>Acoustic isolation >55dB DnT,w.</li>
+                            <li>Smart-glass privacy glazing in primary suites.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 02: Floorplans (Tease) -->
+            <section id="floorplans" class="space-y-12">
+                <h2 class="font-serif text-3xl text-midnight border-b border-midnight/10 pb-6">02. Floorplans</h2>
+
+                <div
+                    class="relative bg-white border border-midnight/10 p-12 overflow-hidden group hover:border-bronze/50 transition-colors duration-500 cursor-pointer">
+                    <div
+                        class="absolute top-4 right-4 font-sans text-[10px] tracking-[0.2em] uppercase text-midnight/30">
+                        Level 4-5 Duplex</div>
+
+                    <!-- Blurred Floorplan Image Placeholder -->
+                    <div class="w-full h-64 bg-gray-100 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 flex items-center justify-center opacity-10">
+                            <!-- Simple SVG Wireframe representing a floorplan -->
+                            <svg width="400" height="200" viewBox="0 0 400 200" fill="none" class="stroke-midnight"
+                                stroke-width="1">
+                                <rect x="50" y="20" width="300" height="160"></rect>
+                                <line x1="150" y1="20" x2="150" y2="180"></line>
+                                <line x1="250" y1="20" x2="250" y2="180"></line>
+                                <circle cx="200" cy="100" r="30"></circle>
+                            </svg>
+                        </div>
+                        <div class="text-center z-10">
+                            <p class="font-serif text-xl mb-2 text-midnight">The Penthouse Collection</p>
+                            <p class="font-sans text-xs text-bronze uppercase tracking-widest">Request Physical
+                                Blueprint</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 03: Concierge -->
+            <section id="services" class="space-y-12">
+                <h2 class="font-serif text-3xl text-midnight border-b border-midnight/10 pb-6">03. Service Layer</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-midnight text-paper p-8 space-y-4">
+                        <div
+                            class="w-8 h-8 rounded-full border border-bronze/50 flex items-center justify-center mb-4 text-bronze">
+                            24</div>
+                        <h3 class="font-serif text-lg">The 24/7 Porter</h3>
+                        <p class="font-sans text-xs opacity-60 leading-relaxed">Stationed in the grand lobby. Security,
+                            deliveries, and discretionary assistance.</p>
+                    </div>
+                    <div class="bg-white border border-midnight/5 p-8 space-y-4">
+                        <div
+                            class="w-8 h-8 rounded-full border border-midnight/20 flex items-center justify-center mb-4 text-midnight">
+                            P</div>
+                        <h3 class="font-serif text-lg">Private Vault</h3>
+                        <p class="font-sans text-xs opacity-60 leading-relaxed">Secure, climate-controlled basement
+                            store for wine or small valuables.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer class="bg-midnight text-portland py-20 px-6 mt-20">
+        <div class="max-w-7xl mx-auto flex flex-col items-center text-center space-y-8">
+            <div class="font-serif tracking-widest text-sm uppercase">SMS • 1694</div>
+            <p class="font-sans text-[10px] tracking-[0.2em] opacity-40 uppercase max-w-lg">
+                This document is confidential. Any unauthorized distribution will result in immediate revocation of
+                access privileges.
+            </p>
+            <a href="index.html"
+                class="font-sans text-xs border-b border-bronze pb-1 hover:text-bronze transition-colors">Exit Secure
+                Session</a>
+        </div>
+    </footer>
+
+
+    <script>
+        // Set Date
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        // Cursor Logic
+        const cursorDot = document.querySelector('.cursor-dot');
+        const cursorOutline = document.querySelector('.cursor-outline');
+
+        window.addEventListener('mousemove', (e) => {
+            const posX = e.clientX;
+            const posY = e.clientY;
+            cursorDot.style.left = `${posX}px`;
+            cursorDot.style.top = `${posY}px`;
+            cursorOutline.animate({
+                left: `${posX}px`,
+                top: `${posY}px`
+            }, { duration: 500, fill: "forwards" });
+        });
+
+        document.querySelectorAll('a, button, .group').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursorOutline.style.width = '60px';
+                cursorOutline.style.height = '60px';
+                cursorOutline.style.backgroundColor = 'rgba(15, 17, 21, 0.05)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursorOutline.style.width = '40px';
+                cursorOutline.style.height = '40px';
+                cursorOutline.style.backgroundColor = 'transparent';
+            });
+        });
+
+        // Animations
+        gsap.registerPlugin(ScrollTrigger);
+
+        gsap.from("main > section", {
+            y: 50,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.2,
+            scrollTrigger: {
+                trigger: "main",
+                start: "top 80%"
+            }
+        });
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St Mary Somerset | Request Access</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@300;400&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portland': '#F5F5F0', // Weathered Stone
+                        'midnight': '#0F1115', // Thames Midnight
+                        'bronze': '#9A8C74',   // Patinated Bronze
+                    },
+                    fontFamily: {
+                        'serif': ['Cinzel', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CUSTOM UTILITIES */
+        body {
+            background-color: #0F1115;
+            /* Midnight background for this page */
+            color: #F5F5F0;
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* Custom Cursor */
+        .cursor-dot,
+        .cursor-outline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .cursor-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #9A8C74;
+        }
+
+        .cursor-outline {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(154, 140, 116, 0.5);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+        }
+
+        /* Form Inputs */
+        input,
+        select,
+        textarea {
+            background: transparent;
+            border-bottom: 1px solid rgba(245, 245, 240, 0.2);
+            color: #F5F5F0;
+            outline: none;
+            transition: border-color 0.3s;
+            border-radius: 0;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #9A8C74;
+        }
+
+        /* Smooth text rendering */
+        .smooth-text {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+</head>
+
+<body
+    class="smooth-text selection:bg-bronze selection:text-white flex items-center justify-center min-h-screen relative p-4">
+
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+
+    <!-- Background Texture -->
+    <div class="absolute inset-0 w-full h-full opacity-[0.05] pointer-events-none">
+        <!-- Geometric overlay or texture could go here, keeping it clean for now -->
+        <div class="w-full h-full bg-[url('assets/images/0040.jpg')] bg-cover bg-center grayscale invert opacity-20">
+        </div>
+    </div>
+
+    <div class="max-w-md w-full relative z-10 space-y-12">
+        <div class="text-center space-y-4">
+            <a href="index.html"
+                class="block font-serif tracking-widest text-sm uppercase text-bronze hover:opacity-80 transition-opacity mb-8">SMS
+                • 1694</a>
+            <h1 class="font-serif text-3xl md:text-4xl text-portland">Private Access</h1>
+            <p class="font-sans text-xs tracking-wide opacity-60 leading-relaxed max-w-xs mx-auto">
+                The Private Dossier contains sensitive architectural specifications and off-market inventory. Please
+                identify yourself.
+            </p>
+        </div>
+
+        <form onsubmit="handleRequest(event)" class="space-y-8">
+            <div class="space-y-1">
+                <label for="name" class="block font-sans text-[10px] tracking-[0.2em] uppercase text-bronze">Full
+                    Name</label>
+                <input type="text" id="name" required class="w-full py-2 font-serif text-lg placeholder-white/20"
+                    placeholder="Enter your name">
+            </div>
+
+            <div class="space-y-1">
+                <label for="email" class="block font-sans text-[10px] tracking-[0.2em] uppercase text-bronze">Email
+                    Address</label>
+                <input type="email" id="email" required class="w-full py-2 font-serif text-lg placeholder-white/20"
+                    placeholder="Enter your email">
+            </div>
+
+            <div class="space-y-1">
+                <label for="interest"
+                    class="block font-sans text-[10px] tracking-[0.2em] uppercase text-bronze">Interest</label>
+                <select id="interest" class="w-full py-2 font-serif text-lg bg-transparent">
+                    <option value="residence" class="bg-midnight">Private Residence</option>
+                    <option value="investment" class="bg-midnight">Portfolio Investment</option>
+                    <option value="press" class="bg-midnight">Media / Press</option>
+                </select>
+            </div>
+
+            <button type="submit"
+                class="w-full border border-bronze/50 px-8 py-4 mt-8 font-sans text-xs tracking-[0.3em] uppercase text-bronze hover:bg-bronze hover:text-midnight transition-all duration-500 group">
+                <span class="group-hover:translate-x-1 inline-block transition-transform duration-300">Unlock
+                    Dossier</span>
+            </button>
+        </form>
+
+        <div class="text-center">
+            <a href="index.html"
+                class="font-sans text-[10px] tracking-[0.2em] uppercase opacity-40 hover:opacity-100 transition-opacity">Return
+                to Main Site</a>
+        </div>
+    </div>
+
+    <script>
+        // Custom Cursor Logic
+        const cursorDot = document.querySelector('.cursor-dot');
+        const cursorOutline = document.querySelector('.cursor-outline');
+
+        window.addEventListener('mousemove', (e) => {
+            const posX = e.clientX;
+            const posY = e.clientY;
+            cursorDot.style.left = `${posX}px`;
+            cursorDot.style.top = `${posY}px`;
+            cursorOutline.animate({
+                left: `${posX}px`,
+                top: `${posY}px`
+            }, { duration: 500, fill: "forwards" });
+        });
+
+        // Hover effects
+        document.querySelectorAll('a, button, input, select').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursorOutline.style.width = '60px';
+                cursorOutline.style.height = '60px';
+                cursorOutline.style.backgroundColor = 'rgba(154, 140, 116, 0.1)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursorOutline.style.width = '40px';
+                cursorOutline.style.height = '40px';
+                cursorOutline.style.backgroundColor = 'transparent';
+            });
+        });
+
+        // Form Handler
+        function handleRequest(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+
+            // Simulation of processing
+            btn.innerHTML = '<span class="animate-pulse">Verifying...</span>';
+            btn.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                // Success animation
+                btn.innerHTML = '<span>Access Granted</span>';
+                btn.classList.add('bg-bronze', 'text-midnight');
+
+                // Redirect
+                setTimeout(() => {
+                    window.location.href = 'dossier.html';
+                }, 1000);
+            }, 1500);
+        }
+
+        // Entrance Animation
+        gsap.from("form > div, h1, p, a", {
+            y: 20,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.1,
+            ease: "power3.out",
+            delay: 0.2
+        });
+    </script>
+</body>
+
+</html>
