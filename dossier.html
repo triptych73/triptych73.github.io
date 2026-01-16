@@ -278,7 +278,7 @@
                     This document is confidential. Any unauthorized distribution will result in immediate revocation of
                     access privileges.
                 </p>
-                <a href="index.html"
+                <a href="#" onclick="firebase.auth().signOut().then(() => window.location.href='index.html')"
                     class="font-sans text-xs border-b border-bronze pb-1 hover:text-bronze transition-colors">Exit
                     Secure
                     Session</a>

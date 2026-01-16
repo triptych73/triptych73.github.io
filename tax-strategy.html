@@ -426,6 +426,9 @@
                             <button onClick={resetData} className="text-gray-400 hover:text-red-500 p-2 rounded-full transition-colors" title="Reset to Defaults">
                                 ↺
                             </button>
+                            <button onClick={() => firebase.auth().signOut().then(() => window.location.reload())} className="text-gray-400 hover:text-red-500 text-xs uppercase font-medium ml-2 transition-colors">
+                                Log Out
+                            </button>
                         </div>
                     </header>
 
