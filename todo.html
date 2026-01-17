@@ -215,6 +215,11 @@
                 <i class="fas fa-wifi"></i> Offline
             </div>
 
+            <button onclick="migratePersonalToShared()" title="Migrate Personal Tasks to Shared Board"
+                class="text-[#F5F5F0]/20 hover:text-warning transition-colors text-[10px] uppercase font-mono tracking-widest border border-white/5 hover:border-warning px-2 py-1 rounded">
+                <i class="fas fa-sync-alt mr-1"></i> Migrate
+            </button>
+
             <a href="projectexecutive.html"
                 class="hover:text-bronze transition-colors ml-4 text-portland/20 hover:text-portland/60">Back
                 to Portal</a>
@@ -419,7 +424,8 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
-                const ref = collection(db, 'artifacts', appId, 'users', user.uid, 'todos');
+                // SHARED PATH: artifacts/site-tasks/global/board/tasks
+                const ref = collection(db, 'artifacts', appId, 'global', 'board', 'tasks');
                 onSnapshot(ref, (snap) => {
                     todos = snap.docs.map(d => {
                         const data = d.data();
@@ -583,7 +589,7 @@
                 }
 
                 try {
-                    const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id);
+                    const ref = doc(db, 'artifacts', appId, 'global', 'board', 'tasks', id);
                     await updateDoc(ref, {
                         status: newStatus,
                         completed: newStatus === 'done',
@@ -632,7 +638,7 @@
             const minOrder = todos.length ? Math.min(...todos.map(t => t.order || 0)) : 0;
 
             try {
-                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'todos'), {
+                await addDoc(collection(db, 'artifacts', appId, 'global', 'board', 'tasks'), {
                     text, category, status,
                     completed: status === 'done',
                     createdAt: serverTimestamp(),
@@ -658,7 +664,7 @@
                 const original = todos.find(t => t.id === id).text;
 
                 if (val && val !== original) {
-                    await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id), { text: val });
+                    await updateDoc(doc(db, 'artifacts', appId, 'global', 'board', 'tasks', id), { text: val });
                 } else {
                     el.innerText = original;
                 }
@@ -709,7 +715,7 @@
                 // If this runs, the user didn't undo
                 if (pendingDeletions.has(id)) {
                     pendingDeletions.delete(id); // Remove from local map
-                    await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', id));
+                    await deleteDoc(doc(db, 'artifacts', appId, 'global', 'board', 'tasks', id));
                 }
             }, 3000);
 
@@ -734,7 +740,7 @@
             if (!confirm('Delete all tasks in Done column?')) return;
             const batch = writeBatch(db);
             todos.filter(t => t.status === 'done').forEach(t => {
-                batch.delete(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'todos', t.id));
+                batch.delete(doc(db, 'artifacts', appId, 'global', 'board', 'tasks', t.id));
             });
             await batch.commit();
         };
@@ -890,6 +896,51 @@
                 modalContent.classList.remove('scale-95');
                 modalInput.focus();
             });
+        };
+
+        // 6. Migration Utility
+        window.migratePersonalToShared = async () => {
+            if (!currentUser) return;
+            if (!confirm("This will copy all tasks from your Personal/Local board to the Shared Board.\n\nProceed?")) return;
+
+            try {
+                const button = document.querySelector('button[onclick="migratePersonalToShared()"]');
+                if (button) button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Migrating...';
+
+                // Read Personal
+                const personalRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'todos');
+                // Use getDocs from sdk
+                const { getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+                const snap = await getDocs(personalRef);
+
+                if (snap.empty) {
+                    alert("No personal tasks found to migrate.");
+                    if (button) button.innerHTML = '<i class="fas fa-sync-alt mr-1"></i> Migrate';
+                    return;
+                }
+
+                const batch = writeBatch(db);
+                let count = 0;
+
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    // Create new ref in Shared
+                    const newRef = doc(collection(db, 'artifacts', appId, 'global', 'board', 'tasks'));
+                    batch.set(newRef, data);
+                    count++;
+                });
+
+                await batch.commit();
+                alert(`Successfully migrated ${count} tasks to the Shared Board!`);
+                if (button) button.remove();
+
+            } catch (err) {
+                console.error("Migration failed:", err);
+                alert("Migration failed: " + err.message);
+                const button = document.querySelector('button[onclick="migratePersonalToShared()"]');
+                if (button) button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Retry';
+            }
         };
 
     </script>
