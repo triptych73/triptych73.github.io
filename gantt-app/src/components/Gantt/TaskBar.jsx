@@ -2,7 +2,9 @@ import React from 'react';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
 
-export const TaskBar = ({ task, style, isSummary, onMouseDown, onDoubleClick }) => {
+export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDoubleClick }) => {
+    // Strict Check: Ignore prop, use childIds
+    const isSummary = task.childIds && task.childIds.length > 0;
     const isMilestone = task.type === 'milestone';
 
     return (
