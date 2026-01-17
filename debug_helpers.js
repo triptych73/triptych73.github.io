@@ -1,30 +1,16 @@
-// Basic helpers
-export const addDays = (date, days) => {
+// Helper Logic Mock
+const addDays = (date, days) => {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
 };
 
-export const getDiffDays = (d1, d2) => {
+const getDiffDays = (d1, d2) => {
     const oneDay = 24 * 60 * 60 * 1000;
     return Math.round((new Date(d1) - new Date(d2)) / oneDay);
 };
 
-export const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-};
-
-// --- Hierarchy & WBS Logic ---
-
-/**
- * Re-processes a flat list of tasks to:
- * 1. Assign WBS numbers (1, 1.1, 1.2) based on hierarchy.
- * 2. Identify Summary tasks (tasks that have children).
- * 3. Recalculate Summary task dates/durations based on children.
- * 
- * Assumes tasks have a 'parentId' property. If not, it tries to infer from ID structure (legacy).
- */
-export const processTasks = (flatTasks) => {
+const processTasks = (flatTasks) => {
     // 1. Build Map for easy access
     const taskMap = new Map();
     // Use stable ID if available, otherwise fallback.
@@ -62,7 +48,7 @@ export const processTasks = (flatTasks) => {
     // 3. Process Tree (DFS) for WBS & Dates
 
     const processNode = (node, numberingPrefix) => {
-        const isSummary = node.children && node.children.length > 0;
+        const isSummary = node.children.length > 0;
         node.isSummary = isSummary;
         node.wbs = numberingPrefix; // Assign calculated WBS (e.g. "1.2")
 
@@ -121,3 +107,27 @@ export const processTasks = (flatTasks) => {
 
     return processedList;
 };
+
+// --- TEST CASE ---
+
+const mockTasks = [
+    { id: '1', name: 'Phase 1', parentId: null, startDate: '2024-01-01', duration: 1 },
+    { id: '1.1', name: 'Task 1', parentId: '1', startDate: '2024-01-01', duration: 5 },
+    { id: '1.1.1', name: 'Subtask A', parentId: '1.1', startDate: '2024-01-01', duration: 2 },
+    { id: '1.1.2', name: 'Subtask B (Leaf)', parentId: '1.1', startDate: '2024-01-01', duration: 3 }
+];
+
+console.log("Processing Tasks...");
+const results = processTasks(mockTasks);
+
+console.log("Results:");
+results.forEach(t => {
+    console.log(`${t.wbs} (${t.name}) - Level: ${t.level}, IsSummary: ${t.isSummary}`);
+});
+
+const leaf = results.find(t => t.id === '1.1.2');
+if (leaf.isSummary) {
+    console.error("FAIL: Leaf node 1.1.2 is marked as SUMMARY!");
+} else {
+    console.log("PASS: Leaf node 1.1.2 is NOT a summary.");
+}
