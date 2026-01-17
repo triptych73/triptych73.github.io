@@ -108,11 +108,73 @@ export const Timeline = ({
         });
     }
 
-    // ... handleScroll ...
+    // Handle Local Scroll (Horizontal Sync Only) + Parent Vertical Sync
+    const handleScroll = (e) => {
+        // Horizontal Sync for Header
+        if (headerRef.current) {
+            headerRef.current.scrollLeft = e.target.scrollLeft;
+        }
 
-    // ... getTaskStyle ...
+        // Parent Vertical Sync
+        if (onScroll) {
+            onScroll(e);
+        }
+    };
 
-    // ... renderDependencies ...
+    // Calculate Task Positions
+    const getTaskStyle = (task, index) => {
+        const startDiff = Math.round((new Date(task.startDate) - new Date(addDays(projectStartDate, -7))) / (1000 * 60 * 60 * 24));
+        const left = startDiff * colWidth;
+        const width = task.duration * colWidth;
+        const top = index * rowHeight + 12; // Padding
+        const height = rowHeight - 24;
+
+        return {
+            left: `${left}px`,
+            top: `${top}px`,
+            width: `${Math.max(width, 2)}px`, // Min width
+            height: `${height}px`
+        };
+    };
+
+    // Calculate Dependency Paths
+    const renderDependencies = () => {
+        const paths = [];
+        tasks.forEach((task, index) => {
+            if (!task.dependencies || task.dependencies.length === 0) return;
+
+            const destX = Math.round((new Date(task.startDate) - new Date(addDays(projectStartDate, -7))) / (1000 * 60 * 60 * 24)) * colWidth;
+            const destY = (index * rowHeight) + (rowHeight / 2) + 12;
+
+            task.dependencies.forEach(depId => {
+                const parentTask = tasks.find(t => t.id === depId);
+                const parentIndex = tasks.findIndex(t => t.id === depId);
+
+                if (!parentTask || parentIndex === -1) return;
+
+                const startDiff = Math.round((new Date(parentTask.startDate) - new Date(addDays(projectStartDate, -7))) / (1000 * 60 * 60 * 24));
+                const srcX = (startDiff + parentTask.duration) * colWidth;
+                const srcY = (parentIndex * rowHeight) + (rowHeight / 2) + 12;
+
+                // Improved Path logic for backward/forward dependencies
+                const controlX = Math.abs(destX - srcX) * 0.5;
+                const d = `M ${srcX} ${srcY} C ${srcX + controlX} ${srcY}, ${destX - controlX} ${destY}, ${destX} ${destY}`;
+
+                paths.push(
+                    <path
+                        key={`${depId}-${task.id}`}
+                        d={d}
+                        stroke="#5C5242"
+                        strokeWidth="1.5"
+                        fill="none"
+                        className="opacity-60"
+                        markerEnd="url(#arrowhead)"
+                    />
+                );
+            });
+        });
+        return paths;
+    };
 
     return (
         <div className="flex-1 flex flex-col relative bg-midnight overflow-hidden h-full">
