@@ -16,7 +16,7 @@ export const GanttHeader = ({ viewMode, setViewMode, onAddTask, ...props }) => {
                     <div className="flex items-center gap-2 text-xs text-gray-400 font-mono tracking-wider">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span>ONLINE</span>
-                        <span className="text-gray-600 pl-2">v1.2.1</span>
+                        <span className="text-gray-600 pl-2">v1.5.2</span>
                     </div>
                 </div>
             </div>
