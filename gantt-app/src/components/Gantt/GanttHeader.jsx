@@ -52,7 +52,7 @@ export const GanttHeader = ({ viewMode, setViewMode, onAddTask, ...props }) => {
                 </div>
 
                 <div className="hidden md:flex bg-panel border border-border rounded-lg p-1 gap-1 font-mono text-xs">
-                    {['day', 'week', 'month'].map((mode) => (
+                    {['day', 'week', 'month', 'year'].map((mode) => (
                         <button
                             key={mode}
                             onClick={() => setViewMode(mode)}
