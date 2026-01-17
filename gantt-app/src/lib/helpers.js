@@ -110,8 +110,10 @@ export const processTasks = (flatTasks) => {
             else if (level === 1) node.category = 'task';
             else node.category = 'subtask';
 
+            node.childIds = node.children.map(c => c.id);
+
             // Clean up internal props we don't need to save persistently/render
-            // BUT we want to keep 'parentId' and 'wbs' for the app.
+            // BUT we want to keep 'parentId', 'wbs', and 'childIds' for the app.
             const { children, _isProcessed, ...cleanNode } = node;
             processedList.push(cleanNode);
             flatten(node.children, level + 1);

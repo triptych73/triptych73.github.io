@@ -73,6 +73,7 @@ function App() {
           id: task.id,
           name: task.name,
           isSummary: task.isSummary,
+          childIdsCount: task.childIds ? task.childIds.length : 0,
           childrenCount: task.children ? task.children.length : 'N/A',
           parentId: task.parentId,
           level: task.level

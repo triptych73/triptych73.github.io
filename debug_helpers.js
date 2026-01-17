@@ -110,24 +110,34 @@ const processTasks = (flatTasks) => {
 
 // --- TEST CASE ---
 
-const mockTasks = [
-    { id: '1', name: 'Phase 1', parentId: null, startDate: '2024-01-01', duration: 1, isSummary: true },
-    { id: '1.1', name: 'Task 1', parentId: '1', startDate: '2024-01-01', duration: 5, isSummary: true },
-    { id: '1.1.1', name: 'Subtask A', parentId: '1.1', startDate: '2024-01-01', duration: 2, isSummary: false },
-    { id: '1.1.2', name: 'Subtask B (Leaf) - Input says Summary', parentId: '1.1', startDate: '2024-01-01', duration: 3, isSummary: true }
-];
+import { initialTasks } from './gantt-app/src/lib/data.js';
 
-console.log("Processing Tasks...");
-const results = processTasks(mockTasks);
+console.log("Processing REAL InitialTasks...");
+const results = processTasks(initialTasks);
 
-console.log("Results:");
-results.forEach(t => {
-    console.log(`${t.wbs} (${t.name}) - Level: ${t.level}, IsSummary: ${t.isSummary}`);
-});
+console.log("Analyzing Results for WBS 1.1.2...");
+const target = results.find(t => t.id === '1.1.2' || t.name.includes("1.1.2") || t.wbs === '1.1.2'); // Flexible search
 
-const leaf = results.find(t => t.id === '1.1.2');
-if (leaf.isSummary) {
-    console.error("FAIL: Leaf node 1.1.2 is marked as SUMMARY (failed to override)!");
+if (target) {
+    console.log(`Target Found: ${target.id} (${target.name})`);
+    console.log(`WBS: ${target.wbs}`);
+    console.log(`IsSummary: ${target.isSummary}`);
+    console.log(`Level: ${target.level}`);
+
+    // Check if it has children in the tree (need to find tasks with this parentId)
+    const children = results.filter(t => t.parentId === target.id);
+    console.log(`Children found in processed list: ${children.length}`);
+    children.forEach(c => console.log(` - Child: ${c.id} (${c.name})`));
 } else {
-    console.log("PASS: Leaf node 1.1.2 is NOT a summary (override successful).");
+    console.log("Target 1.1.2 not found in results.");
+}
+
+// Global Summary Check
+console.log("\n--- Audit: Childless Summaries? ---");
+const badSummaries = results.filter(t => t.isSummary && results.filter(c => c.parentId === t.id).length === 0);
+if (badSummaries.length > 0) {
+    console.log(`FOUND ${badSummaries.length} tasks marked as Summary but with NO children in the list:`);
+    badSummaries.forEach(t => console.log(` - ${t.id} (${t.name})`));
+} else {
+    console.log("PASSED: All summary tasks have visible children.");
 }

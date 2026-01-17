@@ -70,8 +70,8 @@ export const Sidebar = ({ tasks, selectedTaskId, onSelectTask, onEditTask, onReo
                 onScroll={onScroll}
             >
                 {tasks.map((task, index) => {
-                    const isSummary = task.isSummary;
-                    const isSelected = task.id === selectedTaskId;
+                    const isSummary = task.childIds && task.childIds.length > 0;
+                    const isSelected = selectedTaskId === task.id;
 
                     // Indent Styles based on Level
                     const indentClass = task.level === 0 ? "pl-2 font-bold uppercase tracking-wider text-bronze" :
