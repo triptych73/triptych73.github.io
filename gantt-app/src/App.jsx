@@ -22,6 +22,48 @@ function App() {
   const [mobileView, setMobileView] = useState('list'); // 'list' or 'chart'
   const [isMobile, setIsMobile] = useState(false);
 
+  // Phase Tab State
+  const [activePhaseId, setActivePhaseId] = useState(null);
+
+  // Derived: Filter Tasks by Phase
+  // We want to show the specific Phase and its descendants
+  const visibleTasks = React.useMemo(() => {
+    // 1. Identify Phases
+    const phases = tasks.filter(t => t.category === 'phase');
+
+    // Auto-select first phase if none selected
+    if (!activePhaseId && phases.length > 0) {
+      // We can't setState in render, but we can return the default.
+      // Better: logic in useEffect options, but quick hack: use first for logic if null.
+      // Actually, we'll set it in an Effect.
+    }
+
+    const currentPhaseId = activePhaseId || (phases[0]?.id);
+
+    if (!currentPhaseId) return tasks; // Fallback if no phases?
+
+    const activePhase = tasks.find(t => t.id === currentPhaseId);
+    if (!activePhase) return tasks;
+
+    // Filter by WBS prefix
+    // Phase WBS is "1", "2". Descendants are "1.1", "1.2". 
+    // So startsWith(phase.wbs) covers it.
+    let filtered = tasks.filter(t => t.wbs && t.wbs.startsWith(activePhase.wbs));
+
+    if (showSummaryOnly) {
+      filtered = filtered.filter(t => t.isSummary);
+    }
+    return filtered;
+
+  }, [tasks, activePhaseId, showSummaryOnly]);
+
+  useEffect(() => {
+    const phases = tasks.filter(t => t.category === 'phase');
+    if (!activePhaseId && phases.length > 0) {
+      setActivePhaseId(phases[0].id);
+    }
+  }, [tasks]);
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024); // IPad Landscape is ~1024
     checkMobile();
@@ -126,12 +168,8 @@ function App() {
     if (mode === 'subtask') {
       if (selectedTask) {
         parentId = selectedTask.id;
-        // Append to end of children? Finding last descendant index is tricky in flat list.
-        // Simplest: Push to end of list, let hierarchy helper sort? 
-        // Helper sorts by ID? No, preserves list order.
-        // We ideally want it immediately after the selected task block.
-        // For now, let's just push to end for safety, or splice after selected if no children.
-        insertIndex = tasks.length;
+        insertIndex = tasks.length; // Appending is safe, processTasks sorts hierarchy? 
+        // Actually, for better UX we might want it next to the parent, but list is regenerated anyway.
       } else {
         alert("Select a task to add a subtask to.");
         return;
@@ -141,8 +179,11 @@ function App() {
         parentId = selectedTask.parentId;
         insertIndex = tasks.indexOf(selectedTask) + 1;
       } else {
-        // Treat as root
-        parentId = null;
+        // Treat as direct child of Active Phase
+        parentId = activePhaseId;
+        // Insert at end of Phase block?
+        // We don't track indices easily. Append to tasks is easiest, 
+        // as long as parentId is correct, processTasks puts it in the right place.
         insertIndex = tasks.length;
       }
     } else {
@@ -165,9 +206,14 @@ function App() {
         duration: 1,
         progress: 0,
         type: 'task',
+        category: 'phase',
         dependencies: [],
         parentId: null
       };
+
+      // Auto-switch to new phase?
+      // setActivePhaseId(phaseId); // Can't do immediately before render cycle?
+      // We'll let user select it.
 
       const newChild = {
         id: childId,
@@ -194,6 +240,7 @@ function App() {
         duration: 5,
         progress: 0,
         type: 'task',
+        // Category will be auto-assigned by processTasks
         dependencies: [],
         parentId: parentId
       };
@@ -460,12 +507,31 @@ function App() {
         </div>
       )}
 
+      {/* Phase Tabs */}
+      <div className="flex bg-void/30 border-b border-border pl-4 gap-1 pt-2">
+        {tasks.filter(t => t.category === 'phase').map(phase => (
+          <button
+            key={phase.id}
+            onClick={() => {
+              setActivePhaseId(phase.id);
+              setSelectedTaskId(null); // Clear selection on switch
+            }}
+            className={`px-6 py-2 text-sm font-bold uppercase tracking-wider rounded-t-lg transition-colors border-t border-l border-r border-transparent ${activePhaseId === phase.id
+              ? 'bg-midnight text-bronze border-border border-b-midnight -mb-[1px] relative z-10'
+              : 'text-stone/50 hover:text-stone hover:bg-white/5'
+              }`}
+          >
+            {phase.name}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 flex overflow-hidden relative">
         <div
           className={`w-full lg:w-80 flex-shrink-0 h-full overflow-y-auto no-scrollbar border-r border-border transition-all ${isMobile && mobileView !== 'list' ? 'hidden' : 'block'}`}
         >
           <Sidebar
-            tasks={showSummaryOnly ? tasks.filter(t => t.isSummary) : tasks}
+            tasks={visibleTasks} // Use Filtered List
             selectedTaskId={selectedTaskId}
             onSelectTask={setSelectedTaskId}
             onEditTask={setEditingTask}
@@ -477,7 +543,7 @@ function App() {
 
         {/* Timeline Area */}
         <Timeline
-          tasks={showSummaryOnly ? tasks.filter(t => t.isSummary) : tasks}
+          tasks={visibleTasks} // Use Filtered List
           viewMode={viewMode}
           projectStartDate={projectStartDate}
           onTaskDragStart={handleDragStart}
