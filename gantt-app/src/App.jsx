@@ -64,6 +64,26 @@ function App() {
     }
   }, [tasks]);
 
+  // Debug: Log Selected Task
+  useEffect(() => {
+    if (selectedTaskId) {
+      const task = tasks.find(t => t.id === selectedTaskId);
+      if (task) {
+        console.log("Selected Task Debug:", {
+          id: task.id,
+          name: task.name,
+          isSummary: task.isSummary,
+          childrenCount: task.children ? task.children.length : 'N/A',
+          parentId: task.parentId,
+          level: task.level
+        });
+        if (task.children) {
+          console.log("Children IDs:", task.children.map(c => c.id));
+        }
+      }
+    }
+  }, [selectedTaskId, tasks]);
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024); // IPad Landscape is ~1024
     checkMobile();

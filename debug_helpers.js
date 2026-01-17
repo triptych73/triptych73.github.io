@@ -48,7 +48,7 @@ const processTasks = (flatTasks) => {
     // 3. Process Tree (DFS) for WBS & Dates
 
     const processNode = (node, numberingPrefix) => {
-        const isSummary = node.children.length > 0;
+        const isSummary = node.children && node.children.length > 0;
         node.isSummary = isSummary;
         node.wbs = numberingPrefix; // Assign calculated WBS (e.g. "1.2")
 
@@ -111,10 +111,10 @@ const processTasks = (flatTasks) => {
 // --- TEST CASE ---
 
 const mockTasks = [
-    { id: '1', name: 'Phase 1', parentId: null, startDate: '2024-01-01', duration: 1 },
-    { id: '1.1', name: 'Task 1', parentId: '1', startDate: '2024-01-01', duration: 5 },
-    { id: '1.1.1', name: 'Subtask A', parentId: '1.1', startDate: '2024-01-01', duration: 2 },
-    { id: '1.1.2', name: 'Subtask B (Leaf)', parentId: '1.1', startDate: '2024-01-01', duration: 3 }
+    { id: '1', name: 'Phase 1', parentId: null, startDate: '2024-01-01', duration: 1, isSummary: true },
+    { id: '1.1', name: 'Task 1', parentId: '1', startDate: '2024-01-01', duration: 5, isSummary: true },
+    { id: '1.1.1', name: 'Subtask A', parentId: '1.1', startDate: '2024-01-01', duration: 2, isSummary: false },
+    { id: '1.1.2', name: 'Subtask B (Leaf) - Input says Summary', parentId: '1.1', startDate: '2024-01-01', duration: 3, isSummary: true }
 ];
 
 console.log("Processing Tasks...");
@@ -127,7 +127,7 @@ results.forEach(t => {
 
 const leaf = results.find(t => t.id === '1.1.2');
 if (leaf.isSummary) {
-    console.error("FAIL: Leaf node 1.1.2 is marked as SUMMARY!");
+    console.error("FAIL: Leaf node 1.1.2 is marked as SUMMARY (failed to override)!");
 } else {
-    console.log("PASS: Leaf node 1.1.2 is NOT a summary.");
+    console.log("PASS: Leaf node 1.1.2 is NOT a summary (override successful).");
 }
