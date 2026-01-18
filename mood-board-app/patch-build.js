@@ -52,15 +52,14 @@ try {
 
             // Multi-pass replacement for safety
 
-            // 1. Replace absolute paths /_next/ -> /static-assets/
+            // 1. Replace basePath absolute paths /mood-board-app/out/_next/ -> /mood-board-app/out/static-assets/
+            content = content.replace(/\/mood-board-app\/out\/_next\//g, '/mood-board-app/out/static-assets/');
+
+            // 2. Fallback for other locations (though basePath should cover it)
             content = content.replace(/\/_next\//g, '/static-assets/');
 
-            // 2. Replace relative paths ./_next/ -> ./static-assets/
-            content = content.replace(/\.\/_next\//g, './static-assets/');
-
-            // 3. Replace paths starting with _next/ (e.g. in CSS url() sometimes)
+            // 3. Replace paths starting with _next/ (e.g. in CSS url())
             // Be careful to match words boundaries if possible or specific contexts
-            // But _next/ is pretty unique.
             content = content.replace(/\"_next\//g, '"static-assets/');
             content = content.replace(/\'_next\//g, "'static-assets/");
 

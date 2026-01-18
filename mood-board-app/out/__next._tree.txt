@@ -1,4 +1,4 @@
-:HL["./static-assets/static/chunks/93e310e1c889668f.css","style"]
-:HL["./static-assets/static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-:HL["./static-assets/static/media/cc014fcb166cf364-s.p.e32417d2.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-0:{"buildId":"ofZ2vK7ZHfI7M3g_jvJpV","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":true},"staleTime":300}
+:HL["/mood-board-app/out/static-assets/static/chunks/93e310e1c889668f.css","style"]
+:HL["/mood-board-app/out/static-assets/static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/mood-board-app/out/static-assets/static/media/cc014fcb166cf364-s.p.e32417d2.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+0:{"buildId":"pJRHMV4-JKQxc3IQGdgjs","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":true},"staleTime":300}

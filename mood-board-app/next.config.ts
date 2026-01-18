@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  assetPrefix: '.',
+  basePath: '/mood-board-app/out',
   trailingSlash: true,
 };
 
