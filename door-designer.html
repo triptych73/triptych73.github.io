@@ -375,9 +375,105 @@
                     const archStartY = currentY + rw;
                     const curvedPanel = this.createLeafArchPanel(leafWidth, thickness, leafCenterX, archStartY);
                     if (curvedPanel) group.add(curvedPanel);
+
+                    // --- ARCHED TOP RAIL (frame around the curved panel) ---
+                    const archedRail = this.createArchedTopRail(leafWidth, thickness, leafCenterX, archStartY);
+                    if (archedRail) group.add(archedRail);
                 }
 
                 return group;
+            }
+
+            createArchedTopRail(leafWidth, thickness, leafCenterX, archStartY) {
+                // Creates the curved rail that frames the top arch panel
+                const { archRadius, archCenterY, stileWidth, railWidth } = this.config;
+
+                const w = leafWidth / 1000;
+                const t = thickness / 1000;
+                const sw = stileWidth / 1000;
+                const rw = railWidth / 1000;
+                const rOuter = archRadius / 1000;
+                const rInner = rOuter - rw; // Inner radius (smaller)
+                const cy = archCenterY / 1000;
+                const startY = archStartY;
+
+                // Outer edges of the leaf (where stiles meet arch)
+                const outerLeftX = -w / 2 + sw;
+                const outerRightX = w / 2 - sw;
+
+                // Global X coordinates
+                const globalOuterLeft = leafCenterX / 1000 + outerLeftX;
+                const globalOuterRight = leafCenterX / 1000 + outerRightX;
+
+                // Check bounds
+                if (Math.abs(globalOuterLeft) > rOuter || Math.abs(globalOuterRight) > rOuter) return null;
+
+                // Y positions on outer arc
+                const yOuterLeft = cy + Math.sqrt(rOuter * rOuter - globalOuterLeft * globalOuterLeft);
+                const yOuterRight = cy + Math.sqrt(rOuter * rOuter - globalOuterRight * globalOuterRight);
+
+                // Y positions on inner arc (if valid)
+                let yInnerLeft, yInnerRight;
+                if (rInner > 0 && Math.abs(globalOuterLeft) <= rInner && Math.abs(globalOuterRight) <= rInner) {
+                    yInnerLeft = cy + Math.sqrt(rInner * rInner - globalOuterLeft * globalOuterLeft);
+                    yInnerRight = cy + Math.sqrt(rInner * rInner - globalOuterRight * globalOuterRight);
+                } else {
+                    // Inner arc doesn't reach these edges, use startY as inner bound
+                    yInnerLeft = startY;
+                    yInnerRight = startY;
+                }
+
+                if (startY >= Math.min(yOuterLeft, yOuterRight)) return null;
+
+                const shape = new THREE.Shape();
+
+                // Start at inner-left (bottom of rail, left side)
+                shape.moveTo(outerLeftX, Math.max(startY, yInnerLeft));
+
+                // Line to inner-right
+                shape.lineTo(outerRightX, Math.max(startY, yInnerRight));
+
+                // Arc along outer edge (right to left, counter-clockwise when viewed)
+                const numSegments = 32;
+
+                // Outer arc from right to left
+                const angleOuterRight = Math.atan2(yOuterRight - cy, globalOuterRight);
+                const angleOuterLeft = Math.atan2(yOuterLeft - cy, globalOuterLeft);
+
+                for (let i = 0; i <= numSegments; i++) {
+                    const t_param = i / numSegments;
+                    const angle = angleOuterRight + t_param * (angleOuterLeft - angleOuterRight);
+                    const px = rOuter * Math.cos(angle) - leafCenterX / 1000;
+                    const py = cy + rOuter * Math.sin(angle);
+                    shape.lineTo(px, py);
+                }
+
+                // If inner arc is valid, trace it back (left to right)
+                if (rInner > 0 && Math.abs(globalOuterLeft) <= rInner && Math.abs(globalOuterRight) <= rInner) {
+                    const angleInnerLeft = Math.atan2(yInnerLeft - cy, globalOuterLeft);
+                    const angleInnerRight = Math.atan2(yInnerRight - cy, globalOuterRight);
+
+                    for (let i = 0; i <= numSegments; i++) {
+                        const t_param = i / numSegments;
+                        const angle = angleInnerLeft + t_param * (angleInnerRight - angleInnerLeft);
+                        const px = rInner * Math.cos(angle) - leafCenterX / 1000;
+                        const py = cy + rInner * Math.sin(angle);
+                        shape.lineTo(px, py);
+                    }
+                }
+
+                shape.closePath();
+
+                const extrudeSettings = { steps: 1, depth: t, bevelEnabled: false };
+                const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                geo.translate(0, 0, -t / 2);
+
+                const mesh = new THREE.Mesh(geo, this.materials.oak);
+                mesh.name = 'Rail_Arch';
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                return mesh;
             }
 
             createCurvedStile(localXLeft, localXRight, globalXLeft, globalXRight, depth, name) {
