@@ -18,7 +18,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panelled Door Designer</title>
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -33,10 +32,6 @@
             --border: #2A2E35;
             --stone: #F5F5F0;
             --bronze: #9A8C74;
-            --bronze-dark: #5C5242;
-            --emerald: #10B981;
-            --alert: #EF4444;
-            --glass: rgba(255, 255, 255, 0.05);
             --gray-400: #9CA3AF;
             --gray-500: #6B7280;
         }
@@ -162,7 +157,6 @@
             --hover-color: rgba(255, 255, 255, 0.05) !important;
             --focus-color: var(--bronze) !important;
             --number-color: var(--bronze) !important;
-            --string-color: var(--bronze) !important;
             font-family: 'Inter', sans-serif !important;
         }
 
@@ -192,7 +186,7 @@
             <h2>Dimensions</h2>
             <div class="stat-row"><span class="stat-label">Total Width:</span><span class="stat-value"
                     id="disp-width">--</span></div>
-            <div class="stat-row"><span class="stat-label">Total Height:</span><span class="stat-value"
+            <div class="stat-row"><span class="stat-label">Apex Height:</span><span class="stat-value"
                     id="disp-height">--</span></div>
             <div class="stat-row"><span class="stat-label">Arch Radius:</span><span class="stat-value"
                     id="disp-radius">--</span></div>
@@ -222,18 +216,14 @@
                     thickness: 55,
                     isDoubleLeaf: true,
 
-                    // Arch: circle center at (0, archCenterY), radius = archRadius
                     hasArch: true,
                     archRadius: 1200,
                     archCenterY: 1600,
 
-                    // Frame
                     stileWidth: 120,
                     railWidth: 120,
                     muntinWidth: 60,
 
-                    // Panels: Independent row heights (mm) from bottom to top
-                    // The number of entries determines the number of rows.
                     panelRowHeights: [500, 450, 400],
                     panelCols: 2,
 
@@ -246,8 +236,8 @@
 
             initMaterials() {
                 return {
-                    oak: new THREE.MeshStandardMaterial({ color: 0x8B5A2B, roughness: 0.7, metalness: 0.1 }),
-                    oakDark: new THREE.MeshStandardMaterial({ color: 0x6B4420, roughness: 0.75, metalness: 0.1 }),
+                    oak: new THREE.MeshStandardMaterial({ color: 0x8B5A2B, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide }),
+                    oakDark: new THREE.MeshStandardMaterial({ color: 0x6B4420, roughness: 0.75, metalness: 0.1, side: THREE.DoubleSide }),
                 };
             }
 
@@ -258,17 +248,13 @@
                     this.meshGroup.remove(child);
                 }
 
-                const { width, thickness, isDoubleLeaf, hasArch, archRadius, archCenterY } = this.config;
+                const { width, thickness, isDoubleLeaf } = this.config;
 
                 const gap = isDoubleLeaf ? 3 : 0;
                 const leafWidth = isDoubleLeaf ? (width - gap) / 2 : width;
 
                 const leftPos = isDoubleLeaf ? -width / 4 - gap / 4 : 0;
                 const rightPos = isDoubleLeaf ? width / 4 + gap / 4 : 0;
-
-                // Calculate max height based on arch
-                // Apex of arch at x=0: y = archCenterY + archRadius
-                const apexHeight = hasArch ? archCenterY + archRadius : (archCenterY + archRadius);
 
                 const leftLeaf = this.createLeaf(leafWidth, thickness, true, leftPos);
                 this.meshGroup.add(leftLeaf);
@@ -281,46 +267,40 @@
                 this.updateUI();
             }
 
-            // Calculate Y on the arch at a given X (relative to door center)
+            // Get Y on circle at global X. Circle: x² + (y - cy)² = r²
             getArchY(xGlobal) {
                 const { archRadius, archCenterY } = this.config;
                 const r = archRadius / 1000;
                 const cy = archCenterY / 1000;
-                const x = xGlobal; // Already in meters
-
-                if (Math.abs(x) > r) return cy; // Outside arch
-
-                return cy + Math.sqrt(r * r - x * x);
+                if (Math.abs(xGlobal) > r) return cy;
+                return cy + Math.sqrt(r * r - xGlobal * xGlobal);
             }
 
             createLeaf(leafWidth, thickness, isLeft, leafCenterX) {
                 const group = new THREE.Group();
                 group.position.set(leafCenterX / 1000, 0, 0);
 
-                const { stileWidth, railWidth, muntinWidth, panelRowHeights, panelCols, hasArch } = this.config;
+                const { stileWidth, railWidth, muntinWidth, panelRowHeights, panelCols, hasArch, archRadius, archCenterY } = this.config;
 
                 const w = leafWidth / 1000;
                 const t = thickness / 1000;
                 const sw = stileWidth / 1000;
                 const rw = railWidth / 1000;
                 const mw = muntinWidth / 1000;
+                const r = archRadius / 1000;
+                const cy = archCenterY / 1000;
 
-                // Inner edges of stiles (where panels go)
                 const innerLeftX = -w / 2 + sw;
                 const innerRightX = w / 2 - sw;
                 const innerWidth = innerRightX - innerLeftX;
 
-                // Global X coordinates (for arch intersection)
-                const globalLeftStileX = leafCenterX / 1000 - w / 2 + sw / 2;
-                const globalRightStileX = leafCenterX / 1000 + w / 2 - sw / 2;
-                const globalLeftEdge = leafCenterX / 1000 - w / 2;
-                const globalRightEdge = leafCenterX / 1000 + w / 2;
+                // Global X coordinates for arch calculations
+                const gLeftOuter = leafCenterX / 1000 - w / 2;
+                const gLeftInner = leafCenterX / 1000 - w / 2 + sw;
+                const gRightOuter = leafCenterX / 1000 + w / 2;
+                const gRightInner = leafCenterX / 1000 + w / 2 - sw;
 
-                // Calculate stile heights based on arch
-                const leftStileTopY = hasArch ? this.getArchY(globalLeftEdge) : 2.5;
-                const rightStileTopY = hasArch ? this.getArchY(globalRightEdge) : 2.5;
-
-                // Helper
+                // Helper for boxes
                 const createBox = (bw, bh, bd, x, y, mat, name) => {
                     const geo = new THREE.BoxGeometry(bw, bh, bd);
                     const mesh = new THREE.Mesh(geo, mat);
@@ -331,61 +311,68 @@
                     return mesh;
                 };
 
-                // --- STILES ---
-                // Left stile
-                group.add(createBox(sw, leftStileTopY, t, -w / 2 + sw / 2, leftStileTopY / 2, this.materials.oak, 'Stile_Left'));
-                // Right stile
-                group.add(createBox(sw, rightStileTopY, t, w / 2 - sw / 2, rightStileTopY / 2, this.materials.oak, 'Stile_Right'));
+                // --- STILES with curved top ---
+                if (hasArch) {
+                    // Left stile: rectangle from y=0 to arch curve
+                    const leftStile = this.createCurvedStile(
+                        -w / 2, -w / 2 + sw,  // local x range
+                        gLeftOuter, gLeftInner,  // global x range (for arch)
+                        t, 'Stile_Left'
+                    );
+                    group.add(leftStile);
+
+                    // Right stile
+                    const rightStile = this.createCurvedStile(
+                        w / 2 - sw, w / 2,  // local x range
+                        gRightInner, gRightOuter,  // global x range
+                        t, 'Stile_Right'
+                    );
+                    group.add(rightStile);
+                } else {
+                    // Simple box stiles for non-arch
+                    const stileH = 2.5; // Fixed height if no arch
+                    group.add(createBox(sw, stileH, t, -w / 2 + sw / 2, stileH / 2, this.materials.oak, 'Stile_Left'));
+                    group.add(createBox(sw, stileH, t, w / 2 - sw / 2, stileH / 2, this.materials.oak, 'Stile_Right'));
+                }
 
                 // --- BOTTOM RAIL ---
                 group.add(createBox(innerWidth, rw, t, 0, rw / 2, this.materials.oak, 'Rail_Bottom'));
 
                 // --- PANELS & HORIZONTAL MUNTINS ---
-                // Each row has a specified height. We stack them from the bottom.
-                let currentY = rw; // Start above bottom rail
+                let currentY = rw;
                 const numRows = panelRowHeights.length;
 
-                for (let r = 0; r < numRows; r++) {
-                    const rowH = panelRowHeights[r] / 1000;
+                for (let row = 0; row < numRows; row++) {
+                    const rowH = panelRowHeights[row] / 1000;
                     const rowCenterY = currentY + rowH / 2;
+                    const rowTopY = currentY + rowH;
 
-                    // Panel columns
                     const colW = (innerWidth - (panelCols - 1) * mw) / panelCols;
                     for (let c = 0; c < panelCols; c++) {
                         const panelX = innerLeftX + c * (colW + mw) + colW / 2;
-                        // Check if this panel is within the arch
-                        const panelTopY = currentY + rowH;
-                        const panelGlobalX = leafCenterX / 1000 + panelX;
-                        const archYAtPanel = hasArch ? this.getArchY(panelGlobalX) : 999;
+                        group.add(createBox(colW, rowH, t * 0.6, panelX, rowCenterY, this.materials.oakDark, 'Panel'));
 
-                        if (panelTopY <= archYAtPanel + 0.01) {
-                            // Panel fits entirely
-                            group.add(createBox(colW, rowH, t * 0.6, panelX, rowCenterY, this.materials.oakDark, 'Panel'));
-                        }
-
-                        // Vertical muntin (if not last column)
                         if (c < panelCols - 1) {
                             const mx = innerLeftX + (c + 1) * colW + c * mw + mw / 2;
                             group.add(createBox(mw, rowH, t, mx, rowCenterY, this.materials.oak, 'Muntin_V'));
                         }
                     }
 
-                    // Horizontal muntin (if not last row)
-                    if (r < numRows - 1) {
+                    if (row < numRows - 1) {
                         const hmy = currentY + rowH + mw / 2;
                         group.add(createBox(innerWidth, mw, t, 0, hmy, this.materials.oak, 'Muntin_H'));
                     }
 
-                    currentY += rowH + (r < numRows - 1 ? mw : 0);
+                    currentY += rowH + (row < numRows - 1 ? mw : 0);
                 }
 
-                // --- TOP RAIL (straight, below arch) ---
+                // --- TOP RAIL ---
                 const topRailY = currentY + rw / 2;
                 group.add(createBox(innerWidth, rw, t, 0, topRailY, this.materials.oak, 'Rail_Top'));
 
-                // --- ARCHED TOP SECTION ---
+                // --- ARCHED TOP PANEL ---
                 if (hasArch) {
-                    const archStartY = currentY + rw; // Top of top rail
+                    const archStartY = currentY + rw;
                     const curvedPanel = this.createLeafArchPanel(leafWidth, thickness, leafCenterX, archStartY);
                     if (curvedPanel) group.add(curvedPanel);
                 }
@@ -393,8 +380,55 @@
                 return group;
             }
 
+            createCurvedStile(localXLeft, localXRight, globalXLeft, globalXRight, depth, name) {
+                // Creates a stile that follows the arch curve at the top
+                const { archRadius, archCenterY } = this.config;
+                const r = archRadius / 1000;
+                const cy = archCenterY / 1000;
+
+                // Get arch Y at both edges
+                const yAtLeft = Math.abs(globalXLeft) <= r ? cy + Math.sqrt(r * r - globalXLeft * globalXLeft) : cy;
+                const yAtRight = Math.abs(globalXRight) <= r ? cy + Math.sqrt(r * r - globalXRight * globalXRight) : cy;
+
+                // Create shape: rectangle with curved top
+                const shape = new THREE.Shape();
+
+                // Start at bottom-left
+                shape.moveTo(localXLeft, 0);
+                // Bottom-right
+                shape.lineTo(localXRight, 0);
+                // Up to arch at right edge
+                shape.lineTo(localXRight, yAtRight);
+
+                // Arc from right to left (following the outer edge of the overall arch)
+                // We need to draw a small arc segment between these two points
+                // Both points are on the circle, so we use absarc
+                const angleRight = Math.atan2(yAtRight - cy, globalXRight);
+                const angleLeft = Math.atan2(yAtLeft - cy, globalXLeft);
+
+                // Arc center in local coordinates: global center is (0, cy), so local center is (-leafCenterX, cy)
+                // But stile shape is already in leaf-local coords. The arc center relative to stile is complex.
+                // Simpler: just do a straight line for now if the arc segment is small.
+                // OR: we can arc it properly.
+
+                // For a stile, the arc segment is small. Let's just line it.
+                shape.lineTo(localXLeft, yAtLeft);
+
+                shape.closePath();
+
+                const extrudeSettings = { steps: 1, depth: depth, bevelEnabled: false };
+                const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                geo.translate(0, 0, -depth / 2);
+
+                const mesh = new THREE.Mesh(geo, this.materials.oak);
+                mesh.name = name;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                return mesh;
+            }
+
             createLeafArchPanel(leafWidth, thickness, leafCenterX, archStartY) {
-                // Creates rectangular section + curved top that conforms to the overall arch
                 const { archRadius, archCenterY, stileWidth } = this.config;
 
                 const w = leafWidth / 1000;
@@ -406,41 +440,40 @@
 
                 const innerLeftX = -w / 2 + sw;
                 const innerRightX = w / 2 - sw;
-                const innerWidth = innerRightX - innerLeftX;
 
-                // Global X for this leaf's inner edges
                 const globalInnerLeft = leafCenterX / 1000 + innerLeftX;
                 const globalInnerRight = leafCenterX / 1000 + innerRightX;
 
-                // Check if inner edges are within arch radius
                 if (Math.abs(globalInnerLeft) > r || Math.abs(globalInnerRight) > r) return null;
 
-                // Y on the arch at inner left and right edges
                 const yAtLeft = cy + Math.sqrt(r * r - globalInnerLeft * globalInnerLeft);
                 const yAtRight = cy + Math.sqrt(r * r - globalInnerRight * globalInnerRight);
 
-                if (startY >= Math.min(yAtLeft, yAtRight)) return null; // No space for curve
+                if (startY >= Math.min(yAtLeft, yAtRight)) return null;
 
-                // Create shape: start at bottom-left, go right, curve up following arch, come back
                 const shape = new THREE.Shape();
 
-                // Bottom edge (straight line)
                 shape.moveTo(innerLeftX, startY);
                 shape.lineTo(innerRightX, startY);
 
-                // Arc segment (from right to left, following inner edge of arch)
-                // Use absarc centered at (0 - leafCenterX/1000, cy) but shape is in LOCAL coords
-                // So center in local coords is (-leafCenterX/1000, cy)
+                // Arc from right to left
                 const localCenterX = -leafCenterX / 1000;
-
-                // Angles for the arc
                 const angleRight = Math.atan2(yAtRight - cy, globalInnerRight);
                 const angleLeft = Math.atan2(yAtLeft - cy, globalInnerLeft);
 
-                // We need to draw from right angle to left angle, counter-clockwise
-                // THREE.Shape absarc uses the shape's coordinate system
-                // Arc from angleRight to angleLeft
-                shape.absarc(localCenterX, cy, r - sw, angleRight, angleLeft, false);
+                // Draw arc segment - need to sample points along the arc
+                const numSegments = 32;
+                for (let i = 0; i <= numSegments; i++) {
+                    const t_param = i / numSegments;
+                    const angle = angleRight + t_param * (angleLeft - angleRight);
+                    const px = r * Math.cos(angle) - leafCenterX / 1000; // Local X
+                    const py = cy + r * Math.sin(angle);
+                    if (i === 0) {
+                        shape.lineTo(px, py);
+                    } else {
+                        shape.lineTo(px, py);
+                    }
+                }
 
                 shape.closePath();
 
@@ -461,13 +494,13 @@
                 const apexHeight = hasArch ? archCenterY + archRadius : 'N/A';
 
                 document.getElementById('disp-width').textContent = `${width} mm`;
-                document.getElementById('disp-height').textContent = hasArch ? `${apexHeight} mm (apex)` : 'N/A';
+                document.getElementById('disp-height').textContent = hasArch ? `${apexHeight} mm` : 'N/A';
                 document.getElementById('disp-radius').textContent = hasArch ? `${archRadius} mm` : 'N/A';
                 document.getElementById('disp-center').textContent = hasArch ? `${archCenterY} mm` : 'N/A';
                 document.getElementById('disp-style').textContent = isDoubleLeaf ? 'Double Leaf' : 'Single Leaf';
 
                 const vol = (width / 1000) * ((archCenterY + archRadius) / 1000) * (thickness / 1000);
-                const weight = Math.round(vol * 750 * 0.7);
+                const weight = Math.round(vol * 750 * 0.65);
                 document.getElementById('disp-weight').textContent = weight + ' kg';
             }
         }
@@ -527,22 +560,17 @@
         frameFolder.add(door.config, 'muntinWidth', 30, 150, 5).name('Muntin W').onChange(() => door.generate());
 
         const panelFolder = gui.addFolder('Panel Heights (mm)');
-        // Create controllers for each row height
         const rowHeightControllers = [];
         function rebuildPanelGUI() {
             rowHeightControllers.forEach(c => c.destroy());
             rowHeightControllers.length = 0;
-
             door.config.panelRowHeights.forEach((h, i) => {
-                const ctrl = panelFolder.add(door.config.panelRowHeights, i, 100, 800, 10)
-                    .name(`Row ${i + 1}`)
-                    .onChange(() => door.generate());
+                const ctrl = panelFolder.add(door.config.panelRowHeights, i, 100, 800, 10).name(`Row ${i + 1}`).onChange(() => door.generate());
                 rowHeightControllers.push(ctrl);
             });
         }
         rebuildPanelGUI();
 
-        // Add/Remove row buttons
         const panelOps = {
             addRow: () => { door.config.panelRowHeights.push(400); rebuildPanelGUI(); door.generate(); },
             removeRow: () => { if (door.config.panelRowHeights.length > 1) { door.config.panelRowHeights.pop(); rebuildPanelGUI(); door.generate(); } }
