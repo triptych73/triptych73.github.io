@@ -412,12 +412,15 @@ function App() {
   const [dragState, setDragState] = useState(null);
 
   const handleDragStart = (e, task) => {
+    e.preventDefault(); // Prevent default browser drag behavior (native image drag etc)
     e.stopPropagation(); // prevent row selection
 
     // Check if the click target or its parent has resize data attribute
     // The handle has data-resize="right"
     const isResizeHandle = e.target.closest('[data-resize="right"]');
     const isMoveHandle = e.target.closest('[data-move-handle="true"]');
+
+    console.log("Drag Start:", { id: task.id, isResizeHandle, isMoveHandle, shift: e.shiftKey });
 
     // Default to 'move' unless it is explicitly resize
     // Note: The task body itself triggers this, or the new GripVertical
@@ -434,7 +437,13 @@ function App() {
   const handleMouseMove = (e) => {
     if (!dragState) return;
 
-    const daysDiff = Math.round((e.clientX - dragState.startX) / (viewMode === 'day' ? 60 : viewMode === 'week' ? 40 : 20));
+    // Prevent text selection during drag
+    e.preventDefault();
+
+    // Match Timeline.jsx colWidths 
+    // day=60, week=40, month=15, year=5
+    const colWidth = viewMode === 'day' ? 60 : viewMode === 'week' ? 40 : viewMode === 'month' ? 15 : 5;
+    const daysDiff = Math.round((e.clientX - dragState.startX) / colWidth);
 
     if (dragState.type === 'move') {
       let newDate = addDays(dragState.originalStartDate, daysDiff);
@@ -442,6 +451,7 @@ function App() {
       // Constraint: Can't move before dependencies
       const earliestStart = getEarliestStart(dragState.task, tasks);
       if (earliestStart && newDate < earliestStart) {
+        console.log("Move Constrained:", { newDate, earliestStart });
         newDate = earliestStart;
       }
 
