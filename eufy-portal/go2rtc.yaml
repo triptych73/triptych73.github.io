@@ -1,0 +1,12 @@
+streams:
+  # Stream from Scrypted (Video Bridge) -> Force H.264 for Browser
+  doorbell: rtsp://scrypted:34563/f36f1a20993f6127#video=h264
+
+api:
+  listen: ":1984"
+  origin: "*"
+
+webrtc:
+  listen: ":8555"
+  candidates:
+    - 127.0.0.1:8555

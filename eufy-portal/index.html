@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eufy Doorbell Stream</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #ddd;
+            font-family: sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #fff;
+        }
+
+        .video-container {
+            width: 90%;
+            max-width: 1280px;
+            aspect-ratio: 16/9;
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-family: monospace;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🔔 Front Door Live</h1>
+
+    <div class="video-container">
+        <video id="video-player" autoplay playsinline controls muted></video>
+    </div>
+
+    <div class="status" id="status">Connecting to stream...</div>
+
+    <script>
+        const GO2RTC_API = 'http://127.0.0.1:1984/api/ws?src=doorbell';
+
+        async function startStream() {
+            const video = document.getElementById('video-player');
+            const status = document.getElementById('status');
+
+            try {
+                // 1. Create PeerConnection
+                const pc = new RTCPeerConnection({
+                    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+                });
+
+                // 2. Handle incoming tracks
+                pc.ontrack = (ev) => {
+                    if (video.srcObject !== ev.streams[0]) {
+                        video.srcObject = ev.streams[0];
+                        status.innerText = "● LIVE";
+                        status.style.color = "#0f0";
+                    }
+                };
+
+                pc.addTransceiver("video", { direction: "recvonly" });
+                // If you have audio, you might need: pc.addTransceiver("audio", { direction: "recvonly" });
+
+                // 3. Create Offer
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                // 4. Send to Go2RTC
+                const ws = new WebSocket(GO2RTC_API);
+
+                ws.onopen = () => {
+                    status.innerText = "Handshaking...";
+                    ws.send(JSON.stringify({ type: "webrtc/offer", value: offer.sdp }));
+                };
+
+                ws.onmessage = (msg) => {
+                    const data = JSON.parse(msg.data);
+                    if (data.type === "webrtc/answer") {
+                        pc.setRemoteDescription({ type: "answer", sdp: data.value });
+                    }
+                };
+
+                ws.onclose = () => {
+                    status.innerText = "❌ Connection Lost. Retrying...";
+                    setTimeout(startStream, 3000);
+                };
+
+            } catch (err) {
+                console.error(err);
+                status.innerText = "Error: " + err.message;
+            }
+        }
+
+        startStream();
+    </script>
+</body>
+
+</html>

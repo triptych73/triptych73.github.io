@@ -1,0 +1,46 @@
+services:
+  # 1. THE BRIDGE
+  # 1. THE BRIDGE (Required by Scrypted Plugin)
+  eufy-ws:
+    image: bropat/eufy-security-ws:latest
+    container_name: eufy-ws
+    restart: unless-stopped
+    ports:
+      - "3000:3000" # Web Interface (Internal for Scrypted)
+    environment:
+      - USERNAME=stmsltd@gmail.com
+      - PASSWORD=Summer01!
+      - COUNTRY=GB
+      - TRUSTED_DEVICE_NAME=MyPythonClient
+      - P2P_CONNECTION_SETUP=0
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./data:/data
+
+  # 2. THE NVR (SCRYPTED)
+  scrypted:
+    image: ghcr.io/koush/scrypted
+    container_name: scrypted
+    restart: unless-stopped
+    ports:
+      - "10443:10443" # Admin UI (HTTPS)
+      - "11080:11080" # Components (HTTP)
+      - "12080:80" # Webhook/Plugin HTTP
+    volumes:
+      - ./.scrypted/volume:/server/volume
+    environment:
+      - SCRYPTED_DOCKER_SERVE_BUTTON=true
+
+  # 2. THE STREAMER
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    container_name: go2rtc
+    restart: unless-stopped
+    ports:
+      - "1984:1984" # The Website connects here
+      - "8555:8555/tcp" # Video Data
+      - "8555:8555/udp" # Video Data
+    volumes:
+      - ./go2rtc.yaml:/config/go2rtc.yaml

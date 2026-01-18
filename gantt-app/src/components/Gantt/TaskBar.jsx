@@ -10,9 +10,10 @@ export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDo
     return (
         <div
             className={clsx(
-                "absolute select-none group touch-none flex items-center z-20",
-                isSummary ? "pointer-events-none" : ""
+                "absolute select-none group touch-none flex items-center z-20"
+                // Removed pointer-events-none to allow Tooltip hover even for summaries
             )}
+            title={`DEBUG: ID=${task.id} WBS=${task.wbs} Cat=${task.category} Level=${task.level} Kids=${task.childIds?.length || 0}`}
             style={style}
             onMouseDown={onMouseDown}
             onDoubleClick={(e) => {
