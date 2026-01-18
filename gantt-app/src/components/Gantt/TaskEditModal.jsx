@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
-export const TaskEditModal = ({ task, onClose, onSave }) => {
-    const [formData, setFormData] = useState({ ...task });
+export const TaskEditModal = ({ task, allTasks, onClose, onSave }) => {
+    const [formData, setFormData] = useState({
+        ...task,
+        // Convert IDs to WBS for display
+        dependencyString: task.dependencies
+            ? task.dependencies.map(id => allTasks?.find(t => t.id === id)?.wbs).filter(Boolean).join(', ')
+            : ''
+    });
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -61,16 +67,12 @@ export const TaskEditModal = ({ task, onClose, onSave }) => {
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-gray-500 uppercase text-[10px] tracking-wider">Depends On (IDs, comma sep)</label>
+                        <label className="text-gray-500 uppercase text-[10px] tracking-wider">Depends On (WBS, comma sep)</label>
                         <input
                             type="text"
-                            placeholder="e.g. t1, t2"
-                            value={formData.dependencies ? formData.dependencies.join(', ') : ''}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                const deps = val.split(',').map(s => s.trim()).filter(Boolean);
-                                setFormData({ ...formData, dependencies: deps });
-                            }}
+                            placeholder="e.g. 1.2, 2.1"
+                            value={formData.dependencyString || ''}
+                            onChange={(e) => setFormData({ ...formData, dependencyString: e.target.value })}
                             className="w-full bg-midnight border border-border px-3 py-2 text-stone focus:border-bronze outline-none rounded font-mono text-xs"
                         />
                     </div>
@@ -104,7 +106,23 @@ export const TaskEditModal = ({ task, onClose, onSave }) => {
                                     alert("Duration must be at least 1 day.");
                                     return;
                                 }
-                                onSave(formData);
+
+                                // Convert WBS string back to IDs
+                                let newDependencies = [];
+                                if (formData.dependencyString && formData.dependencyString.trim() !== '') {
+                                    const wbsList = formData.dependencyString.split(',').map(s => s.trim()).filter(Boolean);
+
+                                    newDependencies = wbsList.map(wbs => {
+                                        const found = allTasks?.find(t => t.wbs === wbs);
+                                        if (!found) {
+                                            console.warn(`Dependency WBS "${wbs}" not found.`);
+                                            return null;
+                                        }
+                                        return found.id;
+                                    }).filter(Boolean);
+                                }
+
+                                onSave({ ...formData, dependencies: newDependencies });
                             }}
                             className="px-4 py-2 bg-bronze hover:bg-bronzeDark text-midnight font-bold rounded font-header tracking-wide transition-colors"
                         >

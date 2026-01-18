@@ -417,6 +417,7 @@ function App() {
     // Check if the click target or its parent has resize data attribute
     // The handle has data-resize="right"
     const isResizeHandle = e.target.closest('[data-resize="right"]');
+    const isMoveHandle = e.target.closest('[data-move-handle="true"]');
 
     // Default to 'move' unless it is explicitly resize
     // Note: The task body itself triggers this, or the new GripVertical
@@ -585,6 +586,7 @@ function App() {
       {editingTask && (
         <TaskEditModal
           task={editingTask}
+          allTasks={tasks} // Pass all tasks for WBS lookup
           onClose={() => setEditingTask(null)}
           onSave={(updatedTask, isDelete) => {
             if (isDelete) {
