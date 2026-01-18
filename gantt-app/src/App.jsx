@@ -6,7 +6,7 @@ import { TaskEditModal } from './components/Gantt/TaskEditModal';
 import { initialTasks } from './lib/data';
 import { signIn, subscribeToData, saveData } from './lib/firebase';
 import { getEarliestStart, cascadeMoves, hasCycle } from './lib/dependencies';
-import { processTasks } from './lib/helpers'; // Import helper
+import { processTasks, addDays } from './lib/helpers'; // Import helper
 
 function App() {
   const [tasks, setTasks] = useState([]); // Start empty, load from FB
