@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Pipeline | St Mary Somerset</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portland': '#F5F5F0',
+                        'midnight': '#0F1115',
+                        'bronze': '#9A8C74',
+                        'bronze-dark': '#5c5240',
+                        'surface': '#1A1D23',
+                    },
+                    fontFamily: {
+                        'serif': ['Cinzel', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0F1115;
+            cursor: default;
+        }
+
+        .glass-panel {
+            background: rgba(26, 29, 35, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0F1115;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body class="text-portland font-sans min-h-screen flex flex-col">
+
+    <!-- Auth Guard Overlay -->
+    <div id="loading-overlay"
+        class="fixed inset-0 bg-midnight z-[9999] flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 border border-bronze/30 border-t-bronze rounded-full animate-spin mb-4"></div>
+        <div class="font-serif text-bronze tracking-[0.2em] animate-pulse">VERIFYING ACCESS</div>
+    </div>
+
+    <div id="protected-content" style="display: none;">
+        <!-- Navbar -->
+        <nav
+            class="sticky top-0 w-full border-b border-white/5 bg-midnight/95 backdrop-blur-md z-50 px-6 py-3 flex justify-between items-center text-[11px] tracking-widest uppercase font-mono">
+            <div class="flex items-center gap-4 text-bronze">
+                <span class="font-bold">SMS-1694</span>
+                <span class="text-white/20">|</span>
+                <span class="text-portland/80">Sales Pipeline</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="projectexecutive.html" class="hover:text-bronze transition-colors text-white/40">Dashboard</a>
+                <a href="#" onclick="firebase.auth().signOut().then(() => window.location.href='index.html')"
+                    class="hover:text-bronze transition-colors ml-4 text-white/20 hover:text-white/60">Log Out</a>
+            </div>
+        </nav>
+
+        <header class="pt-8 px-6 md:px-12 max-w-[1600px] mx-auto w-full flex justify-between items-end mb-8">
+            <div>
+                <h1 class="font-serif text-3xl text-portland tracking-tight mb-1">Dossier Requests</h1>
+                <p class="text-white/40 font-mono text-xs uppercase tracking-widest">Lead Management System</p>
+            </div>
+            <button onclick="document.getElementById('manual-entry-modal').classList.remove('hidden')"
+                class="bg-bronze/20 hover:bg-bronze/30 border border-bronze/40 hover:border-bronze px-6 py-3 text-xs font-mono uppercase tracking-widest text-bronze transition-all rounded">
+                + New Lead
+            </button>
+        </header>
+
+        <!-- Kanban Board -->
+        <main class="px-6 md:px-12 pb-12 max-w-[1600px] mx-auto w-full h-[calc(100vh-200px)]">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 h-full">
+
+                <!-- Column: New -->
+                <div class="flex flex-col h-full">
+                    <div class="pb-4 border-b border-white/10 mb-4 flex justify-between items-center">
+                        <h2 class="font-serif text-bronze">New Requests</h2>
+                        <span id="count-new"
+                            class="text-xs font-mono text-white/40 bg-white/5 px-2 py-1 rounded">0</span>
+                    </div>
+                    <div id="col-new" class="flex-grow space-y-4 overflow-y-auto pr-2 custom-scrollbar"
+                        ondrop="drop(event, 'new')" ondragover="allowDrop(event)">
+                        <!-- Cards injected here -->
+                    </div>
+                </div>
+
+                <!-- Column: Contacted -->
+                <div class="flex flex-col h-full">
+                    <div class="pb-4 border-b border-white/10 mb-4 flex justify-between items-center">
+                        <h2 class="font-serif text-white/80">Contacted</h2>
+                        <span id="count-contacted"
+                            class="text-xs font-mono text-white/40 bg-white/5 px-2 py-1 rounded">0</span>
+                    </div>
+                    <div id="col-contacted" class="flex-grow space-y-4 overflow-y-auto pr-2 custom-scrollbar"
+                        ondrop="drop(event, 'contacted')" ondragover="allowDrop(event)">
+                    </div>
+                </div>
+
+                <!-- Column: Qualified -->
+                <div class="flex flex-col h-full">
+                    <div class="pb-4 border-b border-white/10 mb-4 flex justify-between items-center">
+                        <h2 class="font-serif text-white/80">Qualified</h2>
+                        <span id="count-qualified"
+                            class="text-xs font-mono text-white/40 bg-white/5 px-2 py-1 rounded">0</span>
+                    </div>
+                    <div id="col-qualified" class="flex-grow space-y-4 overflow-y-auto pr-2 custom-scrollbar"
+                        ondrop="drop(event, 'qualified')" ondragover="allowDrop(event)">
+                    </div>
+                </div>
+
+                <!-- Column: Closed -->
+                <div class="flex flex-col h-full">
+                    <div class="pb-4 border-b border-white/10 mb-4 flex justify-between items-center">
+                        <h2 class="font-serif text-white/60">Closed</h2>
+                        <span id="count-closed"
+                            class="text-xs font-mono text-white/40 bg-white/5 px-2 py-1 rounded">0</span>
+                    </div>
+                    <div id="col-closed" class="flex-grow space-y-4 overflow-y-auto pr-2 custom-scrollbar"
+                        ondrop="drop(event, 'closed')" ondragover="allowDrop(event)">
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Manual Entry Modal -->
+    <div id="manual-entry-modal"
+        class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel p-8 rounded-lg max-w-md w-full mx-4 shadow-2xl border border-bronze/20">
+            <h2 class="font-serif text-xl text-portland mb-6">Create New Lead</h2>
+            <form id="manual-form" class="space-y-6">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Full Name</label>
+                    <input type="text" id="m-name" required
+                        class="w-full bg-white/5 border border-white/10 p-2 text-sm text-portland focus:border-bronze outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Email</label>
+                    <input type="email" id="m-email" required
+                        class="w-full bg-white/5 border border-white/10 p-2 text-sm text-portland focus:border-bronze outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Interest</label>
+                    <select id="m-interest"
+                        class="w-full bg-white/5 border border-white/10 p-2 text-sm text-portland focus:border-bronze outline-none bg-midnight">
+                        <option value="residence">Private Residence</option>
+                        <option value="investment">Portfolio Investment</option>
+                        <option value="press">Media / Press</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Notes</label>
+                    <textarea id="m-notes"
+                        class="w-full bg-white/5 border border-white/10 p-2 text-sm text-portland focus:border-bronze outline-none h-20"></textarea>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="button"
+                        onclick="document.getElementById('manual-entry-modal').classList.add('hidden')"
+                        class="flex-1 py-3 text-xs font-mono uppercase tracking-widest text-white/40 hover:text-white border border-transparent hover:border-white/10 transition-all">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 py-3 bg-bronze text-midnight text-xs font-mono uppercase tracking-widest hover:bg-white transition-all font-bold">
+                        Create
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Drag & Drop
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+        }
+
+        function drop(ev, newStatus) {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text");
+            const el = document.getElementById(data);
+
+            // If dropped directly on the container
+            if (ev.target.id.startsWith('col-')) {
+                ev.target.appendChild(el);
+            } else {
+                // If dropped on another card, find the container
+                ev.target.closest('[id^="col-"]').appendChild(el);
+            }
+
+            // Update Firestore
+            const docId = data.replace('card-', '');
+            db.collection('dossier_requests').doc(docId).update({
+                status: newStatus
+            }).catch(console.error);
+        }
+    </script>
+
+    <script>
+        let db;
+
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+
+            // Auth Check
+            firebase.auth().onAuthStateChanged((user) => {
+                const overlay = document.getElementById('loading-overlay');
+                const content = document.getElementById('protected-content');
+
+                if (user) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.style.display = 'none', 300);
+                    content.style.display = 'block';
+                    loadLeads();
+                } else {
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
+
+        function loadLeads() {
+            db.collection('dossier_requests').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+                // Clear cols
+                ['new', 'contacted', 'qualified', 'closed'].forEach(s => {
+                    document.getElementById(`col-${s}`).innerHTML = '';
+                    document.getElementById(`count-${s}`).innerText = '0';
+                });
+
+                const highlightStyle = "border-l-4 border-bronze bg-white/[0.02]";
+                const counts = { new: 0, contacted: 0, qualified: 0, closed: 0 };
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const status = data.status || 'new';
+                    if (!counts.hasOwnProperty(status)) return;
+
+                    counts[status]++;
+
+                    const card = document.createElement('div');
+                    card.id = `card-${doc.id}`;
+                    card.className = "glass-panel p-4 rounded cursor-move hover:border-bronze/50 transition-colors group relative";
+                    if (status === 'new') card.classList.add('border-l-4', 'border-l-bronze');
+
+                    card.draggable = true;
+                    card.ondragstart = drag;
+
+                    const date = data.timestamp ? data.timestamp.toDate().toLocaleDateString() : '—';
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                             <div class="font-serif text-sm text-portland">${data.name}</div>
+                             <div class="font-mono text-[10px] text-white/30">${date}</div>
+                        </div>
+                        <div class="text-xs text-white/60 mb-2 truncate">${data.email}</div>
+                         <div class="flex gap-2">
+                             <span class="text-[9px] uppercase tracking-wider border border-white/10 px-1.5 py-0.5 rounded text-bronze">${data.interest}</span>
+                             ${data.notes ? '<span class="text-[9px] uppercase tracking-wider border border-white/10 px-1.5 py-0.5 rounded text-white/30" title="' + data.notes + '">Note</span>' : ''}
+                         </div>
+                    `;
+
+                    document.getElementById(`col-${status}`).appendChild(card);
+                });
+
+                // Update Counts
+                Object.keys(counts).forEach(k => {
+                    document.getElementById(`count-${k}`).innerText = counts[k];
+                });
+            });
+        }
+
+        // Manual Entry
+        document.getElementById('manual-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('m-name').value;
+            const email = document.getElementById('m-email').value;
+            const interest = document.getElementById('m-interest').value;
+            const notes = document.getElementById('m-notes').value;
+
+            db.collection('dossier_requests').add({
+                name, email, interest, notes,
+                status: 'new',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                document.getElementById('manual-entry-modal').classList.add('hidden');
+                document.getElementById('manual-form').reset();
+            });
+        });
+
+    </script>
+</body>
+
+</html>
