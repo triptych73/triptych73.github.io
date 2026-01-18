@@ -1,6 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
+import { GripVertical } from 'lucide-react';
 
 export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDoubleClick }) => {
     // Strict Check: Ignore prop, use childIds
@@ -34,8 +35,8 @@ export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDo
                             isSummary ? "bg-bronze/40 border-bronze/50 rounded-sm" : ""
                         )}
                         style={!isSummary ? {
-                            // CHANGED: Use Blue Gradient for Tasks to distinguish from Bronze Summaries
-                            background: `linear-gradient(90deg, #3B82F6 ${task.progress}%, #1E3A8A ${task.progress}%)`
+                            // CHANGED: Reverted to Bronze Gradient per user request
+                            background: `linear-gradient(90deg, #9A8C74 ${task.progress}%, #2A2E35 ${task.progress}%)`
                         } : {}}
                     >
                         {/* Progress Label */}
@@ -50,6 +51,16 @@ export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDo
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-bronze/80" />
                         )}
                     </div>
+
+                    {/* Move Handle (Left) - Explicit Grip for moving */}
+                    {!isSummary && (
+                        <div
+                            className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-30 opacity-40 hover:opacity-100 transition-opacity"
+                            data-move-handle="true" // Marker for App.jsx
+                        >
+                            <GripVertical size={14} className="text-white drop-shadow-md" />
+                        </div>
+                    )}
 
                     {/* Resize Handle (Right) - Hide for Summary */}
                     {!isSummary && (

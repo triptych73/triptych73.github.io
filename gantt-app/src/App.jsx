@@ -418,6 +418,9 @@ function App() {
     // The handle has data-resize="right"
     const isResizeHandle = e.target.closest('[data-resize="right"]');
 
+    // Default to 'move' unless it is explicitly resize
+    // Note: The task body itself triggers this, or the new GripVertical
+
     setDragState({
       task,
       startX: e.clientX,
