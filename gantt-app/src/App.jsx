@@ -413,12 +413,17 @@ function App() {
 
   const handleDragStart = (e, task) => {
     e.stopPropagation(); // prevent row selection
+
+    // Check if the click target or its parent has resize data attribute
+    // The handle has data-resize="right"
+    const isResizeHandle = e.target.closest('[data-resize="right"]');
+
     setDragState({
       task,
       startX: e.clientX,
       originalStartDate: new Date(task.startDate),
       originalDuration: task.duration,
-      type: e.shiftKey ? 'resize' : 'move' // Shift to resize
+      type: (e.shiftKey || isResizeHandle) ? 'resize' : 'move' // Resize if handle or Shift
     });
   };
 

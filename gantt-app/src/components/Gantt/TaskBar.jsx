@@ -31,10 +31,11 @@ export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDo
                         className={clsx(
                             "w-full h-full rounded border overflow-hidden transition-shadow",
                             !isSummary && "cursor-grab active:cursor-grabbing shadow-ingot hover:brightness-110 border-white/10",
-                            isSummary ? "bg-bronze/40 border-bronze/50 rounded-sm" : "border-2 border-red-500" // Hardcoded red border for debugging
+                            isSummary ? "bg-bronze/40 border-bronze/50 rounded-sm" : ""
                         )}
                         style={!isSummary ? {
-                            background: `linear-gradient(90deg, #9A8C74 ${task.progress}%, #2A2E35 ${task.progress}%)`
+                            // CHANGED: Use Blue Gradient for Tasks to distinguish from Bronze Summaries
+                            background: `linear-gradient(90deg, #3B82F6 ${task.progress}%, #1E3A8A ${task.progress}%)`
                         } : {}}
                     >
                         {/* Progress Label */}
@@ -50,16 +51,11 @@ export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDo
                         )}
                     </div>
 
-                    {/* DEBUG TEXT OVERLAY */}
-                    <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none text-[8px] text-white font-bold bg-black/50 overflow-hidden break-all leading-tight">
-                        {isSummary ? "SUM" : "TASK"} | K:{task.childIds?.length} | {String(isSummary)}
-                    </div>
-
                     {/* Resize Handle (Right) - Hide for Summary */}
                     {!isSummary && (
                         <div
                             data-resize="right"
-                            className="absolute right-0 top-0 bottom-0 w-4 cursor-e-resize z-20 opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-opacity"
+                            className="absolute right-0 top-0 bottom-0 w-4 cursor-e-resize z-20 opacity-50 hover:opacity-100 hover:bg-white/20 transition-all bg-white/10"
                         />
                     )}
 

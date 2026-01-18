@@ -10,7 +10,7 @@ export const TaskEditModal = ({ task, onClose, onSave }) => {
 
                 {/* Header */}
                 <div className="h-12 bg-void/50 border-b border-border flex items-center justify-between px-4">
-                    <h2 className="font-header text-red-500 tracking-wide">DEBUG MODE ACTIVE</h2>
+                    <h2 className="font-header text-bronze tracking-wide">{task.category === 'phase' ? 'Edit Phase' : 'Edit Task'}</h2>
                     <button onClick={onClose} className="text-stone hover:text-white"><X size={18} /></button>
                 </div>
 
