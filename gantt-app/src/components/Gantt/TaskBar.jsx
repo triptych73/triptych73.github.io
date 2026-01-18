@@ -50,6 +50,11 @@ export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDo
                         )}
                     </div>
 
+                    {/* DEBUG TEXT OVERLAY */}
+                    <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none text-[8px] text-white font-bold bg-black/50 overflow-hidden break-all leading-tight">
+                        {isSummary ? "SUM" : "TASK"} | K:{task.childIds?.length} | {String(isSummary)}
+                    </div>
+
                     {/* Resize Handle (Right) - Hide for Summary */}
                     {!isSummary && (
                         <div
