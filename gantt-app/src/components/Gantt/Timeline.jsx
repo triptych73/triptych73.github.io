@@ -239,19 +239,24 @@ export const Timeline = ({
                     </svg>
 
                     {/* Tasks */}
-                    {tasks.map((task, index) => (
-                        <TaskBar
-                            key={task.id}
-                            task={task}
-                            style={getTaskStyle(task, index)}
-                            isSummary={task.isSummary} // Pass summary flag
-                            onMouseDown={(e) => {
-                                if (task.isSummary) return; // Explicit disable
-                                onTaskDragStart(e, task);
-                            }}
-                            onDoubleClick={() => onEditTask(task)}
-                        />
-                    ))}
+                    {tasks.map((task, index) => {
+                        // Strict Summary Logic (Same as Sidebar/TaskBar)
+                        const isSummary = task.childIds && task.childIds.length > 0;
+
+                        return (
+                            <TaskBar
+                                key={task.id}
+                                task={task}
+                                style={getTaskStyle(task, index)}
+                                isSummary={isSummary} // Pass computed truth
+                                onMouseDown={(e) => {
+                                    if (isSummary) return; // Strict guard
+                                    onTaskDragStart(e, task);
+                                }}
+                                onDoubleClick={() => onEditTask(task)}
+                            />
+                        );
+                    })}
                 </div>
             </div>
         </div>
