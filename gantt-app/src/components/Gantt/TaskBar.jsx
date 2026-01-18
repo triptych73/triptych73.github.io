@@ -31,7 +31,7 @@ export const TaskBar = ({ task, style, isSummary: propSummary, onMouseDown, onDo
                         className={clsx(
                             "w-full h-full rounded border overflow-hidden transition-shadow",
                             !isSummary && "cursor-grab active:cursor-grabbing shadow-ingot hover:brightness-110 border-white/10",
-                            isSummary ? "bg-bronze/40 border-bronze/50 rounded-sm" : ""
+                            isSummary ? "bg-bronze/40 border-bronze/50 rounded-sm" : "border-2 border-red-500" // Hardcoded red border for debugging
                         )}
                         style={!isSummary ? {
                             background: `linear-gradient(90deg, #9A8C74 ${task.progress}%, #2A2E35 ${task.progress}%)`
