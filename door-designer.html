@@ -207,6 +207,8 @@
                     id="disp-height">--</span></div>
             <div class="stat-row"><span class="stat-label">Arch Radius:</span><span class="stat-value"
                     id="disp-radius">--</span></div>
+            <div class="stat-row"><span class="stat-label">Arch Center Y:</span><span class="stat-value"
+                    id="disp-center">--</span></div>
 
             <h2>Configuration</h2>
             <div class="stat-row"><span class="stat-label">Leaf Style:</span><span class="stat-value"
@@ -233,14 +235,15 @@
                 // Default Configuration
                 this.config = Object.assign({
                     width: 1800,        // Total width (mm)
-                    height: 2400,       // Total height to apex (mm)
+                    height: 2200,       // Height to top of rectangular section (mm)
                     thickness: 55,      // Door thickness (mm)
 
                     isDoubleLeaf: true, // Single or Double
 
-                    // Arch Parameters
+                    // Overall Arch Parameters (Arch spans full width)
                     hasArch: true,
-                    archSpringHeight: 1800, // Height where arch starts (mm)
+                    archRadius: 1200,   // Radius of the circular arch (mm)
+                    archCenterY: 1800,  // Y position of the arch center (mm from floor)
 
                     // Frame & Panels
                     stileWidth: 150,    // Vertical beams
@@ -260,13 +263,18 @@
             }
 
             initMaterials() {
-                // Placeholder materials - will be upgraded to textures later
                 return {
                     oak: new THREE.MeshStandardMaterial({
                         color: 0x8B5A2B,
                         roughness: 0.7,
                         metalness: 0.1,
                         name: 'OakMat'
+                    }),
+                    oakDark: new THREE.MeshStandardMaterial({
+                        color: 0x6B4420,
+                        roughness: 0.75,
+                        metalness: 0.1,
+                        name: 'OakDarkMat'
                     }),
                     glass: new THREE.MeshPhysicalMaterial({
                         color: 0xffffff,
@@ -292,10 +300,9 @@
                     this.meshGroup.remove(child);
                 }
 
-                const { width, height, thickness, isDoubleLeaf, hasArch } = this.config;
+                const { width, height, thickness, isDoubleLeaf, hasArch, archRadius, archCenterY, stileWidth, railWidth } = this.config;
 
                 // Calculate Leaf Dimensions
-                // If double leaf, each leaf is half width minus a small gap (e.g. 3mm)
                 const gap = isDoubleLeaf ? 3 : 0;
                 const leafWidth = isDoubleLeaf ? (width - gap) / 2 : width;
 
@@ -312,8 +319,17 @@
                 if (isDoubleLeaf) {
                     const rightLeaf = this.createLeaf(leafWidth, height, thickness, false);
                     rightLeaf.position.set(rightPos / 1000, 0, 0);
-                    // Mirror logic if needed (e.g. for rebates), for now identical
                     this.meshGroup.add(rightLeaf);
+                }
+
+                // Generate Overall Arch Frame (spans entire width)
+                if (hasArch) {
+                    const archFrame = this.createOverallArchFrame(width, archRadius, archCenterY, thickness);
+                    this.meshGroup.add(archFrame);
+
+                    // Generate Curved Top Panel
+                    const curvedPanel = this.createCurvedTopPanel(width, archRadius, archCenterY, height, thickness);
+                    if (curvedPanel) this.meshGroup.add(curvedPanel);
                 }
 
                 this.updateUI();
@@ -321,9 +337,10 @@
 
             createLeaf(width, height, thickness, isLeft) {
                 const group = new THREE.Group();
-                const { stileWidth, railWidth, woodType, hasArch, archSpringHeight } = this.config;
-                // Clamp spring height
-                const effSpringH = hasArch ? Math.min(archSpringHeight, height) : height;
+                const { stileWidth, railWidth, woodType, hasArch, archCenterY, archRadius } = this.config;
+
+                // Effective height for stiles (up to bottom of arch if arch exists)
+                const effHeight = height;
 
                 // Helper to create members
                 const createMember = (w, h, d, x, y, name) => {
@@ -337,108 +354,180 @@
                 };
 
                 // 1. Stiles (Vertical Side Beams)
-                // Left Stile
-                group.add(createMember(stileWidth, effSpringH, thickness, -width / 2 + stileWidth / 2, effSpringH / 2, 'Stile_Left'));
-                // Right Stile
-                group.add(createMember(stileWidth, effSpringH, thickness, width / 2 - stileWidth / 2, effSpringH / 2, 'Stile_Right'));
+                group.add(createMember(stileWidth, effHeight, thickness, -width / 2 + stileWidth / 2, effHeight / 2, 'Stile_Left'));
+                group.add(createMember(stileWidth, effHeight, thickness, width / 2 - stileWidth / 2, effHeight / 2, 'Stile_Right'));
 
                 // 2. Rails (Horizontal Beams)
                 // Bottom Rail
                 group.add(createMember(width - 2 * stileWidth, railWidth, thickness, 0, railWidth / 2, 'Rail_Bottom'));
 
-                // Middle/Lock Rail - Only if space permits
-                const lockRailHeight = 1000;
-                // Check if panel rows > 1 before adding lock rail by default? 
-                // Or does panel/muntin logic override this?
-                // Let's keep Lock Rail as a "feature" but Panel logic handles the rest.
-                // Actually, if we generate panels, we generate MUNTINS. 
-                // A "Lock Rail" is just a wider muntin usually. 
-                // Let's implicitely assume panelRows will generate horizontal bars.
-                // WE REMOVE EXPLICIT LOCK RAIL here to rely on generatePanels, 
-                // UNLESS panelRows is 1, then maybe we want a lock rail?
-                // Let's KEEP Lock rail as a helper visual but be careful of overlap.
-                // Actually, let's remove it and let generatePanels do the work.
+                // Top Rail (at the height, below the arch area)
+                group.add(createMember(width - 2 * stileWidth, railWidth, thickness, 0, effHeight - railWidth / 2, 'Rail_Top'));
 
-                // 3. Top Rail / Arch
-                if (hasArch) {
-                    const archShape = new THREE.Shape();
-                    const w = width / 1000;
-                    const h_total = height / 1000;
-                    const h_spring = effSpringH / 1000;
-                    const t_rail = railWidth / 1000;
-                    const t_stile = stileWidth / 1000;
-
-                    const xRadius = w / 2;
-                    const yRadius = h_total - h_spring;
-
-                    // OUTER CURVE (Top of door)
-                    // Box center is 0,0 for X.
-                    archShape.absellipse(0, h_spring, xRadius, yRadius, Math.PI, 0, true);
-
-                    // INNER CURVE (Bottom of rail)
-                    const innerXRadius = Math.max(0.01, xRadius - t_stile);
-                    const innerYRadius = Math.max(0.01, yRadius - t_rail);
-
-                    archShape.lineTo(innerXRadius, h_spring);
-                    archShape.absellipse(0, h_spring, innerXRadius, innerYRadius, 0, Math.PI, false);
-
-                    archShape.closePath();
-
-                    const extrudeSettings = {
-                        steps: 1,
-                        depth: thickness / 1000,
-                        bevelEnabled: false
-                    };
-
-                    const archGeo = new THREE.ExtrudeGeometry(archShape, extrudeSettings);
-                    archGeo.translate(0, 0, - (thickness / 1000) / 2);
-
-                    const archMesh = new THREE.Mesh(archGeo, this.materials.oak);
-                    archMesh.name = 'Rail_Arch';
-                    archMesh.castShadow = true;
-                    archMesh.receiveShadow = true;
-                    group.add(archMesh);
-
-                } else {
-                    // Standard Top Rail
-                    group.add(createMember(width - 2 * stileWidth, railWidth, thickness, 0, height - railWidth / 2, 'Rail_Top'));
-                }
-
-                // 4. Panels & Muntins
-                this.generatePanels(group, width, effSpringH, thickness);
+                // 3. Panels & Muntins
+                this.generatePanels(group, width, effHeight, thickness);
 
                 return group;
+            }
+
+            createOverallArchFrame(totalWidth, radius, centerY, thickness) {
+                // The arch frame spans the full door width.
+                // It's a circular arc segment.
+                // Center is at (0, centerY) in door coordinates.
+                // Radius is `radius`.
+
+                const group = new THREE.Group();
+                const { stileWidth, railWidth } = this.config;
+
+                const w = totalWidth / 1000;
+                const r = radius / 1000;
+                const cy = centerY / 1000;
+                const t_stile = stileWidth / 1000;
+                const t_rail = railWidth / 1000;
+                const depth = thickness / 1000;
+
+                // Calculate angle at which the arch intersects the vertical edges of the door
+                // Circle: (x)^2 + (y - cy)^2 = r^2
+                // At x = +/- w/2, solve for y
+                const halfW = w / 2;
+                if (halfW > r) {
+                    console.warn("Arch radius too small for door width.");
+                    return group; // Can't form arch
+                }
+
+                // y - cy = sqrt(r^2 - halfW^2)
+                // y = cy + sqrt(r^2 - halfW^2)  (top of circle)
+                const yAtEdge = cy + Math.sqrt(r * r - halfW * halfW);
+
+                // Outer arch curve
+                const outerShape = new THREE.Shape();
+
+                // Angle from center to left edge: atan2(yAtEdge - cy, -halfW) relative to center
+                // Actually, let's use absarc.
+                // Arc from left to right edge of outer circle.
+                // Start angle: acos(halfW / r) -> angle from +X axis
+                // We need angle from center (0, cy) to point (-halfW, yAtEdge).
+                // Using atan2: angle = atan2(yAtEdge - cy, -halfW)
+                // For absarc, center is (0, cy), radius is r.
+                // Start at left edge, sweep to right edge.
+
+                const startAngleOuter = Math.acos(halfW / r); // Angle from +X to right edge (mirrored)
+                const endAngleOuter = Math.PI - startAngleOuter; // Angle to left edge
+
+                // Outer arc (from left to right, going over the top)
+                outerShape.absarc(0, cy, r, endAngleOuter, startAngleOuter, true); // Clockwise from left to right
+
+                // Inner arc (smaller radius, from right back to left)
+                const innerR = r - t_rail;
+                if (innerR > 0 && halfW - t_stile < innerR) {
+                    const innerHalfW = halfW - t_stile;
+                    // Check if inner arc is valid
+                    if (innerHalfW > 0 && innerHalfW < innerR) {
+                        const startAngleInner = Math.acos(innerHalfW / innerR);
+                        const endAngleInner = Math.PI - startAngleInner;
+
+                        // Line down from outer right to inner right
+                        const yAtEdgeInner = cy + Math.sqrt(innerR * innerR - innerHalfW * innerHalfW);
+                        outerShape.lineTo(innerHalfW, yAtEdgeInner);
+
+                        // Inner arc (counter-clockwise from right to left)
+                        outerShape.absarc(0, cy, innerR, startAngleInner, endAngleInner, false);
+                    }
+                }
+
+                outerShape.closePath();
+
+                const extrudeSettings = { steps: 1, depth: depth, bevelEnabled: false };
+                const archGeo = new THREE.ExtrudeGeometry(outerShape, extrudeSettings);
+                archGeo.translate(0, 0, -depth / 2);
+
+                const archMesh = new THREE.Mesh(archGeo, this.materials.oak);
+                archMesh.name = 'Arch_Frame';
+                archMesh.castShadow = true;
+                archMesh.receiveShadow = true;
+                group.add(archMesh);
+
+                return group;
+            }
+
+            createCurvedTopPanel(totalWidth, radius, centerY, rectHeight, thickness) {
+                // The curved panel fills the space between the top rail of the door
+                // (at rectHeight) and the inner curve of the arch.
+
+                const { stileWidth, railWidth } = this.config;
+
+                const w = totalWidth / 1000;
+                const r = radius / 1000;
+                const cy = centerY / 1000;
+                const rh = rectHeight / 1000;
+                const t_stile = stileWidth / 1000;
+                const t_rail = railWidth / 1000;
+                const depth = (thickness * 0.6) / 1000; // Panel is thinner
+
+                const halfW = w / 2;
+                const innerR = r - t_rail;
+                const panelHalfW = halfW - t_stile;
+
+                if (innerR <= 0 || panelHalfW <= 0 || panelHalfW >= innerR) return null;
+
+                // Bottom of panel is top of top rail = rh - t_rail (the TOP of the top rail is at rh - t_rail/2 + t_rail/2 = rh)
+                // Wait, let's be precise:
+                // Top Rail center Y = rh - t_rail / 2. So top edge of top rail = rh.
+                // Panel bottom edge should be at rh.
+                const panelBottomY = rh;
+
+                // Check if arch curve is above panelBottomY within the panel width
+                // Y at inner arch edge (at x = panelHalfW): cy + sqrt(innerR^2 - panelHalfW^2)
+                const yAtPanelEdge = cy + Math.sqrt(innerR * innerR - panelHalfW * panelHalfW);
+
+                if (yAtPanelEdge <= panelBottomY) return null; // Arch doesn't extend above rect
+
+                // Shape: Bottom straight line, then arc, close
+                const panelShape = new THREE.Shape();
+
+                // Start at bottom-left
+                panelShape.moveTo(-panelHalfW, panelBottomY);
+
+                // Line to bottom-right
+                panelShape.lineTo(panelHalfW, panelBottomY);
+
+                // Arc up and over (from right to left, counter-clockwise relative to center)
+                const startAngle = Math.acos(panelHalfW / innerR);
+                const endAngle = Math.PI - startAngle;
+                panelShape.absarc(0, cy, innerR, startAngle, endAngle, false);
+
+                panelShape.closePath();
+
+                const extrudeSettings = { steps: 1, depth: depth, bevelEnabled: false };
+                const panelGeo = new THREE.ExtrudeGeometry(panelShape, extrudeSettings);
+                panelGeo.translate(0, 0, -depth / 2);
+
+                const panelMesh = new THREE.Mesh(panelGeo, this.materials.oakDark);
+                panelMesh.name = 'Panel_CurvedTop';
+                panelMesh.castShadow = true;
+                panelMesh.receiveShadow = true;
+
+                return panelMesh;
             }
 
             generatePanels(group, leafWidth, leafHeight, thickness) {
                 const { stileWidth, railWidth, muntinWidth, panelRows, panelCols } = this.config;
 
-                // Working Area (Between Stiles and Main Rails)
-                // Valid Panel Height = leafHeight - 2 * railWidth
-                // Valid Panel Width = leafWidth - 2 * stileWidth
-
                 const validW = leafWidth - 2 * stileWidth;
                 const validH = leafHeight - 2 * railWidth;
 
-                if (validW <= 0 || validH <= 0) return; // No space
+                if (validW <= 0 || validH <= 0) return;
 
-                // Calculate Slot Dimensions
                 const panelSlotW = (validW - (panelCols - 1) * muntinWidth) / panelCols;
                 const panelSlotH = (validH - (panelRows - 1) * muntinWidth) / panelRows;
 
                 if (panelSlotW <= 0 || panelSlotH <= 0) return;
 
-                // Start Positions (Bottom-Left of valid area)
-                // Center is 0,0. 
-                // X Start = -leafWidth/2 + stileWidth
-                // Y Start = railWidth (since bottom rail height is railWidth)
-
                 const startX = -leafWidth / 2 + stileWidth;
                 const startY = railWidth;
 
-                // HELPER: Create Muntin
                 const createMuntin = (w, h, x, y, name) => {
-                    const geo = new THREE.BoxGeometry(w / 1000, h / 1000, thickness / 1000); // Full thickness for frame
+                    const geo = new THREE.BoxGeometry(w / 1000, h / 1000, thickness / 1000);
                     const mesh = new THREE.Mesh(geo, this.materials.oak);
                     mesh.position.set(x / 1000, y / 1000, 0);
                     mesh.name = name;
@@ -446,18 +535,16 @@
                     group.add(mesh);
                 };
 
-                // HELPER: Create Panel
                 const createPanel = (w, h, x, y) => {
                     const pThick = thickness * 0.6;
                     const geo = new THREE.BoxGeometry(w / 1000, h / 1000, pThick / 1000);
-                    const mesh = new THREE.Mesh(geo, this.materials.oak);
+                    const mesh = new THREE.Mesh(geo, this.materials.oakDark);
                     mesh.position.set(x / 1000, y / 1000, 0);
                     mesh.name = 'Panel';
                     mesh.castShadow = true;
                     group.add(mesh);
                 };
 
-                // Grid Loop
                 for (let r = 0; r < panelRows; r++) {
                     for (let c = 0; c < panelCols; c++) {
                         const x = startX + c * (panelSlotW + muntinWidth) + panelSlotW / 2;
@@ -465,7 +552,6 @@
 
                         createPanel(panelSlotW, panelSlotH, x, y);
 
-                        // Vertical Muntin (to the right if not last)
                         if (c < panelCols - 1) {
                             const mx = startX + (c + 1) * panelSlotW + c * muntinWidth + muntinWidth / 2;
                             const my = y;
@@ -473,11 +559,9 @@
                         }
                     }
 
-                    // Horizontal Muntin (above if not last)
                     if (r < panelRows - 1) {
                         const ry = startY + (r + 1) * panelSlotH + r * muntinWidth + muntinWidth / 2;
-                        const rx = 0; // Center X (spans full valid width)
-                        // Wait, rx should be 0 because validW is centered.
+                        const rx = 0;
                         createMuntin(validW, muntinWidth, rx, ry, 'Muntin_Horz');
                     }
                 }
@@ -486,10 +570,10 @@
             updateUI() {
                 document.getElementById('disp-width').textContent = `${this.config.width} mm`;
                 document.getElementById('disp-height').textContent = `${this.config.height} mm`;
-                document.getElementById('disp-radius').textContent = this.config.hasArch ? `Spring: ${this.config.archSpringHeight}mm` : 'N/A';
+                document.getElementById('disp-radius').textContent = this.config.hasArch ? `${this.config.archRadius} mm` : 'N/A';
+                document.getElementById('disp-center').textContent = this.config.hasArch ? `${this.config.archCenterY} mm` : 'N/A';
                 document.getElementById('disp-style').textContent = this.config.isDoubleLeaf ? 'Double Leaf' : 'Single Leaf';
 
-                // Crude weight calc (Oak approx 750kg/m3)
                 const vol = (this.config.width / 1000) * (this.config.height / 1000) * (this.config.thickness / 1000);
                 const weight = Math.round(vol * 750 * 0.8);
                 document.getElementById('disp-weight').textContent = weight;
@@ -501,8 +585,7 @@
         // ------------------------------------------------------------------
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0F1115); // Matches --midnight
-        // scene.fog = new THREE.Fog(0x0F1115, 5, 20);
+        scene.background = new THREE.Color(0x0F1115);
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
         camera.position.set(0, 1.5, 4);
@@ -540,18 +623,21 @@
         const gui = new GUI({ title: 'Workshop Controls' });
 
         const dimFolder = gui.addFolder('Dimensions');
-        dimFolder.add(door.config, 'width', 800, 4000).onChange(() => door.generate());
-        dimFolder.add(door.config, 'height', 1800, 4000).onChange(() => door.generate());
-        dimFolder.add(door.config, 'thickness', 35, 80).onChange(() => door.generate());
+        dimFolder.add(door.config, 'width', 800, 4000).name('Width (mm)').onChange(() => door.generate());
+        dimFolder.add(door.config, 'height', 1800, 3500).name('Height (mm)').onChange(() => door.generate());
+        dimFolder.add(door.config, 'thickness', 35, 80).name('Thickness (mm)').onChange(() => door.generate());
+
+        const archFolder = gui.addFolder('Arch');
+        archFolder.add(door.config, 'hasArch').name('Enable Arch').onChange(() => door.generate());
+        archFolder.add(door.config, 'archRadius', 500, 3000).name('Radius (mm)').onChange(() => door.generate());
+        archFolder.add(door.config, 'archCenterY', 500, 3000).name('Center Y (mm)').onChange(() => door.generate());
 
         const styleFolder = gui.addFolder('Style');
         styleFolder.add(door.config, 'isDoubleLeaf').name('Double Leaf').onChange(() => door.generate());
-        styleFolder.add(door.config, 'hasArch').name('Arched Top').onChange(() => door.generate());
-        styleFolder.add(door.config, 'archSpringHeight', 1000, 3000).name('Arch Spring H').onChange(() => door.generate());
 
         const panelFolder = gui.addFolder('Panels');
-        panelFolder.add(door.config, 'panelRows', 1, 6, 1).onChange(() => door.generate());
-        panelFolder.add(door.config, 'panelCols', 1, 4, 1).onChange(() => door.generate());
+        panelFolder.add(door.config, 'panelRows', 1, 6, 1).name('Rows').onChange(() => door.generate());
+        panelFolder.add(door.config, 'panelCols', 1, 4, 1).name('Cols').onChange(() => door.generate());
         panelFolder.add(door.config, 'muntinWidth', 40, 200, 5).name('Muntin Width').onChange(() => door.generate());
         panelFolder.add(door.config, 'stileWidth', 80, 400, 5).name('Stile Width').onChange(() => door.generate());
         panelFolder.add(door.config, 'railWidth', 80, 400, 5).name('Rail Width').onChange(() => door.generate());
