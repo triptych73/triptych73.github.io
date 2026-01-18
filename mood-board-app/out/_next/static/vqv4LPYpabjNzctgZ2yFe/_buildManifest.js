@@ -1,7 +1,12 @@
 self.__BUILD_MANIFEST = {
   "__rewrites": {
     "afterFiles": [],
-    "beforeFiles": [],
+    "beforeFiles": [
+      {
+        "source": "/mood-board-app/out//_next/:path+",
+        "destination": "/mood-board-app/out/_next/:path+"
+      }
+    ],
     "fallback": []
   },
   "sortedPages": [
