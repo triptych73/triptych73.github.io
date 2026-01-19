@@ -238,6 +238,7 @@
 
                     woodType: 'Oak',
                     hingeType: 'Butt', // None, Butt, Strap
+                    hingeSide: 'Front', // Front, Back
                     openAngle: 0
                 }, config);
 
@@ -282,26 +283,34 @@
                         plate.position.set(direction * 0.02, 0, 0);
                         hinge.add(plate);
                     } else if (type === 'Strap') {
-                        const strapL = 0.45;
-                        const strapW = 0.045;
-                        const strap = new THREE.Mesh(new THREE.BoxGeometry(strapL, strapW, 0.006), hingeMat);
-                        strap.position.set(direction * (strapL / 2 + 0.005), 0, t / 2 + 0.005);
+                        // Heavily scaled up by ~30%
+                        const strapL = 0.60;
+                        const strapW = 0.060;
+                        const zSide = (this.config.hingeSide === 'Back') ? -1 : 1;
+                        const zOffset = (t / 2 + 0.005) * zSide;
+
+                        const strap = new THREE.Mesh(new THREE.BoxGeometry(strapL, strapW, 0.008), hingeMat);
+                        strap.position.set(direction * (strapL / 2 + 0.005), 0, zOffset);
 
                         // Studs
-                        const studGeo = new THREE.SphereGeometry(0.008, 16, 16);
+                        const studGeo = new THREE.SphereGeometry(0.012, 16, 16);
                         for (let k = 1; k <= 3; k++) {
                             const stud = new THREE.Mesh(studGeo, hingeMat);
-                            stud.position.set(direction * (k * 0.12), 0, t / 2 + 0.009);
+                            // Stud always protrudes outward from the strap face
+                            const studZ = zOffset + (0.004 + 0.008) * zSide; // Strap center Z + half thickness + radius?
+                            // Simpler: Just offset from strap center in direction of Normal (zSide)
+                            stud.position.set(direction * (k * 0.16), 0, zOffset + 0.006 * zSide);
                             stud.scale.set(1, 1, 0.5);
+                            stud.rotation.x = (zSide === -1) ? Math.PI : 0; // Flip if back
                             hinge.add(stud);
                         }
 
                         hinge.add(strap);
 
                         // Tip
-                        const tip = new THREE.Mesh(new THREE.CylinderGeometry(0, strapW / 2, 0.06, 4), hingeMat);
+                        const tip = new THREE.Mesh(new THREE.CylinderGeometry(0, strapW / 2, 0.08, 4), hingeMat);
                         tip.rotation.z = -Math.PI / 2 * direction;
-                        tip.position.set(direction * (strapL + 0.03), 0, t / 2 + 0.005);
+                        tip.position.set(direction * (strapL + 0.04), 0, zOffset);
                         hinge.add(tip);
                     }
 
@@ -1420,6 +1429,7 @@
         const hardFolder = gui.addFolder('Hardware');
         hardFolder.add(door.config, 'openAngle', 0, 90).name('Open Angle').onChange(() => door.generate());
         hardFolder.add(door.config, 'hingeType', ['None', 'Butt', 'Strap']).name('Hinge Type').onChange(() => door.generate());
+        hardFolder.add(door.config, 'hingeSide', ['Front', 'Back']).name('Hinge Face').onChange(() => door.generate());
 
         const panelFolder = gui.addFolder('Panel Heights (mm)');
         const rowHeightControllers = [];
