@@ -722,8 +722,8 @@
 
                 if (pattern === 'Rectangular') {
                     // Rectangular Grid
-                    const rectW = (config.rectWidth || 100) / 1000;
-                    const rectH = (config.rectHeight || 120) / 1000;
+                    const rectW = (config.rectWidth || 30) / 1000;
+                    const rectH = (config.rectHeight || 30) / 1000;
 
                     const halfW = w / 2;
                     const halfH = h / 2;
@@ -750,7 +750,7 @@
 
                 } else {
                     // Diamond (Default)
-                    const diamondW = (config.diamondSize || 100) / 1000;
+                    const diamondW = (config.diamondSize || 30) / 1000;
                     const diamondH = diamondW * 1.5;
 
                     const angle = Math.atan2(diamondH, diamondW);
@@ -1002,8 +1002,8 @@
                         const midY = startY + boundH / 2;
 
                         if (pattern === 'Rectangular') {
-                            const rectW = (override.rectWidth || 100) / 1000;
-                            const rectH = (override.rectHeight || 120) / 1000;
+                            const rectW = (override.rectWidth || 30) / 1000;
+                            const rectH = (override.rectHeight || 30) / 1000;
 
                             const numV = Math.floor((boundW / 2) / rectW);
                             for (let i = -numV; i <= numV; i++) {
@@ -1021,7 +1021,7 @@
                                 leadGrp.add(bar);
                             }
                         } else {
-                            const diamondW = (override.diamondSize || 100) / 1000;
+                            const diamondW = (override.diamondSize || 30) / 1000;
                             const diamondH = diamondW * 1.5;
                             const angle = Math.atan2(diamondH, diamondW);
                             const diagLength = (boundW + boundH) * 2;
@@ -1209,9 +1209,9 @@
             const proxy = {
                 type: config.type || 'Default',
                 pattern: config.pattern || 'Diamond',
-                diamondSize: config.diamondSize || 100,
-                rectWidth: config.rectWidth || 100,
-                rectHeight: config.rectHeight || 120
+                diamondSize: config.diamondSize || 30,
+                rectWidth: config.rectWidth || 30,
+                rectHeight: config.rectHeight || 30
             };
 
             const updateDoor = () => {
@@ -1245,10 +1245,10 @@
                 selControllers.push(patCtrl);
 
                 if (proxy.pattern === 'Rectangular') {
-                    selControllers.push(selFolder.add(proxy, 'rectWidth', 20, 300).name('Grid Width').onChange(updateDoor));
-                    selControllers.push(selFolder.add(proxy, 'rectHeight', 20, 300).name('Grid Height').onChange(updateDoor));
+                    selControllers.push(selFolder.add(proxy, 'rectWidth', 10, 150).name('Grid Width').onChange(updateDoor));
+                    selControllers.push(selFolder.add(proxy, 'rectHeight', 10, 150).name('Grid Height').onChange(updateDoor));
                 } else {
-                    selControllers.push(selFolder.add(proxy, 'diamondSize', 50, 300).name('Diamond Size').onChange(updateDoor));
+                    selControllers.push(selFolder.add(proxy, 'diamondSize', 10, 150).name('Diamond Size').onChange(updateDoor));
                 }
             }
         };
