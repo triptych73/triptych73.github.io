@@ -396,45 +396,39 @@
                 const grp = new THREE.Group();
                 grp.position.set(x, y, 0);
 
-                const w = width; // already in meters? No, input width is in meters (colW from loop)
+                const w = width; // meters
                 const h = height; // meters
-                const t = thickness / 1000; // thickness input is millimeters, converted to meters in createLeaf? 
-                // Wait, in generate(), t is passed as thickness/1000. 
-                // Let's check call site: createProfiledPanel(colW, rowH, t, ...)
-                // colW and rowH are in meters. t is in meters.
-                // BEVEL inputs are in config as numbers (mm or deg).
+                // thickness passed in is the FULL door thickness (in meters) from createLeaf
+                const fullT = thickness;
 
                 const bWidth = Math.min(bevelWidth / 1000, w / 2 - 0.002, h / 2 - 0.002); // Clamp bevel width
                 const bAngleRad = (bevelAngle * Math.PI) / 180;
 
-                // Calculate bevel depth (rise)
+                // Calculate bevel depth (rise) from edge to field
+                // If the field is flush (at fullT/2), and we slope DOWN to the edge.
                 const bDepth = bWidth * Math.tan(bAngleRad);
 
-                // Check thickness constraints
-                // If flush, centered part is at +/- t/2
-                // Edge thickness = t - 2*bDepth (if both sides)
-                // Limit bDepth so edge doesn't invert
-                const maxDepth = (t - 0.006) / (bevelSides === 'Both' ? 2 : 1); // Maintain 6mm edge min
-                const effDepth = Math.min(bDepth, maxDepth);
+                // Constraints:
+                // We need a minimum "tongue" thickness at the edge to slot into the frame.
+                const minEdgeT = 0.012; // 12mm min tongue
+                const maxBevelDepth = (fullT - minEdgeT) / (bevelSides === 'Both' ? 2 : 1);
+
+                // Clamp effective depth
+                const effDepth = Math.min(bDepth, maxBevelDepth);
 
                 let geometry;
 
                 if (panelProfile === 'Raised') {
                     // Custom BufferGeometry for Raised Panel
-                    // We build the front face, back face, bevels, and edges.
-
                     const pGeom = new THREE.BufferGeometry();
                     const vertices = [];
                     const normals = [];
                     const uvs = [];
 
-                    // Helper to add quad
                     const addQuad = (v1, v2, v3, v4, n) => {
                         vertices.push(...v1, ...v2, ...v4);
                         vertices.push(...v2, ...v3, ...v4);
-                        // Simple flat normals
                         for (let i = 0; i < 6; i++) normals.push(...n);
-                        // UVs (planar mapping)
                         uvs.push((v1[0] + w / 2) / w, (v1[1] + h / 2) / h);
                         uvs.push((v2[0] + w / 2) / w, (v2[1] + h / 2) / h);
                         uvs.push((v4[0] + w / 2) / w, (v4[1] + h / 2) / h);
@@ -443,58 +437,70 @@
                         uvs.push((v4[0] + w / 2) / w, (v4[1] + h / 2) / h);
                     };
 
-                    // Dimensions
                     const outerW = w / 2;
                     const outerH = h / 2;
                     const innerW = w / 2 - bWidth;
                     const innerH = h / 2 - bWidth;
 
-                    const zFront = t / 2;
-                    const zBack = -t / 2;
-                    // For bevels:
-                    // If Front bevel: Center is at zFront, Edge is at zFront - effDepth
-                    // If Back bevel: Center is at zBack, Edge is at zBack + effDepth
+                    // FLUSH geometry: Center Field is at +/- fullT/2
+                    const zFront = fullT / 2;
+                    const zBack = -fullT / 2;
+
                     const zFrontCenter = zFront;
                     const zFrontEdge = (bevelSides === 'Front' || bevelSides === 'Both') ? zFront - effDepth : zFront;
+
                     const zBackCenter = zBack;
                     const zBackEdge = (bevelSides === 'Back' || bevelSides === 'Both') ? zBack + effDepth : zBack;
 
                     // -- FRONT SIDE --
                     if (bevelSides === 'Front' || bevelSides === 'Both') {
-                        // Center Field (Plateau)
+                        // Center Field (Flush)
                         addQuad(
                             [-innerW, -innerH, zFrontCenter], [innerW, -innerH, zFrontCenter],
                             [innerW, innerH, zFrontCenter], [-innerW, innerH, zFrontCenter],
                             [0, 0, 1]
                         );
 
-                        // Bevels (Slopes)
-                        // Bottom
+                        // Bevels
+                        // Needs correct normals for lighting
+                        // Vector on bevel plane: (0, bWidth, effDepth) -> Normal approx (0, effDepth, -bWidth) normalized?
+                        // Actually let's just use simple face normals or approx.
+                        // Bottom Bevel: Normal tilts down (y-) and forward (z+)
+                        // Slope is dy/dz = bWidth / effDepth. Angle alpha.
+                        // Normal.y = -sin(alpha), Normal.z = cos(alpha)
+                        const hyp = Math.sqrt(bWidth * bWidth + effDepth * effDepth);
+                        const ny = effDepth / hyp; // depth is Z difference, width is Y difference
+                        const nz = bWidth / hyp;
+
+                        // Bottom (Normal points ~ South-East?) No, South and Up(Front)
                         addQuad(
                             [-innerW, -innerH, zFrontCenter], [-outerW, -outerH, zFrontEdge],
                             [outerW, -outerH, zFrontEdge], [innerW, -innerH, zFrontCenter],
-                            [0, -Math.sin(bAngleRad), Math.cos(bAngleRad)] // Approx normal
+                            [0, -ny, nz]
                         );
                         // Top
                         addQuad(
                             [innerW, innerH, zFrontCenter], [outerW, outerH, zFrontEdge],
                             [-outerW, outerH, zFrontEdge], [-innerW, innerH, zFrontCenter],
-                            [0, Math.sin(bAngleRad), Math.cos(bAngleRad)]
+                            [0, ny, nz]
                         );
                         // Right
                         addQuad(
                             [innerW, -innerH, zFrontCenter], [outerW, -outerH, zFrontEdge],
                             [outerW, outerH, zFrontEdge], [innerW, innerH, zFrontCenter],
-                            [Math.sin(bAngleRad), 0, Math.cos(bAngleRad)]
+                            [ny, 0, nz]
                         );
                         // Left
                         addQuad(
                             [-outerW, -outerH, zFrontEdge], [-innerW, -innerH, zFrontCenter],
                             [-innerW, innerH, zFrontCenter], [-outerW, outerH, zFrontEdge],
-                            [-Math.sin(bAngleRad), 0, Math.cos(bAngleRad)]
+                            [-ny, 0, nz]
                         );
                     } else {
-                        // Flat Front
+                        // Flat Front (Recessed or Flush? Flat usually recessed)
+                        // If "Raised" profile but 'Back' only, front is flat. 
+                        // Should it be flush? Or recessed?
+                        // Let's make it flush same as center for consistency, essentially a thick block.
                         addQuad(
                             [-outerW, -outerH, zFront], [outerW, -outerH, zFront],
                             [outerW, outerH, zFront], [-outerW, outerH, zFront],
@@ -512,29 +518,33 @@
                         );
 
                         // Bevels
+                        const hyp = Math.sqrt(bWidth * bWidth + effDepth * effDepth);
+                        const ny = effDepth / hyp;
+                        const nz = -bWidth / hyp; // Points back (Z-)
+
                         // Bottom
                         addQuad(
                             [outerW, -outerH, zBackEdge], [-outerW, -outerH, zBackEdge],
                             [-innerW, -innerH, zBackCenter], [innerW, -innerH, zBackCenter],
-                            [0, -Math.sin(bAngleRad), -Math.cos(bAngleRad)]
+                            [0, -ny, nz]
                         );
                         // Top
                         addQuad(
                             [-outerW, outerH, zBackEdge], [outerW, outerH, zBackEdge],
                             [innerW, innerH, zBackCenter], [-innerW, innerH, zBackCenter],
-                            [0, Math.sin(bAngleRad), -Math.cos(bAngleRad)]
+                            [0, ny, nz]
                         );
                         // Right
                         addQuad(
                             [outerW, -outerH, zBackEdge], [innerW, -innerH, zBackCenter],
                             [innerW, innerH, zBackCenter], [outerW, outerH, zBackEdge],
-                            [Math.sin(bAngleRad), 0, -Math.cos(bAngleRad)]
+                            [ny, 0, nz]
                         );
                         // Left
                         addQuad(
                             [-innerW, -innerH, zBackCenter], [-outerW, -outerH, zBackEdge],
                             [-outerW, outerH, zBackEdge], [-innerW, innerH, zBackCenter],
-                            [-Math.sin(bAngleRad), 0, -Math.cos(bAngleRad)]
+                            [-ny, 0, nz]
                         );
                     } else {
                         // Flat Back
@@ -545,26 +555,22 @@
                         );
                     }
 
-                    // -- EDGES (Sides connecting FrontEdge to BackEdge) --
-                    // Bottom
+                    // -- EDGES --
                     addQuad(
                         [-outerW, -outerH, zBackEdge], [outerW, -outerH, zBackEdge],
                         [outerW, -outerH, zFrontEdge], [-outerW, -outerH, zFrontEdge],
                         [0, -1, 0]
                     );
-                    // Top
                     addQuad(
                         [-outerW, outerH, zFrontEdge], [outerW, outerH, zFrontEdge],
                         [outerW, outerH, zBackEdge], [-outerW, outerH, zBackEdge],
                         [0, 1, 0]
                     );
-                    // Right
                     addQuad(
                         [outerW, -outerH, zBackEdge], [outerW, outerH, zBackEdge],
                         [outerW, outerH, zFrontEdge], [outerW, -outerH, zFrontEdge],
                         [1, 0, 0]
                     );
-                    // Left
                     addQuad(
                         [-outerW, -outerH, zFrontEdge], [-outerW, outerH, zFrontEdge],
                         [-outerW, outerH, zBackEdge], [-outerW, -outerH, zBackEdge],
@@ -574,13 +580,16 @@
                     pGeom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
                     pGeom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
                     pGeom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-                    pGeom.computeVertexNormals();
+                    // REMOVED computeVertexNormals to keep sharp creases
 
                     geometry = pGeom;
 
                 } else {
-                    // Flat Panel
-                    geometry = new THREE.BoxGeometry(w, h, t);
+                    // Flat Panel - Standard recessed panel
+                    // Should this be flush or recessed? Usually flat panels are recessed.
+                    // Let's keep flat panels recessed (thinner).
+                    const tFlat = 0.018; // 18mm standard layout panel
+                    geometry = new THREE.BoxGeometry(w, h, tFlat);
                 }
 
                 const mesh = new THREE.Mesh(geometry, this.materials.oakDark);
@@ -591,26 +600,27 @@
 
                 // --- BEAD ---
                 if (hasBead) {
-                    const beadW = 0.006; // 6mm bead
-                    const beadShape = new THREE.Shape();
-                    // Draw a rect path for the panel edge
-                    const rect = new THREE.Shape();
-                    rect.moveTo(-w / 2, -h / 2);
-                    rect.lineTo(w / 2, -h / 2);
-                    rect.lineTo(w / 2, h / 2);
-                    rect.lineTo(-w / 2, h / 2);
-                    rect.closePath();
+                    const beadW = 0.006;
+                    const beadProtrusion = 0.002;
+                    // Position relative to whichever face is frontmost at the edge
+                    // For raised panel, edge is at zFrontEdge.
+                    // For flat panel, edge is at tFlat/2.
 
-                    // Extrude a bead shape along this path? 
-                    // Simpler: Just 4 cylinders/boxes or a tube?
-                    // Let's make 4 small mouldings.
-                    // Top/Bottom
+                    let zRef = 0;
+                    if (panelProfile === 'Raised') {
+                        zRef = (bevelSides === 'Front' || bevelSides === 'Both')
+                            ? (fullT / 2 - effDepth)
+                            : fullT / 2;
+                    } else {
+                        zRef = 0.018 / 2;
+                    }
+
+                    const zBead = zRef + beadW / 2;
+
+
                     const beadH = new THREE.BoxGeometry(w, beadW, beadW / 2);
                     const beadV = new THREE.BoxGeometry(beadW, h, beadW / 2);
                     const mat = this.materials.oak;
-
-                    // Position them on the panel face (slightly proud)
-                    const zBead = t / 2 + beadW / 4;
 
                     const topB = new THREE.Mesh(beadH, mat);
                     topB.position.set(0, h / 2 - beadW / 2, zBead);
