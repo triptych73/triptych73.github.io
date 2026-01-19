@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-midnight: #0F1115;
+  --color-void: #050505;
+  --color-panel: #16191D;
+  --color-border: #2A2E35;
+  --color-stone: #F5F5F0;
+  --color-bronze: #9A8C74;
+  --color-bronze-dark: #5C5242;
+  --color-emerald: #10B981;
+  --color-alert: #EF4444;
+  --color-glass: rgba(255, 255, 255, 0.05);
+
+  /* Fonts */
+  --font-serif: "Cinzel", serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+:root {
+  /* Keep CSS variables for JS usage if needed, though Tailwind controls them now */
+  --midnight: #0F1115;
+  --void: #050505;
+  --panel: #16191D;
+  --border: #2A2E35;
+  --stone: #F5F5F0;
+  --bronze: #9A8C74;
+}
+
+body {
+  background-color: var(--color-midnight);
+  color: var(--color-stone);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}

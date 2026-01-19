@@ -222,14 +222,15 @@
 
                     stileWidth: 120,
                     railWidth: 120,
+                    bottomRailWidth: 200,   // Taller bottom rail
                     muntinWidth: 60,
 
                     panelRowHeights: [500, 450, 400],
                     panelCols: 2,
 
                     panelProfile: 'Raised', // Flat, Raised
-                    bevelAngle: 20,         // degrees
-                    bevelWidth: 40,         // mm
+                    panelEdgeThickness: 15, // Thickness at the edge (min 10mm)
+                    bevelWidth: 55,         // mm
                     bevelSides: 'Both',     // Front, Back, Both
                     hasBead: false,         // Add bead moulding
 
@@ -342,10 +343,11 @@
                 }
 
                 // --- BOTTOM RAIL ---
-                group.add(createBox(innerWidth, rw, t, 0, rw / 2, this.materials.oak, 'Rail_Bottom'));
+                const brw = (this.config.bottomRailWidth || rw) / 1000;
+                group.add(createBox(innerWidth, brw, t, 0, brw / 2, this.materials.oak, 'Rail_Bottom'));
 
                 // --- PANELS & HORIZONTAL MUNTINS ---
-                let currentY = rw;
+                let currentY = brw;
                 const numRows = panelRowHeights.length;
 
                 for (let row = 0; row < numRows; row++) {
@@ -401,20 +403,37 @@
                 // thickness passed in is the FULL door thickness (in meters) from createLeaf
                 const fullT = thickness;
 
-                const bWidth = Math.min(bevelWidth / 1000, w / 2 - 0.002, h / 2 - 0.002); // Clamp bevel width
-                const bAngleRad = (bevelAngle * Math.PI) / 180;
+                // Edge Thickness (Tongue)
+                // User wants control of "half thickness... minimum 10mm".  
+                // We'll use panelEdgeThickness from config (total thickness).
+                // panelEdgeThickness is in mm.
+                const userEdgeT = (this.config.panelEdgeThickness || 12) / 1000;
 
-                // Calculate bevel depth (rise) from edge to field
-                // If the field is flush (at fullT/2), and we slope DOWN to the edge.
-                const bDepth = bWidth * Math.tan(bAngleRad);
+                // Bevel Width (Run)
+                const bWidth = Math.min(bevelWidth / 1000, w / 2 - 0.002, h / 2 - 0.002);
 
-                // Constraints:
-                // We need a minimum "tongue" thickness at the edge to slot into the frame.
-                const minEdgeT = 0.012; // 12mm min tongue
-                const maxBevelDepth = (fullT - minEdgeT) / (bevelSides === 'Both' ? 2 : 1);
+                // Calculate Bevel Depth (Rise)
+                // Rise = (FullThickness - EdgeThickness) / 2 (per side)
+                // If "Front" only, Rise = (FullThickness - EdgeThickness).
+                // If "Both", Rise = ...
 
-                // Clamp effective depth
-                const effDepth = Math.min(bDepth, maxBevelDepth);
+                // Wait, if panel is flush (FullT), and edge is userEdgeT.
+                // If Both: rise = (fullT - userEdgeT) / 2.
+                // If Front: rise = (fullT - userEdgeT). (Back is flush? Or back is userEdgeT?)
+                // Usually Single Raised Panel has flat back. So Back is flush with Edge? 
+                // Or Back is recessed?
+                // If "Front" only, let's assume Back is Flat/Recessed.
+                // Constraint: Edge must be centered?
+                // Let's stick to simple logic:
+                // Raise Amount = (fullT - userEdgeT) / (sides==Both ? 2 : 1).
+
+                const rise = (fullT - userEdgeT) / (bevelSides === 'Both' ? 2 : 1);
+
+                // Effective Depth (for geometry)
+                const effDepth = Math.max(0, rise);
+
+                // Bevel Angle (Derived) - informational, or used for normals
+                const bAngleRad = Math.atan2(effDepth, bWidth);
 
                 let geometry;
 
@@ -902,7 +921,7 @@
         const styleFolder = gui.addFolder('Style');
         styleFolder.add(door.config, 'isDoubleLeaf').name('Double Leaf').onChange(() => door.generate());
         styleFolder.add(door.config, 'panelProfile', ['Flat', 'Raised']).name('Panel Profile').onChange(() => door.generate());
-        styleFolder.add(door.config, 'bevelAngle', 0, 89).name('Bevel Angle (deg)').onChange(() => door.generate());
+        styleFolder.add(door.config, 'panelEdgeThickness', 10, 30).name('Edge Thick (mm)').onChange(() => door.generate());
         styleFolder.add(door.config, 'bevelWidth', 0, 150).name('Bevel Width (mm)').onChange(() => door.generate());
         styleFolder.add(door.config, 'bevelSides', ['Front', 'Back', 'Both']).name('Bevel Sides').onChange(() => door.generate());
         styleFolder.add(door.config, 'hasBead').name('Add Bead').onChange(() => door.generate());
@@ -910,6 +929,7 @@
         const frameFolder = gui.addFolder('Frame');
         frameFolder.add(door.config, 'stileWidth', 60, 300, 5).name('Stile W').onChange(() => door.generate());
         frameFolder.add(door.config, 'railWidth', 60, 300, 5).name('Rail W').onChange(() => door.generate());
+        frameFolder.add(door.config, 'bottomRailWidth', 60, 400, 5).name('Bot Rail W').onChange(() => door.generate());
         frameFolder.add(door.config, 'muntinWidth', 30, 150, 5).name('Muntin W').onChange(() => door.generate());
 
         const panelFolder = gui.addFolder('Panel Heights (mm)');
