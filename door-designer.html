@@ -797,12 +797,15 @@
             }
 
             createLeafArchPanel(leafWidth, thickness, leafCenterX, archStartY) {
-                const { archRadius, archCenterY, stileWidth } = this.config;
+                const { archRadius, archCenterY, stileWidth, railWidth } = this.config;
 
                 const w = leafWidth / 1000;
-                const t = (thickness * 0.6) / 1000;
+                // t is not used here properly? We re-define it inside the if block for Raised/Flat.
+                // But we need thickness for validation? No.
                 const sw = stileWidth / 1000;
-                const r = archRadius / 1000;
+                const rw = railWidth / 1000;
+                // Panel goes up to the Inner edge of the top rail
+                const r = (archRadius / 1000) - rw;
                 const cy = archCenterY / 1000;
                 const startY = archStartY;
 
@@ -812,12 +815,28 @@
                 const globalInnerLeft = leafCenterX / 1000 + innerLeftX;
                 const globalInnerRight = leafCenterX / 1000 + innerRightX;
 
-                if (Math.abs(globalInnerLeft) > r || Math.abs(globalInnerRight) > r) return null;
+                // Check geometry validity
+                // If the panel top corners are outside the inner radius, we clip them?
+                // Or if it's completely outside?
+                // Actually, if radius is small, yAtLeft might be imaginary.
+                // Math.sqrt check needed.
 
-                const yAtLeft = cy + Math.sqrt(r * r - globalInnerLeft * globalInnerLeft);
-                const yAtRight = cy + Math.sqrt(r * r - globalInnerRight * globalInnerRight);
+                const getY = (gx) => {
+                    if (Math.abs(gx) > r) return startY; // Should technically never happen if design is valid? Or just clamp to startY?
+                    return Math.max(startY, cy + Math.sqrt(r * r - gx * gx));
+                };
 
-                if (startY >= Math.min(yAtLeft, yAtRight)) return null;
+                const yAtLeft = getY(globalInnerLeft);
+                const yAtRight = getY(globalInnerRight);
+
+                if (startY >= Math.min(yAtLeft, yAtRight)) {
+                    // Panel is effectively rectangular or effectively 0 height at top?
+                    // Return null if height is 0? 
+                    // If yAtLeft < startY, implies error or geometry impossible.
+                    // But Math.max handles it.
+                    // This check is optimization.
+                    // If panel is flat top?
+                }
 
                 const shape = new THREE.Shape();
 
