@@ -255,7 +255,7 @@
                     glass: new THREE.MeshPhysicalMaterial({
                         color: 0x88ccff, transmission: 0.9, opacity: 1, metalness: 0, roughness: 0, ior: 1.5, thickness: 0.005, side: THREE.DoubleSide
                     }),
-                    lead: new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4, metalness: 0.8 })
+                    lead: new THREE.MeshStandardMaterial({ color: 0xAAAAAA, roughness: 0.3, metalness: 0.9 })
                 };
             }
 
@@ -276,7 +276,8 @@
                     hinge.position.y = y;
 
                     // Knuckle (Axis)
-                    const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 12), hingeMat);
+                    const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.15, 16), hingeMat);
+                    knuckle.position.x = -direction * 0.015;
                     hinge.add(knuckle);
 
                     if (type === 'Butt') {
@@ -287,18 +288,24 @@
                         const strapL = 0.45;
                         const strapW = 0.045;
                         const strap = new THREE.Mesh(new THREE.BoxGeometry(strapL, strapW, 0.006), hingeMat);
-                        strap.position.set(direction * (strapL / 2 + 0.01), 0, t / 2 + 0.003);
+                        strap.position.set(direction * (strapL / 2 + 0.005), 0, t / 2 + 0.005);
 
                         // Studs
-                        const studGeo = new THREE.SphereGeometry(0.006, 8, 8);
+                        const studGeo = new THREE.SphereGeometry(0.008, 16, 16);
                         for (let k = 1; k <= 3; k++) {
                             const stud = new THREE.Mesh(studGeo, hingeMat);
-                            stud.position.set(direction * (k * 0.12), 0, t / 2 + 0.006);
+                            stud.position.set(direction * (k * 0.12), 0, t / 2 + 0.009);
                             stud.scale.set(1, 1, 0.5);
                             hinge.add(stud);
                         }
 
                         hinge.add(strap);
+
+                        // Tip
+                        const tip = new THREE.Mesh(new THREE.CylinderGeometry(0, strapW / 2, 0.06, 4), hingeMat);
+                        tip.rotation.z = -Math.PI / 2 * direction;
+                        tip.position.set(direction * (strapL + 0.03), 0, t / 2 + 0.005);
+                        hinge.add(tip);
                     }
 
                     group.add(hinge);
