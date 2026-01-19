@@ -77,10 +77,12 @@ const Stage = () => {
                         <TransformControls
                             key={item.id}
                             mode="translate"
+                            showY={false} // Enforce floor-based plan layout
+                            translationSnap={null} // We handle snapping manually
                             onMouseUp={(e) => {
                                 if (e?.target?.object) {
                                     updateItem(item.id, {
-                                        position: [e.target.object.position.x, e.target.object.position.y, e.target.object.position.z],
+                                        position: [e.target.object.position.x, 0, e.target.object.position.z], // Force Y=0
                                         rotation: [e.target.object.rotation.x, e.target.object.rotation.y, e.target.object.rotation.z]
                                     });
                                 }
