@@ -259,23 +259,18 @@
                 };
             }
 
-            createHinges(type, direction, shoulderHeight) {
+            createHinges(type, direction, positions) {
                 if (!type || type === 'None') return null;
 
                 const { thickness } = this.config;
-                const t = thickness / 1000; // thickness
-                const h = shoulderHeight; // passed in
+                const t = thickness / 1000;
 
                 const group = new THREE.Group();
                 const hingeMat = this.materials.lead;
 
-                // Hinges at 25cm from bottom and 25cm from top (shoulder)
-                const yPos = [0.25, h - 0.25];
-
-                yPos.forEach(y => {
+                positions.forEach(y => {
                     const hinge = new THREE.Group();
                     hinge.position.y = y;
-                    hinge.add(new THREE.AxesHelper(0.2));
 
                     // Knuckle (Axis)
                     const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.15, 16), hingeMat);
@@ -347,6 +342,14 @@
 
                 const shoulderHeight = totalH;
 
+                // Hinge Positions
+                const strapYBottom = brw / 2;
+                const strapYTop = shoulderHeight - rw / 2;
+                const buttYBottom = 0.25;
+                const buttYTop = shoulderHeight - 0.20;
+
+                const hingeY = (this.config.hingeType === 'Strap') ? [strapYBottom, strapYTop] : [buttYBottom, buttYTop];
+
                 // Left (or Single) Leaf
                 const leftLeaf = this.createLeaf(leafWidth, thickness, leftPos, 0);
 
@@ -361,7 +364,7 @@
                     leftLeaf.position.x -= leftHingeX;
                     leftPivot.add(leftLeaf);
 
-                    const lHinges = this.createHinges(this.config.hingeType, 1, shoulderHeight);
+                    const lHinges = this.createHinges(this.config.hingeType, 1, hingeY);
                     if (lHinges) leftPivot.add(lHinges);
 
                     leftPivot.rotation.y = angleRad;
@@ -374,7 +377,7 @@
                     rightLeaf.position.x -= rightHingeX;
                     rightPivot.add(rightLeaf);
 
-                    const rHinges = this.createHinges(this.config.hingeType, -1, shoulderHeight);
+                    const rHinges = this.createHinges(this.config.hingeType, -1, hingeY);
                     if (rHinges) rightPivot.add(rHinges);
 
                     rightPivot.rotation.y = -angleRad;
@@ -388,7 +391,7 @@
                     leftLeaf.position.x -= hingeX;
                     pivot.add(leftLeaf);
 
-                    const hinges = this.createHinges(this.config.hingeType, 1, shoulderHeight);
+                    const hinges = this.createHinges(this.config.hingeType, 1, hingeY);
                     if (hinges) pivot.add(hinges);
 
                     pivot.rotation.y = angleRad;
