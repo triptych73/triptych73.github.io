@@ -1,9 +1,10 @@
 /**
  * Snap Utility for Kitchen Designer
  * Provides edge-to-edge snapping for cabinets and walls.
+ * REFINED: Enforces orthogonal overlap to prevent phantom/perpendicular snaps.
  */
 
-const SNAP_THRESHOLD = 0.1; // 100mm snap distance
+const SNAP_THRESHOLD = 0.2; // 200mm snap distance (slightly generous to catch intent)
 
 /**
  * Calculate the bounding box edges of an item in world space.
@@ -15,10 +16,11 @@ export function getItemBounds(item) {
     const width = item.width || 0.6;
     const depth = item.depth || 0.6;
 
-    // For simplicity, assume Y-axis rotation only (most common case)
+    // For simplicity, assume Y-axis rotation only (most common case in this app)
     const rotY = (item.rotation?.[1] || 0);
 
-    // If rotation is ~90 or ~270 degrees, swap width and depth
+    // If rotation is ~90 or ~270 degrees, swap width and depth logic for bounds
+    // Note: This is an AABB approximation. 
     const isRotated = Math.abs(Math.sin(rotY)) > 0.5;
     const effectiveWidth = isRotated ? depth : width;
     const effectiveDepth = isRotated ? width : depth;
@@ -32,7 +34,20 @@ export function getItemBounds(item) {
 }
 
 /**
+ * Check if two AABBs overlap.
+ */
+export function checkIntersection(boundsA, boundsB, padding = 0) {
+    return (
+        boundsA.minX < boundsB.maxX - padding &&
+        boundsA.maxX > boundsB.minX + padding &&
+        boundsA.minZ < boundsB.maxZ - padding &&
+        boundsA.maxZ > boundsB.minZ + padding
+    );
+}
+
+/**
  * Attempt to snap a moving item to other items.
+ * Only snaps if the items are "aligned" (overlap) on the orthogonal axis.
  * @param {Object} movingItem - The item being moved (with proposed new position)
  * @param {Array} allItems - All items in the scene
  * @param {string} movingItemId - ID of the moving item (to exclude from targets)
@@ -40,56 +55,67 @@ export function getItemBounds(item) {
  */
 export function snapToNearby(movingItem, allItems, movingItemId) {
     const newPos = [...movingItem.position];
-    const movingBounds = getItemBounds(movingItem);
+    let candidateX = newPos[0];
+    let candidateZ = newPos[2];
 
     let snappedX = false;
     let snappedZ = false;
+
+    // Helper to get bounds at a hypothetical position
+    const getHypotheticalBounds = (x, z) => getItemBounds({ ...movingItem, position: [x, movingItem.position[1], z] });
 
     for (const target of allItems) {
         if (target.id === movingItemId) continue;
 
         const targetBounds = getItemBounds(target);
 
-        // --- X-axis snapping (left/right edges) ---
-        if (!snappedX) {
-            // Moving item's right edge -> Target's left edge
-            const rightToLeft = Math.abs(movingBounds.maxX - targetBounds.minX);
-            if (rightToLeft < SNAP_THRESHOLD) {
-                newPos[0] = targetBounds.minX - (movingItem.width || 0.6) / 2;
+        // We use the current moving Item's dimensions, but at the CANDIDATE position.
+        // Initially, this is the mouse position. 
+        // If we snap X, we update candidateX, so subsequent Z checks use the snapped X.
+        const currentBounds = getHypotheticalBounds(candidateX, candidateZ);
+
+        // --- X-AXIS SNAP ---
+        // Requirement: Z-ranges must overlap significantly (to ensure we are "next to" the target)
+        // Overlap logic: (MinA < MaxB) and (MaxA > MinB)
+        const zOverlap = (currentBounds.minZ < targetBounds.maxZ - 0.05) && (currentBounds.maxZ > targetBounds.minZ + 0.05);
+
+        if (zOverlap && !snappedX) {
+            // Snap Right Edge to Target Left
+            if (Math.abs(currentBounds.maxX - targetBounds.minX) < SNAP_THRESHOLD) {
+                candidateX = targetBounds.minX - (currentBounds.maxX - currentBounds.minX) / 2;
                 snappedX = true;
             }
-
-            // Moving item's left edge -> Target's right edge
-            const leftToRight = Math.abs(movingBounds.minX - targetBounds.maxX);
-            if (leftToRight < SNAP_THRESHOLD) {
-                newPos[0] = targetBounds.maxX + (movingItem.width || 0.6) / 2;
+            // Snap Left Edge to Target Right
+            else if (Math.abs(currentBounds.minX - targetBounds.maxX) < SNAP_THRESHOLD) {
+                candidateX = targetBounds.maxX + (currentBounds.maxX - currentBounds.minX) / 2;
                 snappedX = true;
             }
         }
 
-        // --- Z-axis snapping (front/back edges) ---
-        if (!snappedZ) {
-            // Moving item's front (maxZ) -> Target's back (minZ)
-            const frontToBack = Math.abs(movingBounds.maxZ - targetBounds.minZ);
-            if (frontToBack < SNAP_THRESHOLD) {
-                newPos[2] = targetBounds.minZ - (movingItem.depth || 0.6) / 2;
+        // Update bounds with potentially new X for Z check
+        const boundsAfterX = getHypotheticalBounds(candidateX, candidateZ);
+
+        // --- Z-AXIS SNAP ---
+        // Requirement: X-ranges must overlap significantly
+        const xOverlap = (boundsAfterX.minX < targetBounds.maxX - 0.05) && (boundsAfterX.maxX > targetBounds.minX + 0.05);
+
+        if (xOverlap && !snappedZ) {
+            // Snap Front Edge to Target Back
+            if (Math.abs(boundsAfterX.maxZ - targetBounds.minZ) < SNAP_THRESHOLD) {
+                candidateZ = targetBounds.minZ - (boundsAfterX.maxZ - boundsAfterX.minZ) / 2;
                 snappedZ = true;
             }
-
-            // Moving item's back (minZ) -> Target's front (maxZ)
-            const backToFront = Math.abs(movingBounds.minZ - targetBounds.maxZ);
-            if (backToFront < SNAP_THRESHOLD) {
-                newPos[2] = targetBounds.maxZ + (movingItem.depth || 0.6) / 2;
+            // Snap Back Edge to Target Front
+            else if (Math.abs(boundsAfterX.minZ - targetBounds.maxZ) < SNAP_THRESHOLD) {
+                candidateZ = targetBounds.maxZ + (boundsAfterX.maxZ - boundsAfterX.minZ) / 2;
                 snappedZ = true;
             }
         }
-
-        if (snappedX && snappedZ) break; // Early exit if fully snapped
     }
 
     // NaN Guard
-    if (isNaN(newPos[0])) newPos[0] = movingItem.position[0];
-    if (isNaN(newPos[2])) newPos[2] = movingItem.position[2];
+    if (isNaN(candidateX)) candidateX = movingItem.position[0];
+    if (isNaN(candidateZ)) candidateZ = movingItem.position[2];
 
-    return newPos;
+    return [candidateX, newPos[1], candidateZ];
 }
