@@ -372,7 +372,7 @@
                         const override = this.panelOverrides ? this.panelOverrides[panelId] : null;
 
                         let panelMesh;
-                        if (override && override.type === 'Leaded') {
+                        if (override && (override.type === 'Leaded' || override.type === 'Glass')) {
                             panelMesh = this.createLeadedPanel(colW, rowH, t, panelX, rowCenterY, override);
                         } else {
                             panelMesh = this.createProfiledPanel(colW, rowH, t, panelX, rowCenterY);
@@ -978,13 +978,80 @@
                 shape.closePath();
 
                 if (override && (override.type === 'Leaded' || override.type === 'Glass')) {
+                    const grp = new THREE.Group();
+
+                    // 1. Glass
                     const extrudeSettings = { steps: 1, depth: 0.005, bevelEnabled: false };
                     const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
                     geometry.translate(0, 0, -0.0025);
 
-                    const mesh = new THREE.Mesh(geometry, this.materials.glass);
-                    mesh.name = 'Panel_Arch_Glass';
-                    return mesh;
+                    const glass = new THREE.Mesh(geometry, this.materials.glass);
+                    glass.name = 'Panel_Arch_Glass';
+                    grp.add(glass);
+
+                    if (override.type === 'Leaded') {
+                        const pattern = override.pattern || 'Diamond';
+                        const leadW = 0.004;
+                        const leadMat = this.materials.lead;
+                        const leadGrp = new THREE.Group();
+
+                        // Bounds
+                        const boundW = innerRightX - innerLeftX;
+                        const apex = cy + r;
+                        const boundH = apex - startY;
+                        const midY = startY + boundH / 2;
+
+                        if (pattern === 'Rectangular') {
+                            const rectW = (override.rectWidth || 100) / 1000;
+                            const rectH = (override.rectHeight || 120) / 1000;
+
+                            const numV = Math.floor((boundW / 2) / rectW);
+                            for (let i = -numV; i <= numV; i++) {
+                                const px = i * rectW;
+                                const bar = new THREE.Mesh(new THREE.BoxGeometry(leadW, boundH + 0.2, leadW), leadMat); // Extra length
+                                bar.position.set(px, midY, 0.0025);
+                                leadGrp.add(bar);
+                            }
+
+                            const numH = Math.floor((boundH / 2) / rectH) + 1;
+                            for (let i = -numH; i <= numH; i++) {
+                                const py = midY + i * rectH;
+                                const bar = new THREE.Mesh(new THREE.BoxGeometry(boundW + 0.2, leadW, leadW), leadMat);
+                                bar.position.set(0, py, 0.0025);
+                                leadGrp.add(bar);
+                            }
+                        } else {
+                            const diamondW = (override.diamondSize || 100) / 1000;
+                            const diamondH = diamondW * 1.5;
+                            const angle = Math.atan2(diamondH, diamondW);
+                            const diagLength = (boundW + boundH) * 2;
+                            const spacing = diamondW * Math.sin(angle);
+                            const maxDist = Math.max(boundW, boundH) + 0.5;
+                            const count = Math.ceil(maxDist / spacing);
+
+                            for (let i = -count; i <= count; i++) {
+                                const off = i * spacing;
+                                // A
+                                const barA = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
+                                barA.rotation.z = angle;
+                                const dx = -off * Math.sin(angle);
+                                const dy = off * Math.cos(angle);
+                                barA.position.set(dx, midY + dy, 0.0025);
+                                leadGrp.add(barA);
+
+                                // B
+                                const barB = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
+                                barB.rotation.z = -angle;
+                                const dx2 = off * Math.sin(angle);
+                                const dy2 = off * Math.cos(angle);
+                                barB.position.set(dx2, midY + dy2, 0.0025);
+                                leadGrp.add(barB);
+                            }
+                        }
+                        grp.add(leadGrp);
+                    }
+
+                    return grp;
                 }
 
                 const { panelProfile, bevelWidth, panelEdgeThickness } = this.config;
