@@ -4,7 +4,7 @@
  * REFINED: Enforces orthogonal overlap to prevent phantom/perpendicular snaps.
  */
 
-const SNAP_THRESHOLD = 0.2; // 200mm snap distance (slightly generous to catch intent)
+const SNAP_THRESHOLD = 0.05; // 50mm snap distance (tighter control)
 
 /**
  * Calculate the bounding box edges of an item in world space.
