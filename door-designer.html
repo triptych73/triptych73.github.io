@@ -845,11 +845,42 @@
 
                 shape.closePath();
 
-                const extrudeSettings = { steps: 1, depth: t, bevelEnabled: false };
-                const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                geo.translate(0, 0, -t / 2);
+                const { panelProfile, bevelWidth, panelEdgeThickness } = this.config;
+                const fullT = thickness / 1000;
 
-                const mesh = new THREE.Mesh(geo, this.materials.oakDark);
+                let geometry;
+
+                if (panelProfile === 'Raised') {
+                    const userEdgeT = (panelEdgeThickness || 12) / 1000;
+
+                    // Clamp bevel width to fit within the panel dimensions
+                    // Height available is the minimum height (at the edges)
+                    const minHeight = Math.min(yAtLeft, yAtRight) - startY;
+                    const maxBWidth = Math.min(w / 2, minHeight / 2) - 0.002; // Safety margin
+
+                    const bWidth = Math.max(0.001, Math.min(bevelWidth / 1000, maxBWidth));
+
+                    const rise = (fullT - userEdgeT) / 2;
+                    const safeRise = Math.max(0, rise);
+
+                    const extrudeSettings = {
+                        steps: 1,
+                        depth: userEdgeT,
+                        bevelEnabled: true,
+                        bevelThickness: safeRise,
+                        bevelSize: bWidth,
+                        bevelOffset: -bWidth,
+                        bevelSegments: 2
+                    };
+                    geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    geometry.translate(0, 0, -userEdgeT / 2);
+                } else {
+                    const extrudeSettings = { steps: 1, depth: t, bevelEnabled: false };
+                    geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    geometry.translate(0, 0, -t / 2);
+                }
+
+                const mesh = new THREE.Mesh(geometry, this.materials.oakDark);
                 mesh.name = 'Panel_Arch';
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
