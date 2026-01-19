@@ -13,13 +13,7 @@ const PropertiesPanel = () => {
             <div className="flex-1 p-4 text-center">
                 <p className="text-xs text-gray-500 font-mono mt-10">Select an item to edit</p>
                 <div className="mt-8 border-t border-border pt-4 text-left">
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                        <div className={`w-3 h-3 border ${snapEnabled ? 'bg-emerald border-emerald' : 'border-gray-500'} flex items-center justify-center`}>
-                            {snapEnabled && <div className="w-1.5 h-1.5 bg-midnight" />}
-                        </div>
-                        <span className="text-xs text-stone font-mono uppercase group-hover:text-bronze transition-colors">Snap Enabled</span>
-                        <input type="checkbox" className="hidden" checked={snapEnabled} onChange={toggleSnap} />
-                    </label>
+                    {/* Snap moved to bottom bar */}
                 </div>
             </div>
         );
@@ -40,13 +34,6 @@ const PropertiesPanel = () => {
                 <h3 className="text-bronze font-serif text-sm">
                     {selectedItem.name}
                 </h3>
-                <label className="flex items-center gap-2 cursor-pointer group" title="Toggle Snapping">
-                    <div className={`w-3 h-3 border ${snapEnabled ? 'bg-emerald border-emerald' : 'border-gray-500'} flex items-center justify-center`}>
-                        {snapEnabled && <div className="w-1.5 h-1.5 bg-midnight" />}
-                    </div>
-                    <span className="text-[10px] text-stone font-mono uppercase">Snap</span>
-                    <input type="checkbox" className="hidden" checked={snapEnabled} onChange={toggleSnap} />
-                </label>
             </div>
 
             {/* Position */}

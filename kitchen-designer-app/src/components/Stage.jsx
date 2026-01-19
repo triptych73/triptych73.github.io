@@ -31,10 +31,10 @@ const Stage = () => {
             {/* Floor / Grid */}
             <Grid
                 args={[20, 20]}
-                cellSize={1}
+                cellSize={0.1} // Minor lines every 10cm
                 cellThickness={0.5}
                 cellColor="#2A2E35"
-                sectionSize={5}
+                sectionSize={1} // Major lines every 1m
                 sectionThickness={1}
                 sectionColor="#9A8C74"
                 fadeDistance={50}
