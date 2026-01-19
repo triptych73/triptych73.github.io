@@ -307,10 +307,27 @@
 
                         hinge.add(strap);
 
-                        // Tip
-                        const tip = new THREE.Mesh(new THREE.CylinderGeometry(0, strapW / 2, 0.08, 4), hingeMat);
-                        tip.rotation.z = -Math.PI / 2 * direction;
-                        tip.position.set(direction * (strapL + 0.04), 0, zOffset);
+                        // Tip (Flat Triangle)
+                        const tipLen = 0.08;
+                        const tipShape = new THREE.Shape();
+                        tipShape.moveTo(0, -strapW / 2);
+                        tipShape.lineTo(tipLen, 0);
+                        tipShape.lineTo(0, strapW / 2);
+                        tipShape.lineTo(0, -strapW / 2);
+
+                        const tipGeo = new THREE.ExtrudeGeometry(tipShape, { depth: 0.008, bevelEnabled: false });
+                        const tip = new THREE.Mesh(tipGeo, hingeMat);
+
+                        // Center Z relative to zOffset (Extrude goes 0 to depth)
+                        tip.position.z = zOffset - 0.004;
+
+                        if (direction === 1) {
+                            tip.position.x = strapL + 0.005;
+                        } else {
+                            tip.position.x = -(strapL + 0.005);
+                            tip.rotation.z = Math.PI;
+                        }
+
                         hinge.add(tip);
                     }
 
