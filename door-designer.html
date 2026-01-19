@@ -843,23 +843,17 @@
                 shape.moveTo(innerLeftX, startY);
                 shape.lineTo(innerRightX, startY);
 
-                // Arc from right to left
-                const localCenterX = -leafCenterX / 1000;
-                const angleRight = Math.atan2(yAtRight - cy, globalInnerRight);
-                const angleLeft = Math.atan2(yAtLeft - cy, globalInnerLeft);
-
-                // Draw arc segment - need to sample points along the arc
+                // Top edge: trace from Right to Left using Cartesian steps to match Rail logic exactly
                 const numSegments = 32;
                 for (let i = 0; i <= numSegments; i++) {
                     const t_param = i / numSegments;
-                    const angle = angleRight + t_param * (angleLeft - angleRight);
-                    const px = r * Math.cos(angle) - leafCenterX / 1000; // Local X
-                    const py = cy + r * Math.sin(angle);
-                    if (i === 0) {
-                        shape.lineTo(px, py);
-                    } else {
-                        shape.lineTo(px, py);
-                    }
+                    // Interpolate X from Right to Left
+                    const localX = innerRightX + t_param * (innerLeftX - innerRightX);
+                    const globalX = leafCenterX / 1000 + localX;
+
+                    const py = getY(globalX);
+
+                    shape.lineTo(localX, py);
                 }
 
                 shape.closePath();
