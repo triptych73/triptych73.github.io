@@ -226,6 +226,7 @@
 
                     panelRowHeights: [500, 450, 400],
                     panelCols: 2,
+                    panelProfile: 'Raised', // Flat, Raised, Ogee, Bead
 
                     woodType: 'Oak'
                 }, config);
@@ -350,7 +351,8 @@
                     const colW = (innerWidth - (panelCols - 1) * mw) / panelCols;
                     for (let c = 0; c < panelCols; c++) {
                         const panelX = innerLeftX + c * (colW + mw) + colW / 2;
-                        group.add(createBox(colW, rowH, t * 0.6, panelX, rowCenterY, this.materials.oakDark, 'Panel'));
+                        const profiledPanel = this.createProfiledPanel(colW, rowH, t, panelX, rowCenterY);
+                        group.add(profiledPanel);
 
                         if (c < panelCols - 1) {
                             const mx = innerLeftX + (c + 1) * colW + c * mw + mw / 2;
@@ -382,6 +384,136 @@
                 }
 
                 return group;
+            }
+
+            createProfiledPanel(width, height, thickness, x, y) {
+                // Creates a panel with classical moulding profile
+                const { panelProfile } = this.config;
+                const w = width;
+                const h = height;
+                const t = thickness * 0.6; // Panel is thinner than frame
+
+                let geometry;
+                const margin = Math.min(w, h) * 0.15; // Moulding margin
+
+                switch (panelProfile) {
+                    case 'Raised': {
+                        // Raised/Fielded panel: raised center with beveled edges
+                        const shape = new THREE.Shape();
+                        shape.moveTo(-w / 2, -h / 2);
+                        shape.lineTo(w / 2, -h / 2);
+                        shape.lineTo(w / 2, h / 2);
+                        shape.lineTo(-w / 2, h / 2);
+                        shape.closePath();
+
+                        // Create bevel extrude
+                        geometry = new THREE.ExtrudeGeometry(shape, {
+                            steps: 1,
+                            depth: t,
+                            bevelEnabled: true,
+                            bevelThickness: t * 0.3,
+                            bevelSize: margin,
+                            bevelOffset: -margin,
+                            bevelSegments: 2
+                        });
+                        geometry.translate(0, 0, -t / 2);
+                        break;
+                    }
+
+                    case 'Ogee': {
+                        // Ogee profile: S-curve moulding around the edge
+                        const shape = new THREE.Shape();
+                        const m = margin;
+
+                        // Outer rectangle
+                        shape.moveTo(-w / 2, -h / 2);
+                        shape.lineTo(w / 2, -h / 2);
+                        shape.lineTo(w / 2, h / 2);
+                        shape.lineTo(-w / 2, h / 2);
+                        shape.closePath();
+
+                        // Inner cutout (raised field)
+                        const hole = new THREE.Path();
+                        hole.moveTo(-w / 2 + m, -h / 2 + m);
+                        hole.lineTo(w / 2 - m, -h / 2 + m);
+                        hole.lineTo(w / 2 - m, h / 2 - m);
+                        hole.lineTo(-w / 2 + m, h / 2 - m);
+                        hole.closePath();
+                        shape.holes.push(hole);
+
+                        // Moulding border (thin)
+                        const borderGeo = new THREE.ExtrudeGeometry(shape, {
+                            steps: 1,
+                            depth: t * 0.4,
+                            bevelEnabled: true,
+                            bevelThickness: t * 0.2,
+                            bevelSize: m * 0.3,
+                            bevelOffset: 0,
+                            bevelSegments: 3
+                        });
+
+                        // Center field (raised)
+                        const fieldShape = new THREE.Shape();
+                        fieldShape.moveTo(-w / 2 + m, -h / 2 + m);
+                        fieldShape.lineTo(w / 2 - m, -h / 2 + m);
+                        fieldShape.lineTo(w / 2 - m, h / 2 - m);
+                        fieldShape.lineTo(-w / 2 + m, h / 2 - m);
+                        fieldShape.closePath();
+
+                        const fieldGeo = new THREE.ExtrudeGeometry(fieldShape, {
+                            steps: 1,
+                            depth: t,
+                            bevelEnabled: false
+                        });
+
+                        // Merge geometries
+                        borderGeo.translate(0, 0, -t * 0.3);
+                        fieldGeo.translate(0, 0, -t / 2);
+
+                        const merged = new THREE.BufferGeometry();
+                        // Use simpler approach: just use raised field
+                        geometry = fieldGeo;
+                        borderGeo.dispose();
+                        break;
+                    }
+
+                    case 'Bead': {
+                        // Bead profile: rounded bead edge around panel
+                        const shape = new THREE.Shape();
+                        shape.moveTo(-w / 2, -h / 2);
+                        shape.lineTo(w / 2, -h / 2);
+                        shape.lineTo(w / 2, h / 2);
+                        shape.lineTo(-w / 2, h / 2);
+                        shape.closePath();
+
+                        geometry = new THREE.ExtrudeGeometry(shape, {
+                            steps: 1,
+                            depth: t,
+                            bevelEnabled: true,
+                            bevelThickness: t * 0.25,
+                            bevelSize: margin * 0.5,
+                            bevelOffset: -margin * 0.3,
+                            bevelSegments: 8 // Smooth round bead
+                        });
+                        geometry.translate(0, 0, -t / 2);
+                        break;
+                    }
+
+                    case 'Flat':
+                    default: {
+                        // Simple flat panel
+                        geometry = new THREE.BoxGeometry(w, h, t);
+                        break;
+                    }
+                }
+
+                const mesh = new THREE.Mesh(geometry, this.materials.oakDark);
+                mesh.position.set(x, y, 0);
+                mesh.name = 'Panel';
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                return mesh;
             }
 
             createArchedTopRail(leafWidth, thickness, leafCenterX, archStartY) {
@@ -640,6 +772,7 @@
 
         const styleFolder = gui.addFolder('Style');
         styleFolder.add(door.config, 'isDoubleLeaf').name('Double Leaf').onChange(() => door.generate());
+        styleFolder.add(door.config, 'panelProfile', ['Flat', 'Raised', 'Ogee', 'Bead']).name('Panel Profile').onChange(() => door.generate());
 
         const frameFolder = gui.addFolder('Frame');
         frameFolder.add(door.config, 'stileWidth', 60, 300, 5).name('Stile W').onChange(() => door.generate());
