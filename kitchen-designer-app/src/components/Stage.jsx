@@ -1,15 +1,12 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment, TransformControls } from '@react-three/drei';
+import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import useStore from '../store/useStore';
-import Cabinet from './Cabinet';
-import Wall from './Wall';
+import SceneItem from './SceneItem';
 
 const Stage = () => {
     const items = useStore((state) => state.items);
-    const selection = useStore((state) => state.selection);
     const setSelection = useStore((state) => state.setSelection);
-    const updateItem = useStore((state) => state.updateItem);
 
     // Deselect on miss
     const onMiss = (e) => {
@@ -51,52 +48,9 @@ const Stage = () => {
             </mesh>
 
             {/* Items Rendering Loop */}
-            {/* Items Rendering Loop */}
-            {items.map((item) => {
-                const isSelected = selection.includes(item.id);
-                const ItemComponent = item.isWall ? Wall : Cabinet;
-                const props = {
-                    key: item.id, // React Key (important)
-                    position: item.position,
-                    rotation: item.rotation,
-                    width: item.width,
-                    height: item.height,
-                    depth: item.depth,
-                    type: item.type,
-                    onClick: (e) => {
-                        e.stopPropagation();
-                        setSelection([item.id]);
-                    }
-                };
-
-                // The rendered item itself
-                const renderedItem = <ItemComponent {...props} />;
-
-                if (isSelected) {
-                    return (
-                        <TransformControls
-                            key={item.id}
-                            mode="translate"
-                            showY={false} // Enforce floor-based plan layout
-                            translationSnap={null} // We handle snapping manually
-                            onMouseUp={(e) => {
-                                if (e?.target?.object) {
-                                    updateItem(item.id, {
-                                        position: [e.target.object.position.x, 0, e.target.object.position.z], // Force Y=0
-                                        rotation: [e.target.object.rotation.x, e.target.object.rotation.y, e.target.object.rotation.z]
-                                    });
-                                }
-                            }}
-                        >
-                            {renderedItem}
-                        </TransformControls>
-                    );
-                }
-
-                return renderedItem;
-            })}
-
-            {/* Demo Cabinet Removed - Store initialized instead */}
+            {items.map((item) => (
+                <SceneItem key={item.id} item={item} />
+            ))}
 
         </Canvas>
     );
