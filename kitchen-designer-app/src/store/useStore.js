@@ -2,7 +2,17 @@ import { create } from 'zustand';
 import { snapToNearby, getItemBounds, checkIntersection } from '../utils/snap';
 
 const useStore = create((set, get) => ({
-    items: [],
+    items: [
+        {
+            id: 'init-1',
+            type: 'base',
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+            width: 0.6,
+            height: 0.87,
+            depth: 0.6
+        }
+    ],
     selection: [],
     snapEnabled: true,
 

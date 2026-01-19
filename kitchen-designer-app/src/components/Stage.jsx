@@ -94,8 +94,7 @@ const Stage = () => {
                 return renderedItem;
             })}
 
-            {/* Demo Cabinet if empty */}
-            {items.length === 0 && <Cabinet position={[0, 0, 0]} />}
+            {/* Demo Cabinet Removed - Store initialized instead */}
 
         </Canvas>
     );
