@@ -236,7 +236,9 @@
                     bevelSides: 'Both',     // Front, Back, Both
                     hasBead: false,         // Add bead moulding
 
-                    woodType: 'Oak'
+                    woodType: 'Oak',
+                    hingeType: 'Butt', // None, Butt, Strap
+                    openAngle: 0
                 }, config);
 
                 this.panelOverrides = {};
@@ -257,6 +259,54 @@
                 };
             }
 
+            createHinges(type, direction) {
+                if (!type || type === 'None') return null;
+
+                const { height, thickness } = this.config;
+                const h = height / 1000;
+                const t = thickness / 1000;
+
+                const group = new THREE.Group();
+                const hingeMat = this.materials.lead; // Use lead material (dark metal)
+
+                const yPos = [h / 2 - 0.25, -h / 2 + 0.25]; // 25cm from top/bottom
+
+                yPos.forEach(y => {
+                    const hinge = new THREE.Group();
+                    hinge.position.y = y;
+
+                    // Knuckle (Axis)
+                    const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 12), hingeMat);
+                    hinge.add(knuckle);
+
+                    if (type === 'Butt') {
+                        const plate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.1, 0.004), hingeMat);
+                        plate.position.set(direction * 0.02, 0, 0);
+                        hinge.add(plate);
+                    } else if (type === 'Strap') {
+                        const strapL = 0.45;
+                        const strapW = 0.045;
+                        const strap = new THREE.Mesh(new THREE.BoxGeometry(strapL, strapW, 0.006), hingeMat);
+                        strap.position.set(direction * (strapL / 2 + 0.01), 0, t / 2 + 0.003);
+
+                        // Studs
+                        const studGeo = new THREE.SphereGeometry(0.006, 8, 8);
+                        for (let k = 1; k <= 3; k++) {
+                            const stud = new THREE.Mesh(studGeo, hingeMat);
+                            stud.position.set(direction * (k * 0.12), 0, t / 2 + 0.006);
+                            stud.scale.set(1, 1, 0.5);
+                            hinge.add(stud);
+                        }
+
+                        hinge.add(strap);
+                    }
+
+                    group.add(hinge);
+                });
+
+                return group;
+            }
+
             generate() {
                 while (this.meshGroup.children.length > 0) {
                     const child = this.meshGroup.children[0];
@@ -264,7 +314,8 @@
                     this.meshGroup.remove(child);
                 }
 
-                const { width, thickness, isDoubleLeaf } = this.config;
+                const { width, thickness, isDoubleLeaf, openAngle } = this.config;
+                const angleRad = (openAngle || 0) * Math.PI / 180;
 
                 const gap = isDoubleLeaf ? 3 : 0;
                 const leafWidth = isDoubleLeaf ? (width - gap) / 2 : width;
@@ -272,13 +323,52 @@
                 const leftPos = isDoubleLeaf ? -width / 4 - gap / 4 : 0;
                 const rightPos = isDoubleLeaf ? width / 4 + gap / 4 : 0;
 
-                // Pass leafIndex: 0 for left (or single), 1 for right
+                // Left (or Single) Leaf
                 const leftLeaf = this.createLeaf(leafWidth, thickness, leftPos, 0);
-                this.meshGroup.add(leftLeaf);
 
                 if (isDoubleLeaf) {
+                    // Double Doors
+                    const leftHingeX = (-width / 2) / 1000;
+                    const rightHingeX = (width / 2) / 1000;
+
+                    // Left Pivot
+                    const leftPivot = new THREE.Group();
+                    leftPivot.position.set(leftHingeX, 0, 0);
+                    leftLeaf.position.x -= leftHingeX;
+                    leftPivot.add(leftLeaf);
+
+                    const lHinges = this.createHinges(this.config.hingeType, 1);
+                    if (lHinges) leftPivot.add(lHinges);
+
+                    leftPivot.rotation.y = angleRad;
+                    this.meshGroup.add(leftPivot);
+
+                    // Right Pivot
                     const rightLeaf = this.createLeaf(leafWidth, thickness, rightPos, 1);
-                    this.meshGroup.add(rightLeaf);
+                    const rightPivot = new THREE.Group();
+                    rightPivot.position.set(rightHingeX, 0, 0);
+                    rightLeaf.position.x -= rightHingeX;
+                    rightPivot.add(rightLeaf);
+
+                    const rHinges = this.createHinges(this.config.hingeType, -1);
+                    if (rHinges) rightPivot.add(rHinges);
+
+                    rightPivot.rotation.y = -angleRad;
+                    this.meshGroup.add(rightPivot);
+
+                } else {
+                    // Single Door
+                    const hingeX = (-width / 2) / 1000;
+                    const pivot = new THREE.Group();
+                    pivot.position.set(hingeX, 0, 0);
+                    leftLeaf.position.x -= hingeX;
+                    pivot.add(leftLeaf);
+
+                    const hinges = this.createHinges(this.config.hingeType, 1);
+                    if (hinges) pivot.add(hinges);
+
+                    pivot.rotation.y = angleRad;
+                    this.meshGroup.add(pivot);
                 }
 
                 this.updateUI();
@@ -1299,6 +1389,10 @@
         frameFolder.add(door.config, 'railWidth', 60, 300, 5).name('Rail W').onChange(() => door.generate());
         frameFolder.add(door.config, 'bottomRailWidth', 60, 400, 5).name('Bot Rail W').onChange(() => door.generate());
         frameFolder.add(door.config, 'muntinWidth', 30, 150, 5).name('Muntin W').onChange(() => door.generate());
+
+        const hardFolder = gui.addFolder('Hardware');
+        hardFolder.add(door.config, 'openAngle', 0, 90).name('Open Angle').onChange(() => door.generate());
+        hardFolder.add(door.config, 'hingeType', ['None', 'Butt', 'Strap']).name('Hinge Type').onChange(() => door.generate());
 
         const panelFolder = gui.addFolder('Panel Heights (mm)');
         const rowHeightControllers = [];
