@@ -765,13 +765,13 @@
                         // Line A (Rotated +angle)
                         const barA = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
                         barA.rotation.z = angle;
-                        barA.position.set(-off * Math.sin(angle), off * Math.cos(angle), 0.0025);
+                        barA.position.set(off * Math.cos(angle), off * Math.sin(angle), 0.0025);
                         leadGrp.add(barA);
 
                         // Line B (Rotated -angle)
                         const barB = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
                         barB.rotation.z = -angle;
-                        barB.position.set(off * Math.sin(angle), off * Math.cos(angle), 0.0025);
+                        barB.position.set(off * Math.cos(angle), -off * Math.sin(angle), 0.0025);
                         leadGrp.add(barB);
                     }
                 }
@@ -1035,16 +1035,16 @@
                                 // A
                                 const barA = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
                                 barA.rotation.z = angle;
-                                const dx = -off * Math.sin(angle);
-                                const dy = off * Math.cos(angle);
+                                const dx = off * Math.cos(angle);
+                                const dy = off * Math.sin(angle);
                                 barA.position.set(dx, midY + dy, 0.0025);
                                 leadGrp.add(barA);
 
                                 // B
                                 const barB = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
                                 barB.rotation.z = -angle;
-                                const dx2 = off * Math.sin(angle);
-                                const dy2 = off * Math.cos(angle);
+                                const dx2 = off * Math.cos(angle);
+                                const dy2 = -off * Math.sin(angle);
                                 barB.position.set(dx2, midY + dy2, 0.0025);
                                 leadGrp.add(barB);
                             }
@@ -1101,13 +1101,27 @@
             selectPanel(panelId, mesh) {
                 this.selectedPanelId = panelId;
 
-                if (this.selectionBox) {
-                    this.scene.remove(this.selectionBox);
-                    this.selectionBox = null;
+                // Revert previous glow
+                if (this.currentSelection) {
+                    this.currentSelection.forEach(item => {
+                        if (item.mesh) item.mesh.material = item.original;
+                    });
                 }
+                this.currentSelection = [];
+
+                // Apply new glow
                 if (mesh) {
-                    this.selectionBox = new THREE.BoxHelper(mesh, 0xffff00);
-                    this.scene.add(this.selectionBox);
+                    mesh.traverse((obj) => {
+                        if (obj.isMesh && obj.material) {
+                            this.currentSelection.push({ mesh: obj, original: obj.material });
+                            const mat = obj.material.clone();
+                            if (mat.emissive) {
+                                mat.emissive.set(0x665500);
+                                mat.emissiveIntensity = 0.5;
+                            }
+                            obj.material = mat;
+                        }
+                    });
                 }
 
                 // Update GUI
