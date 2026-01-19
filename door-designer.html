@@ -1103,8 +1103,83 @@
 
         const door = new Door(scene);
 
+        // --- INTERACTION ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('mousedown', (event) => {
+            // Calculate mouse position in normalized device coordinates
+            // Note: renderer is full screen.
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // Intersect objects
+            const intersects = raycaster.intersectObjects(door.meshGroup.children, true);
+
+            if (intersects.length > 0) {
+                // Find first object that is part of a panel
+                let target = intersects[0].object;
+                while (target && (!target.userData || !target.userData.isPanel)) {
+                    target = target.parent;
+                    if (target === door.meshGroup) { target = null; break; }
+                }
+
+                if (target && target.userData && target.userData.id) {
+                    console.log("Selected Panel:", target.userData.id);
+                    door.selectPanel(target.userData.id);
+                }
+            }
+        });
+
         // --- GUI ---
         const gui = new GUI({ title: 'Workshop Controls' });
+
+        // --- SELECTED PANEL GUI ---
+        const selFolder = gui.addFolder('Selected Panel');
+        // selFolder.close();
+
+        let selControllers = [];
+
+        window.updatePanelGUI = (panelId, config) => {
+            selFolder.title(`Panel: ${panelId}`);
+            selFolder.open();
+
+            // Clear old controllers
+            while (selControllers.length > 0) {
+                selControllers.pop().destroy();
+            }
+
+            // Proxy object to handle GUI changes
+            const proxy = {
+                type: config.type || 'Default',
+                diamondSize: config.diamondSize || 100
+            };
+
+            // Type Selector
+            const typeCtrl = selFolder.add(proxy, 'type', ['Default', 'Leaded']).name('Type').onChange((v) => {
+                if (v === 'Default') {
+                    delete door.panelOverrides[panelId];
+                } else {
+                    door.panelOverrides[panelId] = { type: 'Leaded', diamondSize: proxy.diamondSize };
+                }
+                door.generate();
+                // Refresh to show/hide sub-params
+                window.updatePanelGUI(panelId, door.panelOverrides[panelId] || {});
+            });
+            selControllers.push(typeCtrl);
+
+            if (proxy.type === 'Leaded') {
+                const sizeCtrl = selFolder.add(proxy, 'diamondSize', 50, 300).name('Diamond Size').onChange((v) => {
+                    if (door.panelOverrides[panelId]) {
+                        door.panelOverrides[panelId].diamondSize = v;
+                        door.generate();
+                    }
+                });
+                selControllers.push(sizeCtrl);
+            }
+        };
 
         const dimFolder = gui.addFolder('Dimensions');
         dimFolder.add(door.config, 'width', 800, 4000).name('Width (mm)').onChange(() => door.generate());
