@@ -255,7 +255,7 @@
                     glass: new THREE.MeshPhysicalMaterial({
                         color: 0x88ccff, transmission: 0.9, opacity: 1, metalness: 0, roughness: 0, ior: 1.5, thickness: 0.005, side: THREE.DoubleSide
                     }),
-                    lead: new THREE.MeshStandardMaterial({ color: 0xAAAAAA, roughness: 0.3, metalness: 0.9 })
+                    lead: new THREE.MeshStandardMaterial({ color: 0xAAAAAA, roughness: 0.3, metalness: 0.9, side: THREE.DoubleSide })
                 };
             }
 
@@ -269,11 +269,14 @@
                 const group = new THREE.Group();
                 const hingeMat = this.materials.lead; // Use lead material (dark metal)
 
-                const yPos = [h / 2 - 0.25, -h / 2 + 0.25]; // 25cm from top/bottom
+                console.log(`Creating Hinges: Type=${type}, H=${h}, T=${t}`);
+                const yPos = [h / 2 - 0.25, -h / 2 + 0.25];
+                console.log('Hinge Y Positions:', yPos);
 
                 yPos.forEach(y => {
                     const hinge = new THREE.Group();
                     hinge.position.y = y;
+                    hinge.add(new THREE.AxesHelper(0.2));
 
                     // Knuckle (Axis)
                     const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.15, 16), hingeMat);
