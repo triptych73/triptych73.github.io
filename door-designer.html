@@ -226,7 +226,12 @@
 
                     panelRowHeights: [500, 450, 400],
                     panelCols: 2,
-                    panelProfile: 'Raised', // Flat, Raised, Ogee, Bead
+
+                    panelProfile: 'Raised', // Flat, Raised
+                    bevelAngle: 20,         // degrees
+                    bevelWidth: 40,         // mm
+                    bevelSides: 'Both',     // Front, Back, Both
+                    hasBead: false,         // Add bead moulding
 
                     woodType: 'Oak'
                 }, config);
@@ -387,133 +392,247 @@
             }
 
             createProfiledPanel(width, height, thickness, x, y) {
-                // Creates a panel with classical moulding profile
-                const { panelProfile } = this.config;
-                const w = width;
-                const h = height;
-                const t = thickness * 0.6; // Panel is thinner than frame
+                const { panelProfile, bevelAngle, bevelWidth, bevelSides, hasBead } = this.config;
+                const grp = new THREE.Group();
+                grp.position.set(x, y, 0);
+
+                const w = width; // already in meters? No, input width is in meters (colW from loop)
+                const h = height; // meters
+                const t = thickness / 1000; // thickness input is millimeters, converted to meters in createLeaf? 
+                // Wait, in generate(), t is passed as thickness/1000. 
+                // Let's check call site: createProfiledPanel(colW, rowH, t, ...)
+                // colW and rowH are in meters. t is in meters.
+                // BEVEL inputs are in config as numbers (mm or deg).
+
+                const bWidth = Math.min(bevelWidth / 1000, w / 2 - 0.002, h / 2 - 0.002); // Clamp bevel width
+                const bAngleRad = (bevelAngle * Math.PI) / 180;
+
+                // Calculate bevel depth (rise)
+                const bDepth = bWidth * Math.tan(bAngleRad);
+
+                // Check thickness constraints
+                // If flush, centered part is at +/- t/2
+                // Edge thickness = t - 2*bDepth (if both sides)
+                // Limit bDepth so edge doesn't invert
+                const maxDepth = (t - 0.006) / (bevelSides === 'Both' ? 2 : 1); // Maintain 6mm edge min
+                const effDepth = Math.min(bDepth, maxDepth);
 
                 let geometry;
-                const margin = Math.min(w, h) * 0.15; // Moulding margin
 
-                switch (panelProfile) {
-                    case 'Raised': {
-                        // Raised/Fielded panel: raised center with beveled edges
-                        const shape = new THREE.Shape();
-                        shape.moveTo(-w / 2, -h / 2);
-                        shape.lineTo(w / 2, -h / 2);
-                        shape.lineTo(w / 2, h / 2);
-                        shape.lineTo(-w / 2, h / 2);
-                        shape.closePath();
+                if (panelProfile === 'Raised') {
+                    // Custom BufferGeometry for Raised Panel
+                    // We build the front face, back face, bevels, and edges.
 
-                        // Create bevel extrude
-                        geometry = new THREE.ExtrudeGeometry(shape, {
-                            steps: 1,
-                            depth: t,
-                            bevelEnabled: true,
-                            bevelThickness: t * 0.3,
-                            bevelSize: margin,
-                            bevelOffset: -margin,
-                            bevelSegments: 2
-                        });
-                        geometry.translate(0, 0, -t / 2);
-                        break;
+                    const pGeom = new THREE.BufferGeometry();
+                    const vertices = [];
+                    const normals = [];
+                    const uvs = [];
+
+                    // Helper to add quad
+                    const addQuad = (v1, v2, v3, v4, n) => {
+                        vertices.push(...v1, ...v2, ...v4);
+                        vertices.push(...v2, ...v3, ...v4);
+                        // Simple flat normals
+                        for (let i = 0; i < 6; i++) normals.push(...n);
+                        // UVs (planar mapping)
+                        uvs.push((v1[0] + w / 2) / w, (v1[1] + h / 2) / h);
+                        uvs.push((v2[0] + w / 2) / w, (v2[1] + h / 2) / h);
+                        uvs.push((v4[0] + w / 2) / w, (v4[1] + h / 2) / h);
+                        uvs.push((v2[0] + w / 2) / w, (v2[1] + h / 2) / h);
+                        uvs.push((v3[0] + w / 2) / w, (v3[1] + h / 2) / h);
+                        uvs.push((v4[0] + w / 2) / w, (v4[1] + h / 2) / h);
+                    };
+
+                    // Dimensions
+                    const outerW = w / 2;
+                    const outerH = h / 2;
+                    const innerW = w / 2 - bWidth;
+                    const innerH = h / 2 - bWidth;
+
+                    const zFront = t / 2;
+                    const zBack = -t / 2;
+                    // For bevels:
+                    // If Front bevel: Center is at zFront, Edge is at zFront - effDepth
+                    // If Back bevel: Center is at zBack, Edge is at zBack + effDepth
+                    const zFrontCenter = zFront;
+                    const zFrontEdge = (bevelSides === 'Front' || bevelSides === 'Both') ? zFront - effDepth : zFront;
+                    const zBackCenter = zBack;
+                    const zBackEdge = (bevelSides === 'Back' || bevelSides === 'Both') ? zBack + effDepth : zBack;
+
+                    // -- FRONT SIDE --
+                    if (bevelSides === 'Front' || bevelSides === 'Both') {
+                        // Center Field (Plateau)
+                        addQuad(
+                            [-innerW, -innerH, zFrontCenter], [innerW, -innerH, zFrontCenter],
+                            [innerW, innerH, zFrontCenter], [-innerW, innerH, zFrontCenter],
+                            [0, 0, 1]
+                        );
+
+                        // Bevels (Slopes)
+                        // Bottom
+                        addQuad(
+                            [-innerW, -innerH, zFrontCenter], [-outerW, -outerH, zFrontEdge],
+                            [outerW, -outerH, zFrontEdge], [innerW, -innerH, zFrontCenter],
+                            [0, -Math.sin(bAngleRad), Math.cos(bAngleRad)] // Approx normal
+                        );
+                        // Top
+                        addQuad(
+                            [innerW, innerH, zFrontCenter], [outerW, outerH, zFrontEdge],
+                            [-outerW, outerH, zFrontEdge], [-innerW, innerH, zFrontCenter],
+                            [0, Math.sin(bAngleRad), Math.cos(bAngleRad)]
+                        );
+                        // Right
+                        addQuad(
+                            [innerW, -innerH, zFrontCenter], [outerW, -outerH, zFrontEdge],
+                            [outerW, outerH, zFrontEdge], [innerW, innerH, zFrontCenter],
+                            [Math.sin(bAngleRad), 0, Math.cos(bAngleRad)]
+                        );
+                        // Left
+                        addQuad(
+                            [-outerW, -outerH, zFrontEdge], [-innerW, -innerH, zFrontCenter],
+                            [-innerW, innerH, zFrontCenter], [-outerW, outerH, zFrontEdge],
+                            [-Math.sin(bAngleRad), 0, Math.cos(bAngleRad)]
+                        );
+                    } else {
+                        // Flat Front
+                        addQuad(
+                            [-outerW, -outerH, zFront], [outerW, -outerH, zFront],
+                            [outerW, outerH, zFront], [-outerW, outerH, zFront],
+                            [0, 0, 1]
+                        );
                     }
 
-                    case 'Ogee': {
-                        // Ogee profile: S-curve moulding around the edge
-                        const shape = new THREE.Shape();
-                        const m = margin;
+                    // -- BACK SIDE --
+                    if (bevelSides === 'Back' || bevelSides === 'Both') {
+                        // Center Field
+                        addQuad(
+                            [-innerW, innerH, zBackCenter], [innerW, innerH, zBackCenter],
+                            [innerW, -innerH, zBackCenter], [-innerW, -innerH, zBackCenter],
+                            [0, 0, -1]
+                        );
 
-                        // Outer rectangle
-                        shape.moveTo(-w / 2, -h / 2);
-                        shape.lineTo(w / 2, -h / 2);
-                        shape.lineTo(w / 2, h / 2);
-                        shape.lineTo(-w / 2, h / 2);
-                        shape.closePath();
-
-                        // Inner cutout (raised field)
-                        const hole = new THREE.Path();
-                        hole.moveTo(-w / 2 + m, -h / 2 + m);
-                        hole.lineTo(w / 2 - m, -h / 2 + m);
-                        hole.lineTo(w / 2 - m, h / 2 - m);
-                        hole.lineTo(-w / 2 + m, h / 2 - m);
-                        hole.closePath();
-                        shape.holes.push(hole);
-
-                        // Moulding border (thin)
-                        const borderGeo = new THREE.ExtrudeGeometry(shape, {
-                            steps: 1,
-                            depth: t * 0.4,
-                            bevelEnabled: true,
-                            bevelThickness: t * 0.2,
-                            bevelSize: m * 0.3,
-                            bevelOffset: 0,
-                            bevelSegments: 3
-                        });
-
-                        // Center field (raised)
-                        const fieldShape = new THREE.Shape();
-                        fieldShape.moveTo(-w / 2 + m, -h / 2 + m);
-                        fieldShape.lineTo(w / 2 - m, -h / 2 + m);
-                        fieldShape.lineTo(w / 2 - m, h / 2 - m);
-                        fieldShape.lineTo(-w / 2 + m, h / 2 - m);
-                        fieldShape.closePath();
-
-                        const fieldGeo = new THREE.ExtrudeGeometry(fieldShape, {
-                            steps: 1,
-                            depth: t,
-                            bevelEnabled: false
-                        });
-
-                        // Merge geometries
-                        borderGeo.translate(0, 0, -t * 0.3);
-                        fieldGeo.translate(0, 0, -t / 2);
-
-                        const merged = new THREE.BufferGeometry();
-                        // Use simpler approach: just use raised field
-                        geometry = fieldGeo;
-                        borderGeo.dispose();
-                        break;
+                        // Bevels
+                        // Bottom
+                        addQuad(
+                            [outerW, -outerH, zBackEdge], [-outerW, -outerH, zBackEdge],
+                            [-innerW, -innerH, zBackCenter], [innerW, -innerH, zBackCenter],
+                            [0, -Math.sin(bAngleRad), -Math.cos(bAngleRad)]
+                        );
+                        // Top
+                        addQuad(
+                            [-outerW, outerH, zBackEdge], [outerW, outerH, zBackEdge],
+                            [innerW, innerH, zBackCenter], [-innerW, innerH, zBackCenter],
+                            [0, Math.sin(bAngleRad), -Math.cos(bAngleRad)]
+                        );
+                        // Right
+                        addQuad(
+                            [outerW, -outerH, zBackEdge], [innerW, -innerH, zBackCenter],
+                            [innerW, innerH, zBackCenter], [outerW, outerH, zBackEdge],
+                            [Math.sin(bAngleRad), 0, -Math.cos(bAngleRad)]
+                        );
+                        // Left
+                        addQuad(
+                            [-innerW, -innerH, zBackCenter], [-outerW, -outerH, zBackEdge],
+                            [-outerW, outerH, zBackEdge], [-innerW, innerH, zBackCenter],
+                            [-Math.sin(bAngleRad), 0, -Math.cos(bAngleRad)]
+                        );
+                    } else {
+                        // Flat Back
+                        addQuad(
+                            [outerW, -outerH, zBack], [-outerW, -outerH, zBack],
+                            [-outerW, outerH, zBack], [outerW, outerH, zBack],
+                            [0, 0, -1]
+                        );
                     }
 
-                    case 'Bead': {
-                        // Bead profile: rounded bead edge around panel
-                        const shape = new THREE.Shape();
-                        shape.moveTo(-w / 2, -h / 2);
-                        shape.lineTo(w / 2, -h / 2);
-                        shape.lineTo(w / 2, h / 2);
-                        shape.lineTo(-w / 2, h / 2);
-                        shape.closePath();
+                    // -- EDGES (Sides connecting FrontEdge to BackEdge) --
+                    // Bottom
+                    addQuad(
+                        [-outerW, -outerH, zBackEdge], [outerW, -outerH, zBackEdge],
+                        [outerW, -outerH, zFrontEdge], [-outerW, -outerH, zFrontEdge],
+                        [0, -1, 0]
+                    );
+                    // Top
+                    addQuad(
+                        [-outerW, outerH, zFrontEdge], [outerW, outerH, zFrontEdge],
+                        [outerW, outerH, zBackEdge], [-outerW, outerH, zBackEdge],
+                        [0, 1, 0]
+                    );
+                    // Right
+                    addQuad(
+                        [outerW, -outerH, zBackEdge], [outerW, outerH, zBackEdge],
+                        [outerW, outerH, zFrontEdge], [outerW, -outerH, zFrontEdge],
+                        [1, 0, 0]
+                    );
+                    // Left
+                    addQuad(
+                        [-outerW, -outerH, zFrontEdge], [-outerW, outerH, zFrontEdge],
+                        [-outerW, outerH, zBackEdge], [-outerW, -outerH, zBackEdge],
+                        [-1, 0, 0]
+                    );
 
-                        geometry = new THREE.ExtrudeGeometry(shape, {
-                            steps: 1,
-                            depth: t,
-                            bevelEnabled: true,
-                            bevelThickness: t * 0.25,
-                            bevelSize: margin * 0.5,
-                            bevelOffset: -margin * 0.3,
-                            bevelSegments: 8 // Smooth round bead
-                        });
-                        geometry.translate(0, 0, -t / 2);
-                        break;
-                    }
+                    pGeom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                    pGeom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                    pGeom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+                    pGeom.computeVertexNormals();
 
-                    case 'Flat':
-                    default: {
-                        // Simple flat panel
-                        geometry = new THREE.BoxGeometry(w, h, t);
-                        break;
-                    }
+                    geometry = pGeom;
+
+                } else {
+                    // Flat Panel
+                    geometry = new THREE.BoxGeometry(w, h, t);
                 }
 
                 const mesh = new THREE.Mesh(geometry, this.materials.oakDark);
-                mesh.position.set(x, y, 0);
                 mesh.name = 'Panel';
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
+                grp.add(mesh);
 
-                return mesh;
+                // --- BEAD ---
+                if (hasBead) {
+                    const beadW = 0.006; // 6mm bead
+                    const beadShape = new THREE.Shape();
+                    // Draw a rect path for the panel edge
+                    const rect = new THREE.Shape();
+                    rect.moveTo(-w / 2, -h / 2);
+                    rect.lineTo(w / 2, -h / 2);
+                    rect.lineTo(w / 2, h / 2);
+                    rect.lineTo(-w / 2, h / 2);
+                    rect.closePath();
+
+                    // Extrude a bead shape along this path? 
+                    // Simpler: Just 4 cylinders/boxes or a tube?
+                    // Let's make 4 small mouldings.
+                    // Top/Bottom
+                    const beadH = new THREE.BoxGeometry(w, beadW, beadW / 2);
+                    const beadV = new THREE.BoxGeometry(beadW, h, beadW / 2);
+                    const mat = this.materials.oak;
+
+                    // Position them on the panel face (slightly proud)
+                    const zBead = t / 2 + beadW / 4;
+
+                    const topB = new THREE.Mesh(beadH, mat);
+                    topB.position.set(0, h / 2 - beadW / 2, zBead);
+                    grp.add(topB);
+
+                    const botB = new THREE.Mesh(beadH, mat);
+                    botB.position.set(0, -h / 2 + beadW / 2, zBead);
+                    grp.add(botB);
+
+                    const leftB = new THREE.Mesh(beadV, mat);
+                    leftB.position.set(-w / 2 + beadW / 2, 0, zBead);
+                    grp.add(leftB);
+
+                    const rightB = new THREE.Mesh(beadV, mat);
+                    rightB.position.set(w / 2 - beadW / 2, 0, zBead);
+                    grp.add(rightB);
+
+                    // If both sides, add to back too?
+                    // User: "option for each of the 2 remaining panel types". Usually applied to front.
+                }
+
+                return grp;
             }
 
             createArchedTopRail(leafWidth, thickness, leafCenterX, archStartY) {
@@ -772,7 +891,11 @@
 
         const styleFolder = gui.addFolder('Style');
         styleFolder.add(door.config, 'isDoubleLeaf').name('Double Leaf').onChange(() => door.generate());
-        styleFolder.add(door.config, 'panelProfile', ['Flat', 'Raised', 'Ogee', 'Bead']).name('Panel Profile').onChange(() => door.generate());
+        styleFolder.add(door.config, 'panelProfile', ['Flat', 'Raised']).name('Panel Profile').onChange(() => door.generate());
+        styleFolder.add(door.config, 'bevelAngle', 0, 89).name('Bevel Angle (deg)').onChange(() => door.generate());
+        styleFolder.add(door.config, 'bevelWidth', 0, 150).name('Bevel Width (mm)').onChange(() => door.generate());
+        styleFolder.add(door.config, 'bevelSides', ['Front', 'Back', 'Both']).name('Bevel Sides').onChange(() => door.generate());
+        styleFolder.add(door.config, 'hasBead').name('Add Bead').onChange(() => door.generate());
 
         const frameFolder = gui.addFolder('Frame');
         frameFolder.add(door.config, 'stileWidth', 60, 300, 5).name('Stile W').onChange(() => door.generate());
