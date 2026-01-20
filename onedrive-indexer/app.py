@@ -1036,6 +1036,15 @@ for idx, item in enumerate(items):
          st.markdown(f"#### 📖 {name}")
          with st.container(height=500, border=True):
              st.markdown(st.session_state["view_content"])
+             
+             # Download Button
+             st.download_button(
+                 label="💾 Download Markdown",
+                 data=st.session_state["view_content"],
+                 file_name=f"{name}.md",
+                 mime="text/markdown"
+             )
+
              if st.button("❌ Close Preview", key=f"close_{item_id}"):
                  st.session_state["view_id"] = None
                  st.session_state["view_content"] = None
