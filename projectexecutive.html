@@ -17,6 +17,7 @@
     <!-- Firebase SDKs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
     <script src="firebase-config.js"></script>
 
     <!-- Auth Guard -->
@@ -230,6 +231,37 @@
 
             <!-- COL 2 & 3: Active Tools & Docs -->
             <div class="lg:col-span-2 xl:col-span-2 space-y-6">
+
+                <!-- Visitor Stats Widget (New) -->
+                <div>
+                    <h3 class="font-mono text-[10px] uppercase tracking-widest text-white/40 mb-3 ml-1">Live Analytics
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Metric 1 -->
+                        <div class="glass-panel p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] text-bronze uppercase tracking-widest mb-1">Live Now</div>
+                                <div class="text-2xl font-serif text-white flex items-baseline gap-2">
+                                    <span id="stat-live">0</span>
+                                    <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[9px] text-white/30 font-mono">ACTIVE SESSIONS</div>
+                            </div>
+                        </div>
+                        <!-- Metric 2 -->
+                        <div class="glass-panel p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] text-bronze uppercase tracking-widest mb-1">Today</div>
+                                <div class="text-2xl font-serif text-white" id="stat-today">0</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[9px] text-white/30 font-mono">UNIQUE VISITORS</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Active Tools Grid -->
                 <div>
@@ -590,16 +622,56 @@
 
                 if (user) {
                     // Authenticated: Show Content
-                    setTimeout(() => { // Small fake delay for effect, or remove
+                    setTimeout(() => {
                         overlay.style.opacity = '0';
                         setTimeout(() => overlay.style.display = 'none', 300);
                         content.style.display = 'block';
+
+                        // Initialize Analytics
+                        initVisitorStats();
                     }, 500);
                 } else {
                     // Not Authenticated: Redirect
                     window.location.href = 'login.html';
                 }
             });
+
+            function initVisitorStats() {
+                const db = firebase.firestore();
+                const statLive = document.getElementById('stat-live');
+                const statToday = document.getElementById('stat-today');
+
+                // 1. Live Visitors (Last 5 Minutes)
+                const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+                // Using onSnapshot for real-time updates
+                db.collection('site_visits')
+                    .where('timestamp', '>', fiveMinsAgo)
+                    .onSnapshot((snapshot) => {
+                        // Filter bots and count unique sessions
+                        const uniqueSessions = new Set();
+                        snapshot.docs.forEach(doc => {
+                            const data = doc.data();
+                            if (!data.isBot) uniqueSessions.add(data.sessionId);
+                        });
+                        statLive.innerText = uniqueSessions.size;
+                    });
+
+                // 2. Today's Total
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
+
+                db.collection('site_visits')
+                    .where('timestamp', '>', todayStart)
+                    .onSnapshot((snapshot) => {
+                        const uniqueSessions = new Set();
+                        snapshot.docs.forEach(doc => {
+                            const data = doc.data();
+                            if (!data.isBot) uniqueSessions.add(data.sessionId);
+                        });
+                        statToday.innerText = uniqueSessions.size;
+                    });
+            }
         }
     </script>
 
