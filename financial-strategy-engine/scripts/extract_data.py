@@ -4,7 +4,7 @@ import datetime
 import re
 import os
 
-# Relative path from tax-strategy-engine/scripts/ to assets/docs/
+# Relative path from financial-strategy-engine/scripts/ to assets/docs/
 # ../../assets/docs/...
 file_path = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'docs', 'STMS Costs Calculation incl Indexation 20230322 v2.xlsx')
 
@@ -101,24 +101,8 @@ def extract_all():
                     if pd.isna(debit): debit = 0.0
                     if pd.isna(credit): credit = 0.0
 
-                    # Indexed Amount
-                    indexed_amount = 0.0
-                    if indexed_col:
-                        try:
-                            val = str(row[indexed_col]).replace('£','').replace(',','')
-                            if val.lower() != 'nan':
-                                indexed_amount = float(val)
-                        except: pass
-
-                    # If this is a Cost ledger:
-                    # Debit = Cost (+ve)
-                    # Credit = Refund (-ve)
-                    
-                    amount = debit
-                    
-                    # If debit is 0 and credit has val?
-                    if amount == 0 and credit > 0:
-                        amount = -credit 
+                    # Standard Accounting Sign: Debit (+) / Credit (-)
+                    amount = debit - credit
                     
                     # Filter empty or zero
                     if abs(amount) < 0.01: continue

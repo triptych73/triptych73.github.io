@@ -4,7 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { useStore } from "@/store/useStore";
 import { DraggableItem } from "./DraggableItem";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export function Canvas() {
     const { isOver, setNodeRef } = useDroppable({
@@ -22,21 +22,37 @@ export function Canvas() {
     const [zoom, setZoom] = useState(1);
     const [isPanning, setIsPanning] = useState(false);
 
+    const containerRef = useRef<HTMLDivElement>(null);
+    const OFFSET = 2500; // Match the CSS offset
+
     // Zoom Handler
     const handleWheel = (e: React.WheelEvent) => {
-        if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            const zoomSensitivity = 0.001;
-            const newZoom = Math.min(Math.max(0.1, zoom - e.deltaY * zoomSensitivity), 5);
-            setZoom(newZoom);
-        } else {
-            // Optional: Pan with wheel if not holding ctrl? 
-            // Standard is Wheel=Scroll/PanY, Shift+Wheel=PanX. 
-            // But let's stick to Zoom for now if requested "separate to main page"
-            // Actually, usually users want Wheel = Zoom in CAD tools.
-            // If they just said "not zoomable", let's make Wheel = Zoom.
-            const zoomSensitivity = 0.0005;
-            const newZoom = Math.min(Math.max(0.1, zoom - e.deltaY * zoomSensitivity), 5);
+        // Prevent default browser behavior (scroll/zoom)
+        e.preventDefault();
+
+        const zoomSensitivity = 0.001;
+        const delta = -e.deltaY * zoomSensitivity;
+        const newZoom = Math.min(Math.max(0.1, zoom + delta), 5); // Allow zoom between 0.1x and 5x
+
+        if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            // Mouse relative to the container (viewport)
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Calculate new pan to keep mouse position stable
+            // Formula: newPan = Mouse - (Mouse - OldPan + Offset) * (NewZoom / OldZoom) + Offset
+            // Derived from: MouseWorld = (MouseScreen - (Pan + Offset)) / Zoom
+
+            // X-Axis
+            const contentXBefore = (mouseX - pan.x + OFFSET) / zoom;
+            const newPanX = mouseX + OFFSET - (contentXBefore * newZoom);
+
+            // Y-Axis
+            const contentYBefore = (mouseY - pan.y + OFFSET) / zoom;
+            const newPanY = mouseY + OFFSET - (contentYBefore * newZoom);
+
+            setPan({ x: newPanX, y: newPanY });
             setZoom(newZoom);
         }
     };
@@ -91,16 +107,26 @@ export function Canvas() {
         addLibraryItem(newAsset);
 
         // 2. Add to Canvas
-        // Calculate position relative to canvas content
-        // Inverse transform: (Screen - Pan) / Zoom
-        // Note: clientX/Y are screen relative, we need relative to the container but for full screen app client~=page
+        let contentX, contentY;
 
-        // We need container bounds to be precise, but assuming full screen for now
-        // Let's rely on the center if it's a paste, or mouse pos if drop.
+        if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
 
-        // Simple Viewport correction (approximate if container not 0,0)
-        const contentX = (clientX - pan.x) / zoom;
-        const contentY = (clientY - pan.y) / zoom;
+            // Transform screen coordinates to local content coordinates
+            // Local = (Screen - (Pan - Offset)) / Zoom
+            // Note: CSS uses left: -2500, top: -2500. 
+            // So Viewport (0,0) corresponds to (-2500 + Pan) in transform term.
+            // Coordinate in big div = (Mouse - Pan) / Zoom + 2500
+
+            contentX = (mouseX - pan.x) / zoom + OFFSET;
+            contentY = (mouseY - pan.y) / zoom + OFFSET;
+        } else {
+            // Fallback if ref missing
+            contentX = 2500;
+            contentY = 2500;
+        }
 
         // Adjust for item center (assuming ~200px size)
         const centeredX = contentX - 100;
@@ -133,6 +159,7 @@ export function Canvas() {
         if (files.length > 0) {
             for (const file of files) {
                 await handleFileProcess(file, e.clientX, e.clientY);
+                // Small delay to ensure order/timestamps if needed
             }
         }
     };
@@ -161,7 +188,9 @@ export function Canvas() {
 
     return (
         <div
+            ref={containerRef}
             className="flex-1 h-full relative overflow-hidden bg-midnight select-none"
+
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

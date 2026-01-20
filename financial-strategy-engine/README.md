@@ -1,6 +1,6 @@
-# Tax Strategy Engine
+# Financial Strategy Engine
 
-This folder contains the Tax Strategy application and its data processing scripts.
+This folder contains the Financial Strategy application and its data processing scripts.
 
 ## Directory Structure
 
@@ -13,7 +13,7 @@ This folder contains the Tax Strategy application and its data processing script
 
 To refresh the data from the master Excel source (`assets/docs/STMS Costs Calculation incl Indexation 20230322 v2.xlsx`):
 
-1. Open a terminal in `tax-strategy-engine/scripts/`
+1. Open a terminal in `financial-strategy-engine/scripts/`
 2. Run data extraction:
    ```bash
    python extract_data.py

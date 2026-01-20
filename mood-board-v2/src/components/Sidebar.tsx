@@ -2,61 +2,63 @@
 
 import { useStore } from "@/store/useStore";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function Sidebar() {
     const { floors, currentFloorId, setCurrentFloor } = useStore();
 
     return (
-        <aside className="w-64 h-full bg-[#0F1115] border-r border-[#2C3038] flex flex-col z-20 shrink-0">
-            <div className="p-6 border-b border-[#2C3038] bg-[#0F1115]">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 rounded bg-[#9A8C74]/10 border border-[#9A8C74]/20 text-[#9A8C74]">
-                        <LayoutDashboard size={20} />
-                    </div>
-                    <div>
-                        <h1 className="font-serif text-xl text-[#F5F5F0] leading-snug">
-                            St Mary <span className="font-bold">Somerset</span>
-                        </h1>
-                        <p className="text-[10px] text-[#9A8C74] uppercase tracking-widest font-semibold mt-1">
-                            Tower Residence
-                        </p>
-                    </div>
+        <aside className="w-64 h-full bg-surface/30 border-r border-white/5 flex flex-col z-20 shrink-0 backdrop-blur-sm">
+            <div className="p-6 border-b border-white/5 bg-surface/10">
+                <div className="p-6 border-b border-white/5 bg-surface/10">
+                    <h1 className="font-serif text-xl text-portland tracking-wide text-center">
+                        St Mary Somerset
+                    </h1>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-2">
-                <div className="px-6 py-4">
-                    <h2 className="text-[10px] font-bold text-[#F5F5F0]/30 uppercase tracking-widest font-sans">Level Selection</h2>
+            <div className="flex-1 overflow-y-auto py-4">
+                <div className="px-6 pb-2">
+                    <h2 className="text-[10px] font-bold text-bronze/70 uppercase tracking-widest font-mono mb-4 flex items-center gap-2">
+                        <span className="w-1 h-1 bg-bronze rounded-full"></span>
+                        Level Selection
+                    </h2>
                 </div>
 
-                <div className="space-y-0.5 px-2">
+                <div className="space-y-1 px-3">
                     {/* Render exact order from store since user defined a specific list */}
                     {floors.map((floor) => (
                         <button
                             key={floor.id}
                             onClick={() => setCurrentFloor(floor.id)}
                             className={cn(
-                                "w-full px-4 py-3 text-left transition-all duration-200 flex items-center gap-3 rounded-md group",
+                                "w-full px-4 py-3 text-left transition-all duration-200 flex items-center gap-3 rounded border border-transparent group relative overflow-hidden",
                                 currentFloorId === floor.id
-                                    ? "bg-[#252932] text-[#F5F5F0] ring-1 ring-[#9A8C74]/20"
-                                    : "text-[#F5F5F0]/50 hover:bg-[#252932]/50 hover:text-[#F5F5F0]"
+                                    ? "bg-surface/60 text-bronze border-bronze/20 shadow-lg shadow-black/20"
+                                    : "text-portland/50 hover:bg-white/5 hover:text-portland hover:border-white/5"
                             )}
                         >
                             <div className={cn(
                                 "w-1.5 h-1.5 rounded-full transition-all duration-300",
                                 currentFloorId === floor.id
-                                    ? "bg-[#9A8C74] shadow-[0_0_8px_rgba(154,140,116,0.6)] scale-110"
-                                    : "bg-[#2C3038] group-hover:bg-[#F5F5F0]/30"
+                                    ? "bg-bronze shadow-[0_0_8px_rgba(154,140,116,0.6)] scale-125"
+                                    : "bg-portland/20 group-hover:bg-portland/60"
                             )} />
-                            <span className="font-sans text-sm font-medium">{floor.name}</span>
+                            <span className={cn(
+                                "font-sans text-xs tracking-wide transition-all",
+                                currentFloorId === floor.id ? "font-medium translate-x-1" : ""
+                            )}>{floor.name}</span>
+
+                            {/* Active Indicator Line */}
+                            {currentFloorId === floor.id && (
+                                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-bronze"></div>
+                            )}
                         </button>
                     ))}
                 </div>
             </div>
 
-            <div className="p-4 border-t border-[#2C3038] bg-[#0F1115]">
+            <div className="p-4 border-t border-white/5 bg-surface/20 backdrop-blur-md">
                 <AuthStatus />
             </div>
         </aside>

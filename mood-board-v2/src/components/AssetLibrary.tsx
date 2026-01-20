@@ -74,6 +74,7 @@ function DraggableLibraryItem({ asset }: { asset: any }) {
                 ref={setNodeRef}
                 {...listeners}
                 {...attributes}
+                suppressHydrationWarning
                 className={cn(
                     "group relative aspect-square bg-[#1A1D23] rounded border border-[#2C3038] hover:border-[#9A8C74]/50 transition-all cursor-grab active:cursor-grabbing overflow-hidden flex flex-col items-center justify-center p-2 hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)]",
                     isDragging && "opacity-50 ring-2 ring-[#9A8C74]",
@@ -205,35 +206,43 @@ export function AssetLibrary() {
     };
 
     return (
-        <aside className="w-80 h-full bg-[#0F1115] border-l border-[#2C3038] flex flex-col z-20 shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.4)]">
+        <aside className="w-80 h-full bg-surface/30 border-l border-white/5 flex flex-col z-20 shrink-0 backdrop-blur-sm shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
 
             {/* Header */}
-            <div className="p-6 border-b border-[#2C3038] bg-[#0F1115]">
-                <h2 className="font-serif text-[#F5F5F0] text-lg mb-4 tracking-wide">Library</h2>
+            <div className="p-6 border-b border-white/5 bg-surface/10">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="font-serif text-portland text-lg tracking-wide flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-bronze rounded-full"></span>
+                        Library
+                    </h2>
+                    <span className="text-[10px] font-mono text-portland/30 bg-white/5 px-2 py-1 rounded">
+                        {allAssets.length} ITEMS
+                    </span>
+                </div>
 
                 {/* Search */}
-                <div className="relative group mb-4">
-                    <Search className="absolute left-3 top-2.5 text-[#F5F5F0]/30 w-4 h-4 group-focus-within:text-[#9A8C74] transition-colors" />
+                <div className="relative group mb-5">
+                    <Search className="absolute left-3 top-2.5 text-portland/30 w-4 h-4 group-focus-within:text-bronze transition-colors" />
                     <input
                         type="text"
                         placeholder="Search assets..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-[#1A1D23] border border-[#2C3038] rounded-md py-2 pl-9 pr-4 text-sm text-[#F5F5F0] placeholder-[#F5F5F0]/20 focus:outline-none focus:border-[#9A8C74]/50 transition-all font-sans"
+                        className="w-full bg-black/20 border border-white/5 rounded px-3 py-2 pl-9 text-xs text-portland placeholder-portland/20 focus:outline-none focus:border-bronze/50 focus:bg-black/40 transition-all font-mono"
                     />
                 </div>
 
                 {/* Categories (Quick Filter) */}
-                <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
                     {ASSET_CATEGORIES.map(cat => (
                         <button
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
                             className={cn(
-                                "text-[10px] uppercase font-bold px-2 py-1 rounded whitespace-nowrap transition-colors border",
+                                "text-[9px] uppercase font-bold px-3 py-1.5 rounded-sm whitespace-nowrap transition-all border font-mono tracking-wider",
                                 selectedCategory === cat.id
-                                    ? "bg-[#9A8C74] text-[#0F1115] border-[#9A8C74]"
-                                    : "bg-transparent text-[#F5F5F0]/40 border-transparent hover:border-[#2C3038] hover:text-[#F5F5F0]"
+                                    ? "bg-bronze text-midnight border-bronze shadow-[0_0_10px_rgba(154,140,116,0.3)]"
+                                    : "bg-transparent text-portland/40 border-white/5 hover:border-white/10 hover:text-portland/80 hover:bg-white/5"
                             )}
                         >
                             {cat.label}
@@ -243,11 +252,12 @@ export function AssetLibrary() {
             </div>
 
             {/* Upload Action */}
-            <div className="p-4 border-b border-[#2C3038] bg-[#1A1D23]/30 space-y-3">
-
-                <div className="flex items-center gap-2 text-xs text-[#F5F5F0]/50">
-                    <FolderOpen size={12} />
-                    <span>Uploading to: <span className="text-[#9A8C74] font-medium uppercase">{ASSET_CATEGORIES.find(c => c.id === selectedCategory)?.label}</span></span>
+            <div className="p-4 border-b border-white/5 bg-surface/5 space-y-3">
+                <div className="flex items-center justify-between text-[10px] text-portland/40 font-mono tracking-wide">
+                    <div className="flex items-center gap-2">
+                        <FolderOpen size={12} />
+                        <span>TARGET: <span className="text-bronze font-bold">{ASSET_CATEGORIES.find(c => c.id === selectedCategory)?.label}</span></span>
+                    </div>
                 </div>
 
                 <input
@@ -260,32 +270,39 @@ export function AssetLibrary() {
                 <button
                     onClick={handleUploadClick}
                     disabled={uploading}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded border border-dashed border-[#2C3038] text-[#F5F5F0]/50 hover:text-[#9A8C74] hover:border-[#9A8C74]/50 hover:bg-[#9A8C74]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs uppercase tracking-wider font-bold"
+                    className="group w-full flex items-center justify-center gap-3 py-3 rounded border border-dashed border-white/10 text-portland/40 hover:text-bronze hover:border-bronze/50 hover:bg-bronze/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-[10px] uppercase tracking-[0.15em] font-bold"
                 >
-                    {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
-                    <span>{uploading ? "Uploading..." : "Upload New Asset"}</span>
+                    <div className="p-1.5 rounded-full bg-white/5 group-hover:bg-bronze/20 transition-colors">
+                        {uploading ? <Loader2 className="animate-spin" size={12} /> : <Upload size={12} />}
+                    </div>
+                    <span>{uploading ? "Processing..." : "Upload New Asset"}</span>
                 </button>
             </div>
 
             {/* Grid */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-black/20">
                 <div className="grid grid-cols-2 gap-3">
                     {allAssets.filter(a => a.type === selectedCategory).map((asset) => (
                         <DraggableLibraryItem key={asset.id} asset={asset} />
                     ))}
-
                 </div>
             </div>
 
             {/* Debug Log */}
-            <div className="p-2 border-t border-[#2C3038] bg-black/40 h-32 overflow-y-auto font-mono text-[10px] w-full">
-                <div className="text-[#F5F5F0]/30 mb-1 border-b border-white/5 uppercase tracking-wider text-[9px]">Live Debug Log</div>
+            <div className="p-3 border-t border-white/5 bg-black/60 h-32 overflow-y-auto font-mono text-[9px] w-full">
+                <div className="text-bronze/50 mb-2 border-b border-white/5 uppercase tracking-widest pb-1 flex justify-between">
+                    <span>System Log</span>
+                    <div className="flex gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    </div>
+                </div>
                 {debugLog.map((log, i) => (
-                    <div key={i} className="text-[#F5F5F0]/70 border-b border-white/5 last:border-0 pb-0.5 mb-0.5 break-all">
-                        {log}
+                    <div key={i} className="text-portland/60 border-b border-white/5 last:border-0 pb-1 mb-1 break-all font-light">
+                        <span className="text-white/20 mr-2">{log.split(']')[0]}]</span>
+                        {log.split(']')[1]}
                     </div>
                 ))}
-                {debugLog.length === 0 && <div className="text-[#F5F5F0]/20 italic">Waiting for connection...</div>}
+                {debugLog.length === 0 && <div className="text-portland/20 italic">System ready...</div>}
             </div>
 
         </aside>
