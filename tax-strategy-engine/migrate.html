@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migration Tool: JSON to Firestore</title>
+
+    <!-- Firebase SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        // Inlined Config
+        window.firebaseConfig = {
+            apiKey: "AIzaSyBcezJRuEx8vsThQKhi8Az_XdL_XSM6u8g",
+            authDomain: "st-mary-somerset.firebaseapp.com",
+            projectId: "st-mary-somerset",
+            storageBucket: "st-mary-somerset.firebasestorage.app",
+            messagingSenderId: "924281338278",
+            appId: "1:924281338278:web:83affbb1aff93ba797f767"
+        };
+        firebase.initializeApp(window.firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+</head>
+
+<body class="bg-gray-100 p-10 font-mono">
+    <div class="max-w-3xl mx-auto bg-white p-8 rounded shadow">
+        <h1 class="text-2xl font-bold mb-4">Migration Utility</h1>
+        <p class="mb-4 text-gray-700">Reads <code>data/extracted_data.json</code> and uploads to Firestore
+            <code>transactions</code> collection.</p>
+
+        <!-- Auth Status -->
+        <div id="auth-section" class="mb-6 p-4 border rounded bg-gray-50">
+            <h2 class="font-bold">1. Authentication</h2>
+            <div id="user-display" class="my-2 text-sm text-gray-600">Checking auth...</div>
+            <button id="login-btn" class="bg-blue-600 text-white px-4 py-2 rounded hidden">Login with Google</button>
+        </div>
+
+        <!-- Data Load -->
+        <div id="data-section" class="mb-6 p-4 border rounded bg-gray-50 opacity-50 pointer-events-none">
+            <h2 class="font-bold">2. Data Source</h2>
+            <button id="load-btn" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded">Load JSON Data</button>
+            <div id="json-stats" class="mt-2 text-sm text-gray-600"></div>
+        </div>
+
+        <!-- Upload -->
+        <div id="upload-section" class="mb-6 p-4 border rounded bg-gray-50 opacity-50 pointer-events-none">
+            <h2 class="font-bold">3. Migration</h2>
+            <p class="text-xs text-red-500 mb-2">Warning: This will overwrite existing documents with the same IDs.</p>
+            <button id="migrate-btn" class="bg-green-600 text-white px-4 py-2 rounded">Start Migration</button>
+
+            <!-- Progress -->
+            <div class="mt-4 w-full bg-gray-200 rounded-full h-4 relative">
+                <div id="progress-bar" class="bg-green-600 h-4 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="log-console"
+                class="mt-4 bg-black text-green-400 p-4 h-64 overflow-y-auto text-xs rounded font-mono">
+                > Ready...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ui = {
+            authSec: document.getElementById('auth-section'),
+            userDisplay: document.getElementById('user-display'),
+            loginBtn: document.getElementById('login-btn'),
+
+            dataSec: document.getElementById('data-section'),
+            loadBtn: document.getElementById('load-btn'),
+            jsonStats: document.getElementById('json-stats'),
+
+            uploadSec: document.getElementById('upload-section'),
+            migrateBtn: document.getElementById('migrate-btn'),
+            progBar: document.getElementById('progress-bar'),
+            log: document.getElementById('log-console')
+        };
+
+        let jsonData = null;
+
+        function log(msg) {
+            const l = document.createElement('div');
+            l.textContent = `> ${msg}`;
+            ui.log.append(l);
+            ui.log.scrollTop = ui.log.scrollHeight;
+        }
+
+        // --- 1. Auth ---
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                ui.userDisplay.textContent = `Logged in as: ${user.email} (${user.uid})`;
+                ui.userDisplay.classList.add('text-green-600', 'font-bold');
+                ui.loginBtn.classList.add('hidden');
+
+                // Unlock Step 2
+                ui.dataSec.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                ui.userDisplay.textContent = "Not logged in";
+                ui.loginBtn.classList.remove('hidden');
+                ui.dataSec.classList.add('opacity-50', 'pointer-events-none');
+            }
+        });
+
+        ui.loginBtn.onclick = () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider);
+        };
+
+        // --- 2. Load JSON ---
+        ui.loadBtn.onclick = async () => {
+            try {
+                log("Fetching ./data/extracted_data.json...");
+                const res = await fetch('./data/extracted_data.json');
+                if (!res.ok) throw new Error("Failed to load file: " + res.status);
+
+                jsonData = await res.json();
+                const count = jsonData.transactions ? jsonData.transactions.length : 0;
+
+                ui.jsonStats.textContent = `Loaded ${count} transactions. Ready to upload.`;
+                log(`Success. Found ${count} items.`);
+
+                // Unlock Step 3
+                ui.uploadSec.classList.remove('opacity-50', 'pointer-events-none');
+            } catch (e) {
+                log("Error loading JSON: " + e.message);
+                alert("Ensure 'data/extracted_data.json' exists and serve this page via HTTP server.");
+            }
+        };
+
+        // --- 3. Migrate ---
+        ui.migrateBtn.onclick = async () => {
+            if (!jsonData || !jsonData.transactions) return;
+            const transactions = jsonData.transactions;
+            const total = transactions.length;
+            const BATCH_SIZE = 450; // Firestore limit is 500
+
+            ui.migrateBtn.disabled = true;
+            ui.migrateBtn.textContent = "Migrating...";
+
+            log(`Starting upload of ${total} documents...`);
+
+            let processed = 0;
+            const chunks = [];
+            for (let i = 0; i < total; i += BATCH_SIZE) {
+                chunks.push(transactions.slice(i, i + BATCH_SIZE));
+            }
+
+            log(`Split into ${chunks.length} batches.`);
+
+            try {
+                for (let i = 0; i < chunks.length; i++) {
+                    const chunk = chunks[i];
+                    const batch = db.batch();
+
+                    chunk.forEach(item => {
+                        // Use item.id as doc ID for idempotency
+                        // item.id is likely an integer from pandas, create a string key
+                        const docId = `txn_${item.id}`;
+                        const ref = db.collection('transactions').doc(docId);
+
+                        // Sanitize data (remove undefined)
+                        const payload = JSON.parse(JSON.stringify(item));
+                        // Timestamp conversion if needed?
+                        // period is string "YYYY-MM", year is int.
+
+                        batch.set(ref, payload);
+                    });
+
+                    await batch.commit();
+                    processed += chunk.length;
+
+                    // Update UI
+                    const pct = Math.round((processed / total) * 100);
+                    ui.progBar.style.width = `${pct}%`;
+                    log(`Batch ${i + 1}/${chunks.length} committed (${chunk.length} items).`);
+                }
+
+                log("MIGRATION COMPLETE!");
+                alert("Migration Complete!");
+                ui.migrateBtn.textContent = "Done";
+
+            } catch (e) {
+                log("FATAL ERROR: " + e.message);
+                console.error(e);
+                ui.migrateBtn.disabled = false;
+                ui.migrateBtn.textContent = "Retry";
+            }
+        };
+
+    </script>
+</body>
+
+</html>

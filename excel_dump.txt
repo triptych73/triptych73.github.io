@@ -1,0 +1,436 @@
+
+--- Sheet: COSTS WORKSHEET ---
+Columns: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', '"costs"/debt basis', 'Unnamed: 6', 'fixed asset basis', 'Unnamed: 8', 'FROM PIVOT', 'Unnamed: 10', 'Unnamed: 11', 'Unnamed: 12', 'Unnamed: 13']
+    Unnamed: 0    Unnamed: 1 Unnamed: 2      Unnamed: 3     Unnamed: 4 "costs"/debt basis      Unnamed: 6                   fixed asset basis     Unnamed: 8   FROM PIVOT Unnamed: 10    Unnamed: 11     Unnamed: 12                         Unnamed: 13
+0          NaN  fixed assets  creditors  current assets  cumul "costs"     annual "costs"         indexed                      annual expense        indexed  annual cost       cumul  indexed costs           cumul                                 NaN
+1       2004.0           NaN        NaN             NaN            NaN                NaN             NaN                                 NaN            NaN      60776.1     60776.1   89947.580634    89947.580634                                 NaN
+2       2005.0           NaN        NaN             NaN            NaN                NaN             NaN                                 NaN            NaN    163459.05   224235.15  236655.821693   326603.402328                                 NaN
+3       2006.0        248492     248922               3         248919             248919   427597.858152                              248492  426864.349319    175968.83   400203.98  246193.173089   572796.575417                                 NaN
+4       2007.0        248492     248922               3         248919                  0               0                                   0              0    153026.73   553230.71  206511.654025   779308.229442                                 NaN
+5       2008.0        333390     609213          259613         349600             100681   159505.327281                               84898   134500.88175    259172.18   812402.89  333387.796902  1112696.026344                                 NaN
+6       2009.0        907896     932760           23350         909410             559810   891452.236781                              574506   914854.43051    322261.67  1134664.56  424242.982756    1536939.0091                                 NaN
+7       2010.0       1002319    1029806           24801        1005005              95595   145487.381485                               94423  143703.698122     18869.65  1153534.21   23514.071201  1560453.080301                                 NaN
+8       2011.0       1006272    1019058            9421        1009637               4632     6701.826531                                3953     5719.41284         1614  1155148.21    1913.918001  1562366.998302                                 NaN
+9       2012.0       1006272     999672           15867         983805             -25832   -36220.146683                                   0              0            0  1155148.21              0  1562366.998302                                 NaN
+10      2013.0       1009340     989299           25849         963450             -20355   -27696.147541                                3068    4174.491803            0  1155148.21              0  1562366.998302                                 NaN
+11      2014.0       1019665    1036943           17278        1019665              56215    74726.423828                               10325   13724.990234     69404.44  1224552.65   75405.296869   1637772.29517                                 NaN
+12      2015.0       1103510    1072797           23422        1049375              29710    39111.462282                               83845  110376.996132     92229.34  1316781.99   99220.711139  1736993.006309                                 NaN
+13      2016.0       1197179    1244627           77304        1167323             117948   152556.839225                               93669  121153.784493    182919.56  1499701.55  193419.850728  1930412.857037                                 NaN
+14      2017.0       1348067    1365226           13589        1351637             184314   230172.675963                              150888  188430.041835    154868.17  1654569.72  158359.210409  2088772.067446                                 NaN
+15      2018.0       1376337    1495675           16848        1478827             127190          127190                               28270          28270    135661.79  1790231.51      135661.79  2224433.857446                                 NaN
+16      2019.0       1378924    1557150            8984        1548166              69339           69339                                2587           2587     80405.89   1870637.4       80405.89  2304839.747446                                 NaN
+17      2020.0       1378923    1618877           15531        1603346              55180           55180                                  -1             -1     41303.94  1911941.34       41303.94  2346143.687446                                 NaN
+18      2021.0       1378923    1639681            6214        1633467              30121           30121                                   0              0    109098.38  2021039.72      109098.38  2455242.067446                                 NaN
+19      2022.0       1378923    2063724          313012        1750712             117245          117245                                   0              0    163720.55  2184760.27      163720.55  2618962.617446                                 NaN
+20      2023.0           NaN        NaN             NaN            NaN                NaN             NaN                                 NaN            NaN     22825.77  2207586.04       22825.77  2641788.387446                                 NaN
+21         NaN           NaN        NaN             NaN            NaN                NaN             NaN                                 NaN            NaN          NaN         NaN            NaN             NaN                                 NaN
+22         NaN           NaN        NaN             NaN            NaN                NaN  2462470.737304  including the 260k in cash now 260            NaN          NaN         NaN            NaN  2901788.387446  including the 260k in cash now 260
+--- Sheet: FULL TANSACTIONAL ---
+Columns: ['Data Source', 'D', 'M', 'Y', 'Date', 'Description', 'Debits', 'Credits', 'Type', 'Incurred Costs', 'Indexed', 'Company', 'Lookup Debit', 'Invoice', 'Invoice date']
+   Data Source   D    M     Y       Date Description    Debits  Credits  Type  Incurred Costs       Indexed                            Company                                                                 Lookup Debit Invoice Invoice date
+0       Matrix  21  JUN  2004 2004-06-21       CB201  11225.00      NaN  COST        11225.00  16711.308887              Willingale Associates                                                                    Architect       y          NaT
+1       Matrix  28  JUN  2004 2004-06-28       CB205    150.00      NaN  COST          150.00    223.313704  Associated Consult.\nServices Ltd                                                            Company Formation       n          NaT
+2       Matrix   8  NOV  2004 2004-11-08       CB216   4241.75      NaN  COST         4241.75   6241.432143                Boyarsky Murphy Ltd                                                                    Architect       y   2004-08-02
+3       Matrix  30  SEP  2004 2004-09-30       CB149   4911.50      NaN  COST         4911.50   7261.500000                Boyarsky Murphy Ltd                                                                    Architect       y   2004-09-01
+4       Matrix  30  SEP  2004 2004-09-30       CB221   1902.24      NaN  COST         1902.24   2812.402679                                RPS                                                         Heritage Chris Miele       n          NaT
+5       Matrix  10  JUN  2004 2004-06-10       CB224   5619.32      NaN  COST         5619.32   8365.807773                Boyarsky Murphy ltd                                                                    Architect       y   2004-10-01
+6       Matrix  21  OCT  2004 2004-10-21       CB227    705.00      NaN  COST          705.00   1039.557264                Locke Carey & Assoc                                                         Fire Safety Engineer       y   2004-09-30
+7       Matrix  11  JAN  2004 2004-01-11       CB229   1175.00      NaN  COST         1175.00   1784.639541                                RPS                                                         Heritage Chris Miele       n          NaT
+8       Matrix   7  JUN  2004 2004-06-07       CB210   4284.05      NaN  COST         4284.05   6377.913838                Boyarsky Murphy Ltd                                                                    Architect       y   2004-07-01
+9       Matrix  12  OCT  2004 2004-10-12       CB241  11225.00      NaN  COST        11225.00  16551.816013              Willingale Associates                                                       Architect - Part 2 ???       y          NaT
+10      Matrix  12  DEC  2004 2004-12-12       CB243   1468.75      NaN  COST         1468.75   2150.918246                Locke Carey & Assoc                                                         Fire Safety Engineer       y   2004-10-31
+11      Matrix  14  DEC  2004 2004-12-14       CB247   4150.36      NaN  COST         4150.36   6078.015355               Alan Baxter & Assoc.                                                          Structural Engineer       y   2004-12-15
+12      Matrix   1  AUG  2005 2005-08-01       CB250   1266.06      NaN  COST         1266.06   1828.095981                                RPS                                                         Heritage Chris Miele       n          NaT
+13      Matrix   1  AUG  2005 2005-08-01       CB252   4200.62      NaN  COST         4200.62   6065.381215                Boyarsky Murphy Ltd                                                                    Architect       y   2005-01-05
+14      Matrix  11  OCT  2004 2004-10-11       CB233   4846.88      NaN  COST         4846.88   7146.963563                Boyarsky Murphy Ltd                                                                    Architect       y   2004-11-01
+15      Matrix  12  SEP  2004 2004-09-12       CB237   4871.25      NaN  COST         4871.25   7201.991627                Boyarsky Murphy ltd                                                                    Architect       y   2004-12-01
+16      Matrix   2  JUL  2005 2005-07-02       CB257    352.50      NaN  COST          352.50    510.042924                Locke Carey & Assoc                                                         Fire Safety Engineer       y   2005-01-31
+17      Matrix   2  JUL  2005 2005-07-02       CB259   4670.62      NaN  COST         4670.62   6758.061509                Boyarsky Murphy Ltd                                                                    Architect       y   2005-02-02
+18      Matrix  14  FEB  2005 2005-02-14       CB261   3365.20      NaN  COST         3365.20   4935.981646    Greenwood\nDevelopment Planning                                                                     Planning       y   2005-02-09
+19      Matrix  19  FEB  2005 2005-02-19       CB262    264.26      NaN  COST          264.26    387.609209                                RPS                                                         Heritage Chris Miele       n          NaT
+20      Matrix   3  JUL  2005 2005-07-03       CB268   5106.55      NaN  COST         5106.55   7388.821826                Boyarsky Murphy ltd                                                                    Architect       y   2005-03-02
+21      Matrix  17  MAR  2005 2005-03-17       CB272    974.08      NaN  COST          974.08   1422.003402                                RPS                                                         Heritage Chris Miele       n          NaT
+22      Matrix  20  MAR  2005 2005-03-20       CB273   9242.01      NaN  COST         9242.01  13491.879165               Alan Baxter & Assoc.                                                          Structural Engineer       y   2005-03-30
+23      Matrix  20  MAR  2005 2005-03-20       CB275   4974.00      NaN  COST         4974.00   7261.256693    Greenwood\nDevelopment Planning                                                                     Planning       y   2005-03-16
+24      Matrix   4  JUN  2005 2005-06-04       CB278  11225.00      NaN  COST        11225.00  16241.792404              Willingale Associates                                                    Architect - Final Payment       y          NaT
+25      Matrix  14  APR  2005 2005-04-14       CB280   3055.00      NaN  COST         3055.00   4434.214509                Boyarsky Murphy Ltd                                                                    Architect       y   2005-04-04
+26      Matrix  14  APR  2005 2005-04-14       CB281   4829.25      NaN  COST         4829.25   7009.469859                   McDonnel Langley                                                                M&E Engineers       n          NaT
+27      Matrix   5  MAY  2005 2005-05-05       a1119   3301.75      NaN  COST         3301.75   4782.378516                Boyarsky Murphy ltd                                                                    Architect       y   2005-05-03
+28      Matrix  23  MAY  2005 2005-05-23       a1124    725.56      NaN  COST          725.56   1050.928312    Greenwood\nDevelopment Planning                                                                     Planning       y   2005-05-18
+29      Matrix   6  MAY  2005 2005-05-06       a1132   4435.62      NaN  COST         4435.62   6424.718344                Boyarsky Murphy Ltd                                                                    Architect       y   2005-06-01
+30      Matrix   6  JUL  2005 2005-07-06       a1134   1233.75      NaN  COST         1233.75   1785.150234                        PT Projects                                                                           QS       y   2005-06-30
+31      Matrix   7  OCT  2005 2005-10-07       a1144   4448.62      NaN  COST         4448.62   6400.213254                Boyarsky Murphy ltd                                                                    Architect       n          NaT
+32      Matrix  20  AUG  2005 2005-08-20       a1153      0.00      NaN  COST            0.00      0.000000                         Greig-Ling                                           Structural Engineer - lost 5753.62     NaN          NaT
+33      Matrix  24  AUG  2005 2005-08-24       a1155   4465.00      NaN  COST         4465.00   6447.126168                Boyarsky Murphy ltd                                                                    Architect       y   2005-08-01
+34      Matrix   9  MAR  2005 2005-03-09       a1162   4459.12      NaN  COST         4459.12   6509.612976                Boyarsky Murphy ltd                                                                    Architect       y   2005-09-01
+35      Matrix   9  APR  2005 2005-04-09       a1163      0.00      NaN   NaN            0.00      0.000000                     City of London                                 License - Foundation Investigation\ncxld 750       y          NaT
+36      Matrix   9  APR  2005 2005-04-09       a1164    881.25      NaN  COST          881.25   1279.100339                     City of London                                           License - Foundation Investigation       y   2005-09-21
+37      Matrix   9  MAY  2005 2005-05-09         NaN    888.30      NaN  COST          888.30   1286.647031                               JHAI                                                           Approved Inspector       y   2005-08-30
+38      Matrix  25  SEP  2005 2005-09-25        c284     30.00      NaN  COST           30.00     43.205593            Companies House -\nstms                                                Companies House annual filing     NaN          NaT
+39      Matrix  11  JUL  2005 2005-07-11       a1173   4476.75      NaN  COST         4476.75   6477.545135                Boyarsky Murphy Ltd                                                                    Architect       y   2005-10-01
+40      Matrix  11  JUL  2005 2005-07-11       a1174   1410.00      NaN  COST         1410.00   2040.171696                        PT Projects                                                                           QS       y   2005-10-30
+41      Matrix  10  JUL  2005 2005-07-10       a1179   5758.44      NaN  COST         5758.44   8332.061207                         Greig-Ling                                                          Structural Engineer       n          NaT
+42      Matrix  10  NOV  2005 2005-11-10       a1182   4465.00      NaN  COST         4465.00   6413.824897                Boyarsky Murphy Ltd                                                                    Architect       y   2005-10-03
+43      Matrix  27  NOV  2005 2005-11-27       a1188  11867.50      NaN  COST        11867.50  17047.271436                    Gerard Huguenin                                                      Ground Works specialist       y   2005-11-23
+44      Matrix  12  JUN  2005 2005-06-12       a1201   6043.62      NaN  COST         6043.62   8744.696785                Boyarsky Murphy ltd                                                                    Architect       y   2005-11-01
+45      Matrix  15  JUN  2005 2005-06-15         NaN  45000.00      NaN  COST        45000.00  65111.862643                     City of London  STMS purchase - cheque to\nStella (c.f. Development Agreement for Invoice?)       y          NaT
+46      Matrix   1  JUN  2006 2006-06-01       a1197   7344.69      NaN  COST         7344.69  10289.966191                         Greig-Ling                                    Structural Engineer (5753 +\nlicense fee)       y   2005-11-28
+47      Matrix   1  JUL  2006 2006-07-01       a1198   5869.12      NaN  COST         5869.12   8222.681471                Boyarsky Murphy Ltd                                                                    Architect       y   2005-01-03
+48      Matrix   1  SEP  2006 2006-09-01       a1200   4406.25      NaN  COST         4406.25   6123.828711                        PT Projects                                                           QS - final payment       y   2005-12-30
+49      Matrix  12  JUN  2005 2005-06-12       a1201   6043.62      NaN  COST         6043.62   8744.696785                Boyarsky Murphy Ltd                                                                    Architect       n          NaT
+--- Sheet: HISCOX ---
+Columns: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3']
+             Unnamed: 0 Unnamed: 1    Unnamed: 2  Unnamed: 3
+0                   NaN        NaN           NaN         NaN
+1    SEP 2006- MAR 2015        NaN  30148.680000         NaN
+2               INDEXED        NaN  36731.882649         NaN
+3                   NaN        NaN           NaN         NaN
+4   2006-09-01 00:00:00   2006 SEP    241.185000  335.200142
+5   2006-10-01 00:00:00   2006 OCT    241.185000  334.698346
+6   2006-11-01 00:00:00   2006 NOV    241.185000  333.533309
+7   2006-12-01 00:00:00   2006 DEC    241.185000  330.900585
+8   2007-01-01 00:00:00   2007 JAN    241.185000  332.706094
+9   2007-02-01 00:00:00   2007 FEB    241.185000  330.248885
+10  2007-03-01 00:00:00   2007 MAR    241.185000  328.148476
+11  2007-04-01 00:00:00   2007 APR    241.185000  326.550869
+12  2007-05-01 00:00:00   2007 MAY    241.185000  325.283940
+13  2007-06-01 00:00:00   2007 JUN    241.185000  323.557880
+14  2007-07-01 00:00:00   2007 JUL    241.185000  325.441769
+15  2007-08-01 00:00:00   2007 AUG    241.185000  323.557880
+16  2007-09-01 00:00:00   2007 SEP    241.185000  322.468983
+17  2007-10-01 00:00:00   2007 OCT    241.185000  321.079696
+18  2007-11-01 00:00:00   2007 NOV    241.185000  319.854785
+19  2007-12-01 00:00:00   2007 DEC    241.185000  318.034844
+20  2008-01-01 00:00:00   2008 JAN    241.185000  319.702328
+21  2008-02-01 00:00:00   2008 FEB    241.185000  317.282632
+22  2008-03-01 00:00:00   2008 MAR    241.185000  316.235495
+23  2008-04-01 00:00:00   2008 APR    241.185000  313.427797
+24  2008-05-01 00:00:00   2008 MAY    241.185000  311.824958
+25  2008-06-01 00:00:00   2008 JUN    241.185000  309.379836
+26  2008-07-01 00:00:00   2008 JUL    241.185000  309.808538
+27  2008-08-01 00:00:00   2008 AUG    241.185000  308.810076
+28  2008-09-01 00:00:00   2008 SEP    241.185000  307.113317
+29  2008-10-01 00:00:00   2008 OCT    241.185000  308.100820
+30  2008-11-01 00:00:00   2008 NOV    241.185000  310.525688
+31  2008-12-01 00:00:00   2008 DEC    241.185000  315.047198
+32  2009-01-01 00:00:00   2009 JAN    354.010000  468.587249
+33  2009-02-01 00:00:00   2009 FEB    354.010000  465.705681
+34  2009-03-01 00:00:00   2009 MAR    354.010000  465.926081
+35  2009-04-01 00:00:00   2009 APR    354.010000  465.485489
+36  2009-05-01 00:00:00   2009 MAY    354.010000  462.641828
+37  2009-06-01 00:00:00   2009 JUN    354.010000  461.341054
+38  2009-07-01 00:00:00   2009 JUL    354.010000  461.341054
+39  2009-08-01 00:00:00   2009 AUG    354.010000  459.189277
+40  2009-09-01 00:00:00   2009 SEP    354.010000  457.269768
+41  2009-10-01 00:00:00   2009 OCT    354.010000  455.787875
+42  2009-11-01 00:00:00   2009 NOV    354.010000  454.525305
+43  2009-12-01 00:00:00   2009 DEC    354.010000  451.606335
+44  2010-01-01 00:00:00   2010 JAN    354.010000  451.813589
+45  2010-02-01 00:00:00   2010 FEB    354.010000  449.134037
+46  2010-03-01 00:00:00   2010 MAR    354.010000  446.081473
+47  2010-04-01 00:00:00   2010 APR    354.010000  441.876934
+48  2010-05-01 00:00:00   2010 MAY    354.010000  440.295979
+49  2010-06-01 00:00:00   2010 JUN    354.010000  439.313614
+--- Sheet: Sheet2 ---
+Columns: ['Matrix', 25, 'NOV', 2009, 40142, '40141400', 'stms cb 161', 1400, 'Unnamed: 8', 'Unnamed: 9', '1400.1', 1797.5069252077565, 'City of London', 'Hoarding I skip lie to nov 11 2010', 'Unnamed: 14', 'Unnamed: 15', 'Unnamed: 16', 'Unnamed: 17', 'Source', 'Day', 'Month', 'Year', 'Date', 'Description', 'Debit', 'Credit', 'Loan Type', 'Unnamed: 27']
+      Matrix  25  NOV  2009  40142     40141400             stms cb 161     1400  Unnamed: 8  Unnamed: 9   1400.1  1797.5069252077565                      City of London                                              Hoarding I skip lie to nov 11 2010  Unnamed: 14 Unnamed: 15  Unnamed: 16  Unnamed: 17     Source  Day Month  Year   Date                                Description    Debit    Credit Loan Type  Unnamed: 27
+0     Matrix  15  DEC  2009  40162  40167812.12             stms cb 162  7812.12         NaN         NaN  7812.12         9965.828312                            Birketts                                                    Legal fees wsp/city for stms          NaN         NaN          NaN          NaN  Statement    2   DEC  2009  40149                                        161  1400.00       NaN    CHEQUE          1.0
+1     Matrix   8  MAR  2010  40245  40242763.00             stms cb 168  2763.00         NaN         NaN  2763.00         3481.605347                            Birketts                                    may-26june (10 hrs), Inv 159394.\nvat=411.60          NaN         NaN          NaN          NaN  Statement   17   DEC  2009  40164                              Trf K Renwick      NaN   5000.00      LOAN          NaN
+2     Matrix   4  MAY  2010  40302  40308396.00             stms cb 163  8396.00         NaN         NaN  8396.00        10442.431127                        Khalid Aslam  Replacement cheque for 155 Loan and Molas £3905.40 of\nI which VAT is i:;nq 40          NaN         NaN          NaN          NaN  Statement   17   DEC  2009  40164                                        162  7817.12       NaN    CHEQUE          1.0
+3     Matrix   4  MAY  2010  40302  40306505.97             stms cb 164  6505.97         NaN         NaN  6505.97         8091.727446                            Birketts                                                                   Vat is 968.97          NaN         NaN          NaN          NaN  Statement   22   JAN  2010  40200                                    Charges     1.59       NaN    CHARGE          NaN
+4     Matrix  27  JUL  2010  40386      4038.00             stms cb 165      NaN         NaN         NaN     0.00            0.000000                            Birketts                                                                            cxld          NaN         NaN          NaN          NaN  Statement   25   FEB  2010  40234                                       Loan      NaN   9500.00      LOAN          NaN
+5     Matrix  27  JUL  2010  40386  40381189.68             stms cb 166  1189.68         NaN         NaN  1189.68         1479.651199                            Birketts                                            inv no. 156253 dated 29.apr.10\nvat=          NaN         NaN          NaN          NaN  Statement   10   MAR  2010  40247                         Debit Under Advice    10.00       NaN    CHARGE          NaN
+6     Matrix  27  JUL  2010  40386    403815.00             stms cb 167    15.00         NaN         NaN    15.00           18.656082                         CASolutions                                                       stms 2010 annual accounts          NaN         NaN          NaN          NaN  Statement   29   MAR  2010  40266                           Loan from Incara      NaN   3700.00      LOAN          NaN
+7     Matrix  29  MAR  2011  40631     40630.00             stms cb 169     0.00         NaN         NaN     0.00            0.000000                           K Renwick                                                      part loan re-payment £6000          NaN         NaN          NaN          NaN  Statement    8   APR  2010  40276                                        164  8505.97       NaN    CHEQUE          1.0
+8     Matrix  29  MAR  2011  40631   4063400.00             stms cb 170   400.00         NaN         NaN   400.00          478.451613                      City of London                                     Hoarding I skip lie 29 Mar 11 29\nJune 2011          NaN         NaN          NaN          NaN  Statement   11   MAY  2010  40309                                        163  8396.00       NaN    CHEQUE          1.0
+9     Matrix  26  APR  2011  40659      4065.00             stms cb 171      NaN         NaN         NaN     0.00            0.000000                           K Renwick                                                      part loan re-payment £3000          NaN         NaN          NaN          NaN  Statement   22   JUN  2010  40351                                    Charges     4.53       NaN    CHARGE          NaN
+10    Matrix  16  MAY  2011  40679      4067.00             stms cb 172      NaN         NaN         NaN     0.00            0.000000                           K Renwick                                                      part loan re-payment £4600          NaN         NaN          NaN          NaN  Statement    5   JUL  2010  40364                             HMRC VAT REPAY      NaN  15957.06      HMRC          NaN
+11    Matrix  28  JUN  2011  40722      4072.00  credit\ntransferred in      NaN         NaN         NaN     0.00            0.000000                                 NaN                                                            £8500 loan from RCLO          NaN         NaN          NaN          NaN  Statement   12   JUL  2010  40371                             HMRC VAT REPAY      NaN   1155.30      HMRC          NaN
+12    Matrix  29  JUN  2011  40723  40721200.00             stms cb 173  1200.00         NaN         NaN  1200.00         1418.877551                      City of London                                 Hoarding I skip lie 29 June 2011\nto 29 sept 11          NaN         NaN          NaN          NaN  Statement   12   JUL  2010  40371                             HMRC VAT REPAY      NaN   2600.85      HMRC          NaN
+13    Matrix  27  JUL  2011  40751      4075.00  credit\ntransferred in      NaN         NaN         NaN     0.00            0.000000                                 NaN                                                            £8500 loan from RCLO          NaN         NaN          NaN          NaN  Statement   30   JUL  2010  40389                                        166  1189.68       NaN    CHEQUE          1.0
+14    Matrix  27  JUL  2011  40751    407514.00             stms cb 174    14.00         NaN         NaN    14.00           16.588837                        CA Solutions                                                            STMS annual accounts          NaN         NaN          NaN          NaN  Statement    5   AUG  2010  40395                                        167    15.00       NaN    CHEQUE          1.0
+15  Invoices   1  JAN  2014  41640   4164203.76         online transfer   203.76         NaN         NaN   203.76          224.329596                              Hiscox                                                             Buildings Insurance          NaN       False          NaN          NaN  Statement    5   AUG  2010  40395                                        168  2763.00       NaN    CHEQUE          1.0
+16  Invoices   1  JAN  2014  41640   4164500.00         online transfer   500.00         NaN         NaN   500.00          550.475059                           G Renwick                                                              Project Management          NaN        True          NaN          NaN  Statement   21   SEP  2010  40442                                    Charges     1.40       NaN    CHARGE          NaN
+17  Invoices   1  JAN  2014  41640   4164210.00         online transfer   210.00         NaN         NaN   210.00          231.199525                           K Renwick                                                                    Office Space          NaN       False          NaN          NaN  Statement   12   OCT  2010  40463                                   Transfer  8000.00       NaN       PLR          NaN
+18  Invoices   1  JAN  2014  41640   4164210.00         online transfer   210.00         NaN         NaN   210.00          231.199525                           K Renwick                                                          Supplies, Printing etc          NaN       False          NaN          NaN  Statement   10   NOV  2010  40492                         Debit Under Advice     2.00       NaN    CHARGE          NaN
+19  Invoices   1  JAN  2014  41640   4164539.99         online transfer   539.99         NaN         NaN   539.99          594.502055                                Ebay                                                                     Asus Laptop          NaN        True          NaN          NaN  Statement   10   NOV  2010  40492                         Debit Under Advice     2.00       NaN    CHARGE          NaN
+20    Matrix  12  JAN  2014  41651     41656.00         online transfer     6.00         NaN         NaN     6.00            6.605701                       Land Registry                                                                  two £3 charges          NaN        True          NaN          NaN  Statement   10   NOV  2010  40492                         Debit Under Advice     2.00       NaN    CHARGE          NaN
+21  Invoices   1  FEB  2014  41671   4167203.76         online transfer   203.76         NaN         NaN   203.76          222.917608                              Hiscox                                                             Buildings Insurance          NaN         ???          NaN          NaN  Statement   29   MAR  2011  40631                                        169  6000.00       NaN    CHEQUE          1.0
+22  Invoices   1  FEB  2014  41671   4167500.00         online transfer   500.00         NaN         NaN   500.00          547.010228                           G Renwick                                                              Project Management          NaN        True          NaN          NaN  Statement    4   APR  2011  40637                                        170   400.00       NaN    CHEQUE          1.0
+23  Invoices   1  FEB  2014  41671   4167210.00         online transfer   210.00         NaN         NaN   210.00          229.744296                           K Renwick                                                                    Office Space          NaN       False          NaN          NaN  Statement   26   APR  2011  40659                                        171  3000.00       NaN    CHEQUE          1.0
+24  Invoices   1  FEB  2014  41671   4167210.00         online transfer   210.00         NaN         NaN   210.00          229.744296                           K Renwick                                                          Supplies, Printing etc          NaN       False          NaN          NaN  Statement    9   MAY  2011  40672  Gbs09051Hcbm0Kda I/G.Renwick, D.Ren  RCLO      NaN   8500.00      LOAN          NaN
+25  Invoices   1  FEB  2014  41671  41671800.00         online transfer  1800.00         NaN         NaN  1800.00         1969.236821                 Boyarsky Murphy Ltd                                                                       CAD files          NaN         NaN          NaN          NaN  Statement   16   MAY  2011  40679                                        172  4500.00       NaN    CHEQUE          1.0
+26    Matrix   5  FEB  2014  41675  41675000.00         online transfer  5000.00         NaN         NaN  5000.00         5470.102282                    Customs & Excise                                               VATI owed £5376.00 5k bank\nlimit          NaN        True          NaN          NaN  Statement   28   JUN  2011  40722                                   Transfer  4000.00       NaN       PLR          NaN
+27    Matrix   5  FEB  2014  41675   4167376.00         online transfer   376.00         NaN         NaN   376.00          411.351692                    Customs & Excise                                                                        VAT owed          NaN        True          NaN          NaN  Statement   29   JUN  2011  40723     Gbs2906190Ggklt1/Renwick.D. Sala  RCLO      NaN   8500.00      LOAN          1.0
+28  Invoices  21  FEB  2014  41691   4169900.00                 invoice   900.00         NaN         NaN   900.00          984.618411  Wilkinson Construction Consultants                                                              Approved Inspector          NaN        True          NaN          NaN  Statement   26   JUL  2011  40750                                        173  1200.00       NaN    CHEQUE          1.0
+29  Invoices  28  FEB  2014  41698  41694644.00                 invoice  4644.00         NaN         NaN  4644.00         5080.630999                                 P&P                                                                       Architect          NaN        True          NaN          NaN  Statement   28   JUL  2011  40752             Gbs280710Gxxxx/Renwick.D. Sala      NaN   8500.00      LOAN          1.0
+30  Invoices   1  MAR  2014  41699   4169203.76         online transfer   203.76         NaN         NaN   203.76          222.392684                              Hiscox                                                             Buildings Insurance          NaN       False          NaN          NaN  Statement   29   JUL  2011  40753                        Part Loan Repayment  8000.00       NaN       PLR          NaN
+31  Invoices   1  MAR  2014  41699   4169500.00         online transfer   500.00         NaN         NaN   500.00          545.722135                           G Renwick                                                              Project Management          NaN        True          NaN          NaN  Statement   16   AUG  2011  40771                                        174    14.00       NaN    CHEQUE          1.0
+32  Invoices   1  MAR  2014  41699   4169210.00         online transfer   210.00         NaN         NaN   210.00          229.203297                           K Renwick                                                                    Office Space          NaN       False          NaN          NaN  Statement   13   SEP  2011  40799                        Part Loan Repayment  8000.00       NaN       PLR          NaN
+33  Invoices   1  MAR  2014  41699   4169210.00         online transfer   210.00         NaN         NaN   210.00          229.203297                           K Renwick                                                          Supplies, Printing etc          NaN       False          NaN          NaN  Statement   15   SEP  2011  40801                       Spargonet Consulting      NaN   9500.00      LOAN          NaN
+34  Invoices   1  MAR  2014  41699  41691783.80         online transfer  1783.80         NaN         NaN  1783.80         1946.918289               R.M. Eaton Stonemason                                                        Stonemasonry Consultancy          NaN        True          NaN          NaN  Statement    5   OCT  2011  40821                                        175  1500.00       NaN    CHEQUE          NaN
+35    Matrix   6  MAR  2014  41704  41701783.80         online transfer  1783.80         NaN         NaN  1783.80         1946.918289                          Cistec Ltd                                                             Structural Engineer          NaN        True          NaN          NaN  Statement   14   OCT  2011  40830                       Spargonet Consulting      NaN   7000.00      LOAN          NaN
+36    Matrix   6  MAR  2014  41704  41702721.60         online transfer  2721.60         NaN         NaN  2721.60         2970.474725              Pilbrow & Partners LLP                                                          architects invoice no.          NaN        True          NaN          NaN  Statement   21   OCT  2011  40837                                        176   400.00       NaN    CHEQUE          NaN
+37    Matrix  10  MAR  2014  41708  41701486.50         online transfer  1486.50         NaN         NaN  1486.50         1622.431907                          Cistec Ltd                                                             Structural Engineer          NaN        True          NaN          NaN  Statement   27   OCT  2011  40843                        Part Loan Repayment  4500.00       NaN       PLR          NaN
+38  Invoices  31  MAR  2014  41729  41724500.00         online transfer  4500.00         NaN         NaN  4500.00         4911.499215                                 P&P                                                                       Architect          NaN        True          NaN          NaN  Statement   15   NOV  2011  40862                       Spargonet Consulting      NaN    500.00      LOAN          NaN
+39  Invoices   1  APR  2014  41730   4173203.76         online transfer   203.76         NaN         NaN   203.76          221.609918                              Hiscox                                                             Buildings Insurance          NaN       False          NaN          NaN  Statement   22   NOV  2011  40869                                        177  4500.00       NaN    CHEQUE          NaN
+40  Invoices   1  APR  2014  41730   4173500.00         online transfer   500.00         NaN         NaN   500.00          543.801330                           G Renwick                                                              Project Management          NaN        True          NaN          NaN  Statement    2   DEC  2011  40879                                        179  4500.00       NaN    CHEQUE          NaN
+41  Invoices   1  APR  2014  41730   4173210.00         online transfer   210.00         NaN         NaN   210.00          228.396558                           K Renwick                                                                    Office Space          NaN       False          NaN          NaN  Statement    2   FEB  2012  40941                                        180  4800.00       NaN    CHEQUE          NaN
+42  Invoices   1  APR  2014  41730   4173210.00         online transfer   210.00         NaN         NaN   210.00          228.396558                           K Renwick                                                          Supplies, Printing etc          NaN       False          NaN          NaN  Statement    1   MAR  2012  40969                                         61  4200.00       NaN    CHEQUE          NaN
+43  Invoices   1  APR  2014  41730  41734993.63         online transfer  4993.63         NaN         NaN  4993.63         5431.085268                            Birketts                                                                           Legal          NaN       False          NaN          NaN  Statement   26   MAR  2012  40994        Gbs260328X7Nz19F 1/Renwick.D, Salaf      NaN   8000.00      LOAN          NaN
+44    Matrix  12  APR  2014  41741    417452.30         online transfer    52.30         NaN         NaN    52.30           56.881619                            Atos Web                                                                   cpu equipment          NaN       False          NaN          NaN  Statement    5   APR  2012  41004                         Debit Under Advice     5.00       NaN    CHARGE          NaN
+45    Matrix  12  APR  2014  41741  41741278.74         online transfer  1278.74         NaN         NaN  1278.74         1390.761025                   UK Power Networks                                   install temp electricity onsite -part payment          NaN       False          NaN          NaN  Statement    5   APR  2012  41004                                         62  4800.00       NaN    CHEQUE          NaN
+46  Invoices  30  APR  2014  41759  41754231.20         online transfer  4231.20         NaN         NaN  4231.20         4601.864372                                 P&P                                                                       Architect          NaN        True          NaN          NaN  Statement    4   MAY  2012  41033                                         63  6000.00       NaN    CHEQUE          NaN
+47  Invoices   1  MAY  2014  41760   4176203.76         online transfer   203.76         NaN         NaN   203.76          221.436717                              Hiscox                                                             Buildings Insurance          NaN       False          NaN          NaN  Statement   15   MAY  2012  41044                       Spargonet Consulting      NaN   9500.00      LOAN          NaN
+48  Invoices   1  MAY  2014  41760   4176500.00         online transfer   500.00         NaN         NaN   500.00          543.376319                           G Renwick                                                              Project Management          NaN        True          NaN          NaN  Statement   25   MAY  2012  41054                                         64  4500.00       NaN    CHEQUE          NaN
+49  Invoices   1  MAY  2014  41760   4176210.00         online transfer   210.00         NaN         NaN   210.00          228.218054                           K Renwick                                                                    Office Space          NaN       False          NaN          NaN  Statement   20   JUN  2012  41080                       Spargonet Consulting      NaN   6000.00      LOAN          NaN
+--- Sheet: NEW STATEMENTS ---
+Columns: ['Source', 'Day', 'Month', 'Year', 'Date', 'Description', 'Debit', 'Credit', 'Loan Type']
+       Source  Day Month  Year       Date                          Description    Debit    Credit Loan Type
+0   Statement    2   DEC  2009 2009-12-02                                  161  1400.00       NaN    CHEQUE
+1   Statement   17   DEC  2009 2009-12-17                        Trf K Renwick      NaN   5000.00      LOAN
+2   Statement   17   DEC  2009 2009-12-17                                  162  7817.12       NaN    CHEQUE
+3   Statement   22   JAN  2010 2010-01-22                              Charges     1.59       NaN    CHARGE
+4   Statement   25   FEB  2010 2010-02-25                                 Loan      NaN   9500.00      LOAN
+5   Statement   10   MAR  2010 2010-03-10                   Debit Under Advice    10.00       NaN    CHARGE
+6   Statement   29   MAR  2010 2010-03-29                     Loan from Incara      NaN   3700.00      LOAN
+7   Statement    8   APR  2010 2010-04-08                                  164  8505.97       NaN    CHEQUE
+8   Statement   11   MAY  2010 2010-05-11                                  163  8396.00       NaN    CHEQUE
+9   Statement   22   JUN  2010 2010-06-22                              Charges     4.53       NaN    CHARGE
+10  Statement    5   JUL  2010 2010-07-05                       HMRC VAT REPAY      NaN  15957.06      HMRC
+11  Statement   12   JUL  2010 2010-07-12                       HMRC VAT REPAY      NaN   1155.30      HMRC
+12  Statement   12   JUL  2010 2010-07-12                       HMRC VAT REPAY      NaN   2600.85      HMRC
+13  Statement   30   JUL  2010 2010-07-30                                  166  1189.68       NaN    CHEQUE
+14  Statement    5   AUG  2010 2010-08-05                                  167    15.00       NaN    CHEQUE
+15  Statement    5   AUG  2010 2010-08-05                                  168  2763.00       NaN    CHEQUE
+16  Statement   21   SEP  2010 2010-09-21                              Charges     1.40       NaN    CHARGE
+17  Statement   12   OCT  2010 2010-10-12                             Transfer  8000.00       NaN       PLR
+18  Statement   10   NOV  2010 2010-11-10                   Debit Under Advice     2.00       NaN    CHARGE
+19  Statement   10   NOV  2010 2010-11-10                   Debit Under Advice     2.00       NaN    CHARGE
+20  Statement   10   NOV  2010 2010-11-10                   Debit Under Advice     2.00       NaN    CHARGE
+21  Statement   29   MAR  2011 2011-03-29                                  169  6000.00       NaN    CHEQUE
+22  Statement    4   APR  2011 2011-04-04                                  170   400.00       NaN    CHEQUE
+23  Statement   26   APR  2011 2011-04-26                                  171  3000.00       NaN    CHEQUE
+24  Statement    9   MAY  2011 2011-05-09  Gbs09051Hcbm0Kda I/G.Renwick, D.Ren      NaN   8500.00      LOAN
+25  Statement   16   MAY  2011 2011-05-16                                  172  4500.00       NaN    CHEQUE
+26  Statement   28   JUN  2011 2011-06-28                             Transfer  4000.00       NaN       PLR
+27  Statement   29   JUN  2011 2011-06-29     Gbs2906190Ggklt1/Renwick.D. Sala      NaN   8500.00      LOAN
+28  Statement   26   JUL  2011 2011-07-26                                  173  1200.00       NaN    CHEQUE
+29  Statement   28   JUL  2011 2011-07-28       Gbs280710Gxxxx/Renwick.D. Sala      NaN   8500.00      LOAN
+30  Statement   29   JUL  2011 2011-07-29                  Part Loan Repayment  8000.00       NaN       PLR
+31  Statement   16   AUG  2011 2011-08-16                                  174    14.00       NaN    CHEQUE
+32  Statement   13   SEP  2011 2011-09-13                  Part Loan Repayment  8000.00       NaN       PLR
+33  Statement   15   SEP  2011 2011-09-15                 Spargonet Consulting      NaN   9500.00      LOAN
+34  Statement    5   OCT  2011 2011-10-05                                  175  1500.00       NaN    CHEQUE
+35  Statement   14   OCT  2011 2011-10-14                 Spargonet Consulting      NaN   7000.00      LOAN
+36  Statement   21   OCT  2011 2011-10-21                                  176   400.00       NaN    CHEQUE
+37  Statement   27   OCT  2011 2011-10-27                  Part Loan Repayment  4500.00       NaN       PLR
+38  Statement   15   NOV  2011 2011-11-15                 Spargonet Consulting      NaN    500.00      LOAN
+39  Statement   22   NOV  2011 2011-11-22                                  177  4500.00       NaN    CHEQUE
+40  Statement    2   DEC  2011 2011-12-02                                  179  4500.00       NaN    CHEQUE
+41  Statement    2   FEB  2012 2012-02-02                                  180  4800.00       NaN    CHEQUE
+42  Statement    1   MAR  2012 2012-03-01                                   61  4200.00       NaN    CHEQUE
+43  Statement   26   MAR  2012 2012-03-26  Gbs260328X7Nz19F 1/Renwick.D, Salaf      NaN   8000.00      LOAN
+44  Statement    5   APR  2012 2012-04-05                   Debit Under Advice     5.00       NaN    CHARGE
+45  Statement    5   APR  2012 2012-04-05                                   62  4800.00       NaN    CHEQUE
+46  Statement    4   MAY  2012 2012-05-04                                   63  6000.00       NaN    CHEQUE
+47  Statement   15   MAY  2012 2012-05-15                 Spargonet Consulting      NaN   9500.00      LOAN
+48  Statement   25   MAY  2012 2012-05-25                                   64  4500.00       NaN    CHEQUE
+49  Statement   20   JUN  2012 2012-06-20                 Spargonet Consulting      NaN   6000.00      LOAN
+--- Sheet: PIVOT ---
+Columns: ['Row Labels', 'Sum of Indexed', 'Sum of Incurred Costs', 'RPI FIGURE', 'Unnamed: 4', 'YEAR', 'CALC INDEXED', 'Unnamed: 7', '<--- JUST FOR CROSS CHECK ONLY']
+   Row Labels  Sum of Indexed  Sum of Incurred Costs  RPI FIGURE  Unnamed: 4    YEAR  CALC INDEXED  Unnamed: 7  <--- JUST FOR CROSS CHECK ONLY
+0        2004    89947.580634               60776.10         NaN         NaN     NaN           NaN         NaN                             NaN
+1         Jan     1784.639541                1175.00       183.1         1.0  2004.0   1784.639541         NaN                             NaN
+2         Jun    31678.344202               21278.37       186.8         6.0  2004.0  31678.344202         NaN                             NaN
+3         Sep    17275.894306               11684.99       188.1         9.0  2004.0  17275.894306         NaN                             NaN
+4         Oct    24738.336840               16776.88       188.6        10.0  2004.0  24738.336840         NaN                             NaN
+5         Nov     6241.432143                4241.75       189.0        11.0  2004.0   6241.432143         NaN                             NaN
+6         Dec     8228.933602                5619.11       189.9        12.0  2004.0   8228.933602         NaN                             NaN
+7        2005   236655.821693              163459.05         NaN         NaN     NaN           NaN         NaN                             NaN
+8         Feb     5323.590854                3629.46       189.6         2.0  2005.0   5323.590854         NaN                             NaN
+9         Mar    28684.752236               19649.21       190.5         3.0  2005.0  28684.752236         NaN                             NaN
+10        Apr    12722.784708                8765.50       191.6         4.0  2005.0  12722.784708         NaN                             NaN
+11        May    13544.672203                9351.23       192.0         5.0  2005.0  13544.672203         NaN                             NaN
+12        Jun    98843.048616               68312.24       192.2         6.0  2005.0  98843.048616         NaN                             NaN
+13        Jul    33291.854532               23008.61       192.2         7.0  2005.0  33291.854532         NaN                             NaN
+14        Aug    14340.603364                9931.68       192.6         8.0  2005.0  14340.603364         NaN                             NaN
+15        Sep       43.205593                  30.00       193.1         9.0  2005.0     43.205593         NaN                             NaN
+16        Oct     6400.213254                4448.62       193.3        10.0  2005.0   6400.213254         NaN                             NaN
+17        Nov    23461.096333               16332.50       193.6        11.0  2005.0  23461.096333         NaN                             NaN
+18       2006   246193.173089              175968.83         NaN         NaN     NaN           NaN         NaN                             NaN
+19        Mar    18265.465385               12807.50       195.0         3.0  2006.0  18265.465385         NaN                             NaN
+20        Apr    25000.524824               17664.88       196.5         4.0  2006.0  25000.524824         NaN                             NaN
+21        May    22312.693065               15861.99       197.7         5.0  2006.0  22312.693065         NaN                             NaN
+22        Jun    31974.466942               22822.48       198.5         6.0  2006.0  31974.466942         NaN                             NaN
+23        Jul    43276.464952               30889.53       198.5         7.0  2006.0  43276.464952         NaN                             NaN
+24        Aug    16740.405407               11990.97       199.2         8.0  2006.0  16740.405407         NaN                             NaN
+25        Sep    59903.198636               43101.87       200.1         9.0  2006.0  59903.198636         NaN                             NaN
+26        Nov    18012.568807               13025.27       201.1        11.0  2006.0  18012.568807         NaN                             NaN
+27        Dec    10707.385072                7804.34       202.7        12.0  2006.0  10707.385072         NaN                             NaN
+28       2007   206511.654025              153026.73         NaN         NaN     NaN           NaN         NaN                             NaN
+29        Jan    13794.642857               10000.00       201.6         1.0  2007.0  13794.642857         NaN                             NaN
+30        Feb    75310.192024               55000.00       203.1         2.0  2007.0  75310.192024         NaN                             NaN
+31        Apr     2405.416066                1776.60       205.4         4.0  2007.0   2405.416066         NaN                             NaN
+32        May     3071.710257                2277.55       206.2         5.0  2007.0   3071.710257         NaN                             NaN
+33        Jun     9522.919407                7098.53       207.3         6.0  2007.0   9522.919407         NaN                             NaN
+34        Jul    11317.792926                8387.62       206.1         7.0  2007.0  11317.792926         NaN                             NaN
+35        Aug      135.575427                 101.06       207.3         8.0  2007.0    135.575427         NaN                             NaN
+36        Sep    16899.949817               12640.02       208.0         9.0  2007.0  16899.949817         NaN                             NaN
+37        Oct    32793.048784               24633.11       208.9        10.0  2007.0  32793.048784         NaN                             NaN
+38        Nov    41254.815451               31108.00       209.7        11.0  2007.0  41254.815451         NaN                             NaN
+39        Dec        5.591010                   4.24       210.9        12.0  2007.0      5.591010         NaN                             NaN
+40       2008   333387.796902              259172.18         NaN         NaN     NaN           NaN         NaN                             NaN
+41        Feb     7303.979461                5552.18       211.4         2.0  2008.0   7303.979461         NaN                             NaN
+42        Mar    14046.265884               10712.74       212.1         3.0  2008.0  14046.265884         NaN                             NaN
+43        Apr        0.000000                   0.00       214.0         4.0  2008.0      0.000000         NaN                             NaN
+44        May        0.685230                   0.53       215.1         5.0  2008.0      0.685230         NaN                             NaN
+45        Jun      317.326467                 247.38       216.8         6.0  2008.0    317.326467         NaN                             NaN
+46        Jul     4670.230282                3635.76       216.5         7.0  2008.0   4670.230282         NaN                             NaN
+47        Aug    12833.687610               10023.29       217.2         8.0  2008.0  12833.687610         NaN                             NaN
+48        Sep    84615.974258               66451.38       218.4         9.0  2008.0  84615.974258         NaN                             NaN
+49        Oct    70336.446491               55060.21       217.7        10.0  2008.0  70336.446491         NaN                             NaN
+--- Sheet: RPI ---
+Columns: ['Title', 'RPI All Items Index: Jan 1987=100']
+                Title RPI All Items Index: Jan 1987=100
+0                CDID                              CHAW
+1   Source dataset ID                              MM23
+2             PreUnit                               NaN
+3                Unit            Index, base year = 100
+4        Release date                        22-03-2023
+5        Next release                     19 April 2023
+6     Important notes                               NaN
+7                1987                             101.9
+8                1988                             106.9
+9                1989                             115.2
+10               1990                             126.1
+11               1991                             133.5
+12               1992                             138.5
+13               1993                             140.7
+14               1994                             144.1
+15               1995                             149.1
+16               1996                             152.7
+17               1997                             157.5
+18               1998                             162.9
+19               1999                             165.4
+20               2000                             170.3
+21               2001                             173.3
+22               2002                             176.2
+23               2003                             181.3
+24               2004                             186.7
+25               2005                               192
+26               2006                             198.1
+27               2007                             206.6
+28               2008                             214.8
+29               2009                             213.7
+30               2010                             223.6
+31               2011                             235.2
+32               2012                             242.7
+33               2013                             250.1
+34               2014                               256
+35               2015                             258.5
+36               2016                             263.1
+37               2017                             272.5
+38               2018                             281.6
+39               2019                             288.8
+40               2020                             293.1
+41               2021                               305
+42               2022                             340.3
+43            1987 Q1                             100.3
+44            1987 Q2                             101.9
+45            1987 Q3                             102.1
+46            1987 Q4                             103.2
+47            1988 Q1                             103.7
+48            1988 Q2                             106.2
+49            1988 Q3                             107.7
+--- Sheet: RPI ANNUAL ---
+Columns: ['1987', 101.9]
+    1987  101.9
+0   1988  106.9
+1   1989  115.2
+2   1990  126.1
+3   1991  133.5
+4   1992  138.5
+5   1993  140.7
+6   1994  144.1
+7   1995  149.1
+8   1996  152.7
+9   1997  157.5
+10  1998  162.9
+11  1999  165.4
+12  2000  170.3
+13  2001  173.3
+14  2002  176.2
+15  2003  181.3
+16  2004  186.7
+17  2005  192.0
+18  2006  198.1
+19  2007  206.6
+20  2008  214.8
+21  2009  213.7
+22  2010  223.6
+23  2011  235.2
+24  2012  242.7
+25  2013  250.1
+26  2014  256.0
+27  2015  258.5
+28  2016  263.1
+29  2017  272.5
+30  2018  281.6
+31  2019  288.8
+32  2020  293.1
+33  2021  305.0
+34  2022  340.3
+--- Sheet: MATRIX ---
+Columns: ['Key', 'Vendor', 'Date', 'Amount', 'Cumulative Amount', 'Cheque no', 'Type', 'Rec.']
+             Key                             Vendor       Date    Amount  Cumulative Amount Cheque no                                          Type Rec.
+0   3.815911e+09              Willingale Associates 2004-06-21  11225.00           11225.00     CB201                                     Architect    C
+1   3.816615e+07  Associated Consult.\nServices Ltd 2004-06-28    150.00           11375.00     CB205                             Company Formation    C
+2   3.829942e+08                Boyarsky Murphy Ltd 2004-11-08   4241.75           15616.75     CB216                                     Architect    C
+3   3.826049e+08                Boyarsky Murphy Ltd 2004-09-30   4911.50           20528.25     CB149                                     Architect    C
+4   3.826019e+08                                RPS 2004-09-30   1902.24           22430.49     cb221                          Heritage Chris Miele    C
+5   3.814856e+08                Boyarsky Murphy ltd 2004-06-10   5619.32           28049.81     cb224                                     Architect    C
+6   3.828170e+07                Locke Carey & Assoc 2004-10-21    705.00           28754.81     cb227                          Fire Safety Engineer    C
+7   3.799712e+08                                RPS 2004-01-11   1175.00           29929.81     cb229                          Heritage Chris Miele    C
+8   3.814543e+08                Boyarsky Murphy Ltd 2004-06-07   4284.05           34213.86     cb210                                     Architect    C
+9   3.827211e+09              Willinoale Associates 2004-10-12  11225.00           45438.86     cb241                                     Architect    C
+10  3.833315e+08                Locke Carey & Assoc 2004-12-12   1468.75           46907.61     cb243                          Fire Safety Engineer    C
+11  3.833542e+08               Alan Baxter & Assoc. 2004-12-14   4150.36           51057.97     cb247                           Structural Engineer    C
+12  3.856513e+08                                RPS 2005-08-01   1266.06           52324.03     cb250                          Heritage Chris Miele    C
+13  3.856542e+08                Boyarsky Murphy Ltd 2005-08-01   4200.62           56524.65     cb252                                     Architect    C
+14  3.827148e+08                Boyarsky Murphy Ltd 2004-10-11   4846.88           61371.53     cb233                                     Architect    C
+15  3.824249e+08                Boyarsky Murphy ltd 2004-09-12   4871.25           66242.78     cb237                                     Architect    C
+16  3.853535e+07                Locke Carey & Assoc 2005-07-02    352.50           66595.28     cb257                          Fire Safety Engineer    C
+17  3.853547e+08                Boyarsky Murphy Ltd 2005-07-02   4670.62           71265.90     cb259                                     Architect    C
+18  3.839734e+08    Greenwood\nDevelopment Planning 2005-02-14   3365.20           74631.10     cb261                                      Planning    C
+19  3.840226e+07                                RPS 2005-02-19    264.26           74895.36     cb262                          Heritage Chris Miele    C
+20  3.853651e+08                Boyarsky Murphy ltd 2005-07-03   5106.55           80001.91     cb268                                     Architect    C
+21  3.842897e+07                                RPS 2005-03-17    974.08           80975.99     cb272                          Heritage Chris Miele    C
+22  3.843192e+08               Alan Baxter & Assoc. 2005-03-20   9242.01           90218.00     cb273                           Structural Engineer    C
+23  3.843150e+08    Greenwood\nDevelopment Plannino 2005-03-20   4974.00           95192.00     cb275                                      Planning    C
+24  3.850711e+09              Willinoale Associates 2005-06-04  11225.00          106417.00     cb278                                 Final Payment    C
+25  3.845631e+08                Boyarsky Murphy Ltd 2005-04-14   3055.00          109472.00     cb280                                     Architect    C
+26  3.845648e+08                   McDonnel Langley 2005-04-14   4829.25          114301.25     cb281                                 M&E Engineers    C
+27  3.847733e+08                Boyarsky Murphy ltd 2005-05-05   3301.75          117603.00     a1119                                     Architect    C
+28  3.849573e+07    Greenwood\nDevelopment Planning 2005-05-23    725.56          118328.56     a1124                                      Planning    C
+29  3.847844e+08                Boyarsky Murphy Ltd 2005-05-06   4435.62          122764.18     a1132                                     Architect    C
+30  3.853912e+08                        PT Projects 2005-07-06   1233.75          123997.93     a1134                                            QS    C
+31  3.863244e+08                Boyarsky Murphy ltd 2005-10-07   4448.62          128446.55     a1144                                     Architect    C
+32  3.858400e+05                         Greig-Ling 2005-08-20      0.00          128446.55     a1153            Structural Engineer - lost 5753.62  NaN
+33  3.858845e+08                Boyarsky Murphy ltd 2005-08-24   4465.00          132911.55     a1155                                     Architect    C
+34  3.842045e+08                Boyarsky Murphy ltd 2005-03-09   4459.12          137370.67     a1162                                     Architect    C
+35  3.845100e+05                     City of London 2005-04-09      0.00          137370.67     a1163  License - Foundation Investigation\ncxld 750  NaN
+36  3.845188e+07                     City of London 2005-04-09    881.25          138251.92     a1164            License - Foundation Investigation    C
+37  3.848189e+07                               JHAI 2005-05-09    888.30          139140.22       NaN                            Approved Inspector    C
+38  3.862030e+06            Companies House -\nstms 2005-09-25     30.00          139170.22      c284                 Companies House annual filing    C
+39  3.854445e+08                Boyarsky Murphy Ltd 2005-07-11   4476.75          143646.97     a1173                                     Architect    C
+40  3.854414e+08                        PT Projects 2005-07-11   1410.00          145056.97     a1174                                            QS    C
+41  3.854358e+08                         Greio-Lino 2005-07-10   5758.44          150815.41     a1179                           Structural Engineer    C
+42  3.866645e+08                Boyarsky Murphy Ltd 2005-11-10   4465.00          155280.41     a1182                                     Architect    C
+43  3.868312e+09                    oerard Huouenin 2005-11-27  11867.50          167147.91     a1188                       Ground Works specialist    C
+44  3.851560e+08                Boyarsky Murphy ltd 2005-06-12   6043.62          173191.53     a1201                                     Architect    C
+45  4.500000e+04                     City of London        NaT  45000.00          218191.53       NaN             STMS purchase - cheque to\nStella  NaN
+46  3.886973e+08                         Greig-Ling 2006-06-01   7344.69          225536.22     a1197     Structural Engineer (5753 +\nlicense fee)    C
+47  3.889959e+08                Boyarsky Murphy Ltd 2006-07-01   5869.12          231405.34     a1198                                     Architect    C
+48  3.896144e+08                        PT Projects 2006-09-01   4406.25          235811.59     a1200                            QS - final payment    C
+49  3.851560e+08                Boyarsky Murphy Ltd 2005-06-12   6043.62          241855.21     a1201                                     Architect    C

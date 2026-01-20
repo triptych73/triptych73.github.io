@@ -25,6 +25,19 @@
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
 
+    <!-- Firebase Auth Guard -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) window.location.href = 'login.html';
+            });
+        }
+    </script>
     <style>
         :root {
             --midnight: #0F1115;
@@ -205,6 +218,162 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+        // ------------------------------------------------------------------
+        // EXPORT UTILS
+        // ------------------------------------------------------------------
+        const ExporterUtils = {
+            saveString(text, filename) {
+                const blob = new Blob([text], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            },
+            saveArrayBuffer(buffer, filename) {
+                const blob = new Blob([buffer], { type: 'application/octet-stream' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            },
+
+            // CUSTOM OBJ EXPORTER FOR QUADS (Adapted for Door Hierarchy)
+            exportOptimizedOBJ(doorInstance) {
+                let output = "# Triptych Door Designer - Optimized OBJ\n";
+                output += "# Scale: Millimeters\n";
+                output += "# Up-Axis: Z (Rotated -90 X)\n\n";
+
+                let globalVertexOffset = 1;
+                const rootGroup = doorInstance.meshGroup;
+
+                // Traverse and find all meshes
+                const meshes = [];
+                rootGroup.traverse((child) => {
+                    if (child.isMesh) meshes.push(child);
+                });
+
+                meshes.forEach((mesh, idx) => {
+                    output += `g Mesh_${idx + 1}\n`;
+
+                    const geo = mesh.geometry;
+                    const posAttr = geo.attributes.position;
+                    // Check if geometry has positions
+                    if (!posAttr) return;
+
+                    const vertices = posAttr.array;
+
+                    // Bake World Matrix
+                    mesh.updateMatrixWorld(true);
+                    const matrix = mesh.matrixWorld;
+
+                    // 1. Write Vertices
+                    for (let i = 0; i < vertices.length; i += 3) {
+                        const localVec = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+
+                        // Apply World Transform
+                        localVec.applyMatrix4(matrix);
+
+                        // Apply Rotation for CAD (Y-Up -> Z-Up: x, z, -y)
+                        output += `v ${localVec.x.toFixed(4)} ${localVec.z.toFixed(4)} ${(-localVec.y).toFixed(4)}\n`;
+                    }
+
+                    // 2. Write Faces
+                    if (geo.index) {
+                        const indices = geo.index.array;
+                        for (let i = 0; i < indices.length; i += 3) {
+                            const a = globalVertexOffset + indices[i];
+                            const b = globalVertexOffset + indices[i + 1];
+                            const c = globalVertexOffset + indices[i + 2];
+                            output += `f ${a} ${b} ${c}\n`;
+                        }
+                    } else {
+                        // Non-indexed
+                        const triCount = vertices.length / 9;
+                        for (let i = 0; i < triCount; i++) {
+                            const v = globalVertexOffset + (i * 3);
+                            output += `f ${v} ${v + 1} ${v + 2}\n`;
+                        }
+                    }
+                    globalVertexOffset += (vertices.length / 3);
+                    output += "\n";
+                });
+
+                this.saveString(output, 'Door_Design_AutoCAD.obj');
+            },
+
+            exportGLTF(doorInstance) {
+                const exporter = new GLTFExporter();
+                // Create clean export group
+                const exportGroup = new THREE.Group();
+                const clone = doorInstance.meshGroup.clone();
+                // We might need to ensure transforms are correct, but clone should handle it
+                exportGroup.add(clone);
+
+                exporter.parse(
+                    exportGroup,
+                    (gltf) => {
+                        this.saveArrayBuffer(gltf, 'Door_Design.glb');
+                    },
+                    (error) => { console.error('GLTF Export Error:', error); },
+                    { binary: true }
+                );
+            }
+        };
+
+        // ------------------------------------------------------------------
+        // FIREBASE PERSISTENCE
+        // ------------------------------------------------------------------
+        const FirestoreService = {
+            async saveDoor(name, config) {
+                const user = firebase.auth().currentUser;
+                if (!user) { alert('Please log in using the link in Project Executive.'); return; }
+
+                try {
+                    // Check if we are updating an existing door (by name check or implicit ID?)
+                    // For now, simpler to just add new versions or allow overwrite if ID known.
+                    // Let's just Add new.
+                    await firebase.firestore().collection('doors').add({
+                        uid: user.uid,
+                        name: name || 'Untitled Door',
+                        config: config,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert('Configuration Saved!');
+                    return true;
+                } catch (e) {
+                    console.error(e);
+                    alert('Save failed: ' + e.message);
+                    return false;
+                }
+            },
+
+            async getUserDoors() {
+                const user = firebase.auth().currentUser;
+                if (!user) return [];
+                try {
+                    const snapshot = await firebase.firestore().collection('doors')
+                        .where('uid', '==', user.uid)
+                        .orderBy('timestamp', 'desc')
+                        .get();
+                    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                } catch (e) {
+                    console.error("Error fetching doors:", e);
+                    return [];
+                }
+            },
+
+            async loadDoor(id) {
+                try {
+                    const doc = await firebase.firestore().collection('doors').doc(id).get();
+                    if (doc.exists) return doc.data().config;
+                } catch (e) {
+                    console.error("Error loading door:", e);
+                }
+                return null;
+            }
+        };
 
         class Door {
             constructor(scene, config = {}) {
@@ -1357,6 +1526,46 @@
         // --- GUI ---
         const gui = new GUI({ title: 'Workshop Controls' });
 
+        // --- PROJECT CONTROLS ---
+        const projFolder = gui.addFolder('Project Files');
+
+        const projState = {
+            saveName: 'My Door Design',
+            save: async () => {
+                const success = await FirestoreService.saveDoor(projState.saveName, door.config);
+                if (success) refreshLoadList();
+            },
+            loadId: '',
+            load: async () => {
+                if (!projState.loadId) return;
+                const newConfig = await FirestoreService.loadDoor(projState.loadId);
+                if (newConfig) {
+                    // Update door config and regenerate
+                    Object.assign(door.config, newConfig);
+                    door.generate();
+                    // Update all GUI controllers to reflect new config
+                    gui.folders.forEach(f => f.controllers.forEach(c => c.updateDisplay()));
+                    // Dimensions and Style are main ones
+                    // Special handling for panels if needed
+                    console.log("Loaded Config:", newConfig);
+                }
+            },
+            exportOBJ: () => ExporterUtils.exportOptimizedOBJ(door),
+            exportGLTF: () => ExporterUtils.exportGLTF(door)
+        };
+
+        projFolder.add(projState, 'saveName').name('Design Name');
+        projFolder.add(projState, 'save').name('💾 Save to Cloud');
+
+        let loadCtrl = projFolder.add(projState, 'loadId', { 'Loading...': '' }).name('📂 Load Design');
+        projFolder.add(projState, 'load').name('Load Selected');
+
+        const expFolder = gui.addFolder('Export / Download');
+        expFolder.add(projState, 'exportOBJ').name('Download OBJ (CAD)');
+        expFolder.add(projState, 'exportGLTF').name('Download GLB');
+
+        // (Moved refreshLoadList and Auth Listener to end)
+
         // --- SELECTED PANEL GUI ---
         const selFolder = gui.addFolder('Selected Panel');
         // selFolder.close();
@@ -1469,6 +1678,45 @@
         panelFolder.add(door.config, 'panelCols', 1, 4, 1).name('Columns').onChange(() => door.generate());
 
         document.getElementById('loading').style.display = 'none';
+
+
+        // --- PERSISTENCE INIT ---
+        // Refresh Load List (Moved here to prevent blocking standard GUI)
+        async function refreshLoadList() {
+            try {
+                const doors = await FirestoreService.getUserDoors();
+                const options = {};
+                if (!doors || doors.length === 0) options['(No Saved Designs)'] = '';
+                else options['Select a Design...'] = '';
+
+                if (doors) {
+                    doors.forEach(d => {
+                        const date = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString() : '';
+                        const label = `${d.name} [${date}]`;
+                        options[label] = d.id;
+                    });
+                }
+
+                if (loadCtrl) {
+                    const parent = loadCtrl.parent;
+                    if (parent) {
+                        loadCtrl.destroy();
+                        loadCtrl = parent.add(projState, 'loadId', options).name('📂 Load Design');
+                    }
+                }
+            } catch (e) {
+                console.error("Error refreshing load list:", e);
+            }
+        }
+
+        // Listen for Auth with Error Handling
+        if (typeof firebase !== 'undefined') {
+            try {
+                firebase.auth().onAuthStateChanged(user => {
+                    if (user) refreshLoadList();
+                });
+            } catch (e) { console.error("Auth Listener Error:", e); }
+        }
 
         function animate() {
             requestAnimationFrame(animate);

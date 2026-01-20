@@ -1,2 +1,0 @@
-:HL["/mood-board-app/out/static-assets/static/chunks/93e310e1c889668f.css","style"]
-0:{"buildId":"pJRHMV4-JKQxc3IQGdgjs","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"/_not-found","paramType":null,"paramKey":"/_not-found","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":false}},"isRootLayout":true},"staleTime":300}
