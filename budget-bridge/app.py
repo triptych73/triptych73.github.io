@@ -148,6 +148,16 @@ else:
                 with col2:
                     end_date = st.date_input("End Date", pd.to_datetime("today") - pd.Timedelta(days=1))
                 
+                st.write("---")
+                # TEST: Balance Sheet (Sanity Check for Permissions)
+                if st.button("Test Permission: Fetch Balance Sheet"):
+                    try:
+                        bs = client.get_balance_sheet(access_token, tenant['tenantId'])
+                        st.success("Balance Sheet fetch successful! (Permission is valid)")
+                    except Exception as e:
+                        st.error(f"Balance Sheet failed: {e}")
+                st.write("---")
+
                 # Bank Account Select
                 # We need to fetch accounts first to let user select
                 if st.button("Fetch Bank Report"):
@@ -161,16 +171,6 @@ else:
                             if not bank_accs:
                                 st.warning("No bank accounts found.")
                             else:
-                                # TEST: Balance Sheet (Sanity Check for Permissions)
-                                st.write("---")
-                                if st.button("Test Permission: Fetch Balance Sheet"):
-                                    try:
-                                        bs = client.get_balance_sheet(access_token, tenant['tenantId'])
-                                        st.success("Balance Sheet fetch successful! (Permission is valid)")
-                                    except Exception as e:
-                                        st.error(f"Balance Sheet failed: {e}")
-                                st.write("---")
-
                                 for ba in bank_accs:
                                     st.subheader(f"Report for {ba['Name']}")
                                     
