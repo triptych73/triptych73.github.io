@@ -24,23 +24,30 @@ try:
     db = firestore.client()
 except ValueError:
     # Not initialized, proceed
-    try:
-        if firebase_creds_str:
+    
+    # Priority 1: Environment Variable
+    if firebase_creds_str:
+        try:
             cred_dict = json.loads(firebase_creds_str)
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
             db = firestore.client()
-        elif os.path.exists(CRED_PATH):
-            cred = credentials.Certificate(CRED_PATH)
-            firebase_admin.initialize_app(cred)
-            db = firestore.client()
-        elif os.path.exists("firebase_key.json"):
-            cred = credentials.Certificate("firebase_key.json")
-            firebase_admin.initialize_app(cred)
-            db = firestore.client()
-    except Exception as e:
-        print(f"Firebase Init Error: {e}") 
-        # Don't crash app, just disable DB features
+        except Exception as e:
+            print(f"Env Var Init failed: {e}. Falling back to file.")
+    
+    # Priority 2: File (if db is still None)
+    if db is None:
+        try:
+            if os.path.exists(CRED_PATH):
+                cred = credentials.Certificate(CRED_PATH)
+                firebase_admin.initialize_app(cred)
+                db = firestore.client()
+            elif os.path.exists("firebase_key.json"):
+                cred = credentials.Certificate("firebase_key.json")
+                firebase_admin.initialize_app(cred)
+                db = firestore.client()
+        except Exception as e2:
+             print(f"File Init failed: {e2}")
 
 st.set_page_config(page_title="Budget Bridge", layout="wide")
 
