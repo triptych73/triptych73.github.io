@@ -102,8 +102,23 @@ class XeroClient:
         b64_auth = base64.b64encode(auth_str.encode()).decode()
         return {
             "Authorization": f"Basic {b64_auth}",
-            "Content-Type": "application/x-www-form-urlencoded"
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "BudgetBridge/1.0"
         }
+
+    def get_profit_and_loss(self, access_token, tenant_id):
+        url = f"{self.api_base}/Reports/ProfitAndLoss"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Xero-Tenant-Id": tenant_id,
+            "Accept": "application/json",
+            "User-Agent": "BudgetBridge/1.0"
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to fetch P&L: {response.text}")
         
     def save_token(self, token):
         # Add timestamp for convenience
@@ -192,7 +207,8 @@ class XeroClient:
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Xero-Tenant-Id": tenant_id,
-            "Accept": "application/json"
+            "Accept": "application/json",
+            "User-Agent": "BudgetBridge/1.0"
         }
         params = {
             "bankAccountID": bank_account_id,
@@ -210,7 +226,8 @@ class XeroClient:
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Xero-Tenant-Id": tenant_id,
-            "Accept": "application/json"
+            "Accept": "application/json",
+            "User-Agent": "BudgetBridge/1.0"
         }
         params = {}
         if date:

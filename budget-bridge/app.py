@@ -149,13 +149,23 @@ else:
                     end_date = st.date_input("End Date", pd.to_datetime("today") - pd.Timedelta(days=1))
                 
                 st.write("---")
-                # TEST: Balance Sheet (Sanity Check for Permissions)
-                if st.button("Test Permission: Fetch Balance Sheet"):
-                    try:
-                        bs = client.get_balance_sheet(access_token, tenant['tenantId'])
-                        st.success("Balance Sheet fetch successful! (Permission is valid)")
-                    except Exception as e:
-                        st.error(f"Balance Sheet failed: {e}")
+                # DIAGNOSTICS
+                col_d1, col_d2 = st.columns(2)
+                with col_d1:
+                    if st.button("Test: Balance Sheet"):
+                        try:
+                            bs = client.get_balance_sheet(access_token, tenant['tenantId'])
+                            st.success("Balance Sheet OK")
+                        except Exception as e:
+                            st.error(f"BS Fail: {e}")
+                
+                with col_d2:
+                    if st.button("Test: Profit & Loss"):
+                        try:
+                            pl = client.get_profit_and_loss(access_token, tenant['tenantId'])
+                            st.success("P&L OK")
+                        except Exception as e:
+                            st.error(f"P&L Fail: {e}")
                 st.write("---")
 
                 # Bank Account Select
