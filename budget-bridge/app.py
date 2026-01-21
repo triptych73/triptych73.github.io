@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from xero_client import XeroClient
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -126,6 +127,46 @@ else:
                                 st.info("No invoices found.")
                         except Exception as e:
                             st.error(f"Error fetching invoices: {e}")
+
+            with st.expander("Bank Statement Report (Reconciled Items)"):
+                st.write("Fetch the official Bank Statement Report to see reconciled lines. Default: 2020-01-01 to Yesterday.")
+                
+                # Date Inputs
+                col1, col2 = st.columns(2)
+                with col1:
+                    start_date = st.date_input("Start Date", pd.to_datetime("2020-01-01"))
+                with col2:
+                    end_date = st.date_input("End Date", pd.to_datetime("today") - pd.Timedelta(days=1))
+                
+                # Bank Account Select
+                # We need to fetch accounts first to let user select
+                if st.button("Fetch Bank Report"):
+                    with st.spinner("Fetching Report..."):
+                        try:
+                            # 1. Get Bank Accounts
+                            acc_data = client.get_accounts(access_token, tenant['tenantId'])
+                            all_accs = acc_data.get('Accounts', [])
+                            bank_accs = [a for a in all_accs if a['Type'] == 'BANK']
+                            
+                            if not bank_accs:
+                                st.warning("No bank accounts found.")
+                            else:
+                                for ba in bank_accs:
+                                    st.subheader(f"Report for {ba['Name']}")
+                                    
+                                    report = client.get_bank_statement_report(
+                                        access_token, 
+                                        tenant['tenantId'], 
+                                        ba['AccountID'], 
+                                        str(start_date), 
+                                        str(end_date)
+                                    )
+                                    
+                                    # Basic JSON dump for MVP inspection
+                                    st.json(report)
+                                    
+                        except Exception as e:
+                            st.error(f"Error fetching report: {e}")
             
             if st.button("Logout"):
                 st.session_state.token = None

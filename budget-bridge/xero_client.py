@@ -181,3 +181,25 @@ class XeroClient:
             return response.json()
         else:
             raise Exception(f"Failed to fetch invoices: {response.text}")
+
+    def get_bank_statement_report(self, access_token, tenant_id, bank_account_id, from_date, to_date):
+        """
+        Fetches the Bank Statement Report.
+        Dates should be strings 'YYYY-MM-DD'.
+        """
+        url = f"{self.api_base}/Reports/BankStatement"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Xero-Tenant-Id": tenant_id,
+            "Accept": "application/json"
+        }
+        params = {
+            "bankAccountID": bank_account_id,
+            "fromDate": from_date,
+            "toDate": to_date
+        }
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to fetch bank statement report: {response.text}")
