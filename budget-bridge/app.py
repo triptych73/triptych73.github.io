@@ -60,6 +60,12 @@ else:
     
     st.write("### Connected Organization")
     
+    # DEBUG: Show scopes
+    if 'scope' in token:
+        st.caption(f"Granted Scopes: {token['scope']}")
+    else:
+        st.caption("Scopes not found in token.")
+    
     try:
         # 1. Get Tenants (Orgs)
         tenants = client.get_tenants(access_token)
