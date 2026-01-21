@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "st-mary-somerset",
+  "private_key_id": "c9ea90333ade254a369f819da1736454ff298afd",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDPcgKdgLYD5t+S\nbhTmBD0VL9DXw1u3UZE0TtxoQgPvBL2JElXfvh39Bwup4uBxaVU71nRF2nDxP25d\ndFUlC2RjoGMAMII24FVzu/NfJJkoRVh4xJHmthhgMeTQseWF8pmLmz01m7Z/Lmeh\n5uzB//74vOEDDBMnzjuDQpFt/viDNuCDlhPrCSeWetMfbc49U6fQ/4tItBJUV9Pm\nXXv4B6ERUhz1I+AL5l94UjcHgJTdbqorNTE0gJqrO/0Iy76KwLEunuhwv3qjNqq0\nE40FKWpNEzq+8M1Hp1EcgHg3GHWBHeqa6C5Sl4x969s1TsPW34sWLVxWMlk60PRN\n6Rohidd1AgMBAAECggEAAODufmd0aJKn2UQCmNElR2ucV+xG/UEzmylcrnYIdBDM\n0wxjFTobVejw+sn6zI2B6SmOH1qewQLVWet7eIHybafuVhVJLpLSLICRYL00BzM4\nqKBKhD6QCV5Eu2vkI+ZZvKPjxTrw3FvgX/5CpqAJ3tir9PpDiCxhMlE2nPo9aA7c\n6CNxw0CHVmG8/y56LVBQYT/09e4LYIj7eatC5VvpCIINlybhNN5z4jrF4T6YpZgR\nVeDqXxd/Lp3XjXWZ5CM4iXuzsufNgiTREKK8mMHugzTWzuEmhbGbO188SINzhZvl\nK+hJCcJZKgJg7/sqzLiMIwzdw8M8LmSxvrzQE48ESQKBgQD0VFiVbf5jPhQl+pTZ\n/S1e3USR3IStqw4wJrsJdb1d2rrLz18XC5Vy3hvfbCIXfXesX2XFjnXNJqCoSAeW\nIil7NB8K+flgOTc3mXYosUu53xPcvHlIZ2EPUp9Q9WDgJ14+XdYwjhWuIvrpqVjU\n4WPz4r4I4nExh1nGX46ANHnlXQKBgQDZWqVqK+xTwp685WPh6+0UtaEcay5rHtmT\nxvKzG951jQyBTK8qh6mcbfQlosTh4LpD3AaGT2VQhqja5HA3tn504yVk265vT1ZV\nGRtfG1osf4DaO/3fjbETT92g6s9McAkxm7eVqqKt1o88Eg0Juvv9okFOuNilsx6E\nJaKhk4TA+QKBgH4l8lqsoNRCoAp/10y5kCxTl+yra4FzOO8ZgCZBORV1Mk66ccEn\nRPE6xi9T2EJCkIBZ/OTESgQy9m4MSoZ0evBWl9SF/gB1ahH11PDroUqFZ+7nDMOa\nRJ2xrfoRxwPUr68JqeYF5iGzg9MSkX/QI1gvcKiLqZ/F308x1RRSg8EtAoGBAJ7A\nWU75s8vdu0kmllR9mBTnMDxsgGPXDX2k8sElGs9q7PZHhy0eFyDdIlSW1QxRslo8\nCzvwI4S0RgJSlS/sB+LhwP8wgPBl1x2ij95gQPV9TySWaq/scqgzTiHpPu2Kavyj\nymvzTIyByO5MFN/FhaXT67VOx1YHRMOqJWW0NGMpAoGANwnNJjOsyAUihquwJ41V\nY6orPI+ro6vjEqwqDEb6AWtrRKCmgbphwMK7wyliyAsGyd6JPAgWS12rji6/IKsi\nGIjEIPDJE2arPRUc1/8n2Y84AH4An6r7RD6X8MsTNk7HYla0p7a5Im85Be3iBB1M\nlE0bqyeF8xvi+mAcwwBtiCg=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@st-mary-somerset.iam.gserviceaccount.com",
+  "client_id": "106904057820628010546",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40st-mary-somerset.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
