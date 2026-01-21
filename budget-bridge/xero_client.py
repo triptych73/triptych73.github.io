@@ -23,7 +23,8 @@ class XeroClient:
             "profile",
             "email",
             "accounting.transactions.read",
-            "accounting.settings.read"
+            "accounting.settings.read",
+            "accounting.reports.read"
         ]
 
     def get_auth_url(self):
