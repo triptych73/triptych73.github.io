@@ -2,11 +2,45 @@ import streamlit as st
 import pandas as pd
 from xero_client import XeroClient
 import os
+import json
 from datetime import datetime
 from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
 
 # Load environment variables
 load_dotenv()
+
+# Initialize Firebase (Global/Singleton pattern for Streamlit)
+# Priority 1: Environment Variable
+firebase_creds_str = os.getenv("FIREBASE_CREDENTIALS")
+CRED_PATH = "/data/firebase_key.json"
+db = None
+
+try:
+    # Check if already initialized
+    firebase_admin.get_app()
+    db = firestore.client()
+except ValueError:
+    # Not initialized, proceed
+    try:
+        if firebase_creds_str:
+            cred_dict = json.loads(firebase_creds_str)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+        elif os.path.exists(CRED_PATH):
+            cred = credentials.Certificate(CRED_PATH)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+        elif os.path.exists("firebase_key.json"):
+            cred = credentials.Certificate("firebase_key.json")
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+    except Exception as e:
+        print(f"Firebase Init Error: {e}") 
+        # Don't crash app, just disable DB features
 
 st.set_page_config(page_title="Budget Bridge", layout="wide")
 
@@ -210,6 +244,7 @@ else:
             with st.expander("Journals / GL View (Account Transactions)"):
                 st.write("Fetch full General Ledger lines (Journals). Requires 'accounting.journals.read' permission.")
                 
+                
                 if st.button("Fetch Journals (Last 100)"):
                     with st.spinner("Fetching Journals..."):
                         try:
@@ -250,6 +285,96 @@ else:
                             st.error(f"Error fetching journals: {e}")
                             st.info("Did you remember to Logout & Re-Connect to approve the new Journals permission?")
             
+            with st.expander("Custom Reconciliation Report (Phase 2)"):
+                st.write("Join Bank Transactions with Journals to see GL Coding.")
+                if st.button("Generate Joined Report"):
+                    if db is None:
+                        st.error("Database not initialized.")
+                    else:
+                        with st.spinner("Reading full history from Database..."):
+                            try:
+                                # 1. Get Bank Tx
+                                b_docs = db.collection('xero_transactions').stream()
+                                bank_rows = []
+                                for d in b_docs:
+                                    dd = d.to_dict()
+                                    bank_rows.append(dd)
+                                df_bank = pd.DataFrame(bank_rows)
+                                
+                                # 2. Get Journals
+                                j_docs = db.collection('xero_journals').stream()
+                                journal_rows = []
+                                for d in j_docs:
+                                    j = d.to_dict()
+                                    # Explode lines immediately or later? 
+                                    # Better to keep 'SourceID' accessible.
+                                    # SourceID is on the Journal level.
+                                    sid = j.get('SourceID')
+                                    stype = j.get('SourceType')
+                                    
+                                    # Optimization: Only care about Bank Recs
+                                    # (Sometimes they are 'BANKREC' or 'BANKTRANSFER' or 'SPENDMONEY'?)
+                                    # Let's keep all for now to be safe.
+                                    if sid:
+                                        for line in j.get('JournalLines', []):
+                                            journal_rows.append({
+                                                'SourceID': sid,
+                                                'SourceType': stype,
+                                                'AccountCode': line.get('AccountCode'),
+                                                'TaxType': line.get('TaxType'),
+                                                'JournalGross': line.get('GrossAmount'),
+                                                'JournalNet': line.get('NetAmount')
+                                            })
+                                            
+                                df_journal = pd.DataFrame(journal_rows)
+                                
+                                if df_bank.empty or df_journal.empty:
+                                    st.warning(f"Data missing. Bank: {len(df_bank)}, Journals: {len(df_journal)}")
+                                else:
+                                    # 3. JOIN
+                                    # Bank TransactionID == Journal SourceID
+                                    # Note: TransactionID in bank tx might be named 'TransactionID' or 'BankTransactionID'?
+                                    # API returns 'BankTransactionID'. Let's check our sync script... we dumped raw.
+                                    # Usually 'BankTransactionID'.
+                                    
+                                    # Let's clean columns for merge
+                                    # Rename df_bank 'BankTransactionID' -> 'JoinID'
+                                    # Rename df_journal 'SourceID' -> 'JoinID'
+                                    
+                                    # Prepare Bank DF
+                                    # Check actually existing columns
+                                    msg = f"Bank Cols: {list(df_bank.columns)}"
+                                    # Try to find the ID
+                                    bank_id_col = 'BankTransactionID' if 'BankTransactionID' in df_bank.columns else 'TransactionID'
+                                    
+                                    # Merge
+                                    merged = pd.merge(
+                                        df_bank, 
+                                        df_journal, 
+                                        left_on=bank_id_col, 
+                                        right_on='SourceID', 
+                                        how='left'
+                                    )
+                                    
+                                    # Select useful columns
+                                    # Date, Contact.Name, Description, Total, AccountCode, TaxType
+                                    # Handle nested 'Contact': Contact is usually a dict in the raw JSON
+                                    # We need to flatten it if present.
+                                    if 'Contact' in merged.columns:
+                                        merged['ContactName'] = merged['Contact'].apply(lambda x: x.get('Name') if isinstance(x, dict) else str(x))
+                                    else:
+                                        merged['ContactName'] = "Unknown"
+                                        
+                                    final_cols = ['DateString', 'ContactName', 'Description', 'Total', 'AccountCode', 'TaxType', 'JournalNet', 'JournalGross']
+                                    # Filter only cols that exist
+                                    final_cols = [c for c in final_cols if c in merged.columns]
+                                    
+                                    st.success(f"Generated Report with {len(merged)} lines.")
+                                    st.dataframe(merged[final_cols])
+                                    
+                            except Exception as e:
+                                st.error(f"Report Generation Failed: {e}")
+
             if st.button("Logout (Reset Connection)"):
                 st.session_state.token = None
                 # Delete the token file to force a fresh OAuth flow (needed for scope updates)
