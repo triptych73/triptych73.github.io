@@ -204,7 +204,59 @@ def sync_job():
             except Exception as e:
                 print(f"Failed to fetch statement for {bank['Name']}: {e}")
 
-        print("Sync complete.")
+        # 6. Fetch Journals (GL Data)
+        # Journals endpoint returns 100 at a time. Offset is "Last JournalNumber seen".
+        # We loop until we get < 100 results.
+        print("Fetching Journals...")
+        journals_ref = db.collection('xero_journals')
+        offset = 0
+        total_journals = 0
+        
+        while True:
+            print(f"Fetching journals (offset={offset})...")
+            try:
+                j_data = client.get_journals(access_token, tenant_id, offset=offset)
+                journals = j_data.get('Journals', [])
+                
+                if not journals:
+                    break
+                
+                batch_j = db.batch()
+                batch_count_j = 0
+                max_journal_num = 0
+                
+                for j in journals:
+                    # Use JournalID as Document ID to prevent duplicates
+                    doc_ref = journals_ref.document(j['JournalID'])
+                    j['SyncedAt'] = firestore.SERVER_TIMESTAMP
+                    batch_j.set(doc_ref, j)
+                    
+                    batch_count_j += 1
+                    # Track max JournalNumber for next offset
+                    j_num = j.get('JournalNumber', 0)
+                    if j_num > max_journal_num:
+                        max_journal_num = j_num
+                
+                batch_j.commit()
+                total_journals += len(journals)
+                print(f"Saved {len(journals)} journals.")
+                
+                # Update offset for next iteration
+                if max_journal_num > 0:
+                    offset = max_journal_num
+                else:
+                    # Safety break if we can't determine next offset
+                    break
+                
+                # If we got less than 100, we are done
+                if len(journals) < 100:
+                    break
+                    
+            except Exception as e:
+                print(f"Error fetching journals batch: {e}")
+                break
+
+        print(f"Sync complete. Total Journals synced: {total_journals}")
 
     except Exception as e:
         print(f"Error during sync: {e}")

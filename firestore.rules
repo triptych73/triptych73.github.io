@@ -24,6 +24,9 @@ service cloud.firestore {
     match /transactions/{docId} {
       allow read, write: if isAuthenticated();
     }
+    match /xero_journals/{docId} {
+        allow read, write: if isAuthenticated();
+    }
 
     // Xero Transactions (Bank Feed):
     // Read-access for backend sync and frontend display
