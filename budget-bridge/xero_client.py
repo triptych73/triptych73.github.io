@@ -204,3 +204,20 @@ class XeroClient:
             return response.json()
         else:
             raise Exception(f"Failed to fetch bank statement report: {response.text}")
+
+    def get_balance_sheet(self, access_token, tenant_id, date=None):
+        url = f"{self.api_base}/Reports/BalanceSheet"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Xero-Tenant-Id": tenant_id,
+            "Accept": "application/json"
+        }
+        params = {}
+        if date:
+            params['date'] = date
+            
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to fetch balance sheet: {response.text}")
