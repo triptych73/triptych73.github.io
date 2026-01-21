@@ -106,10 +106,16 @@ def extract_thumbnails():
                 for rel in d_rels_root.findall('.//{http://schemas.openxmlformats.org/package/2006/relationships}Relationship'):
                     blip_map[rel.get('Id')] = rel.get('Target')
             
-            # Find Anchors
+            # Find Anchors (TwoCell and OneCell)
             if sheet_name not in image_map: image_map[sheet_name] = {}
             
-            for anchor in d_root.findall('.//xdr:twoCellAnchor', NS):
+            anchors = []
+            anchors.extend(d_root.findall('.//xdr:twoCellAnchor', NS))
+            anchors.extend(d_root.findall('.//xdr:oneCellAnchor', NS))
+            
+            print(f"  Anchors found: {len(anchors)}")
+
+            for anchor in anchors:
                 row_node = anchor.find('./xdr:from/xdr:row', NS)
                 pic_node = anchor.find('./xdr:pic', NS)
                 

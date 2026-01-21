@@ -71,22 +71,61 @@ else:
             tenant = tenants[0] 
             st.info(f"Using Organization: **{tenant['tenantName']}**")
             
-            # 2. Fetch Transactions
-            if st.button("Fetch Bank Transactions"):
-                with st.spinner("Fetching data from Xero..."):
-                    try:
-                        data = client.get_bank_transactions(access_token, tenant['tenantId'])
-                        transactions = data.get('BankTransactions', [])
-                        
-                        if transactions:
-                            df = pd.json_normalize(transactions)
-                            st.write(f"Found {len(transactions)} transactions.")
-                            st.dataframe(df)
-                        else:
-                            st.info("No bank transactions found.")
+            # 2. Data Fetching Tabs
+            tab1, tab2, tab3 = st.tabs(["Bank Transactions", "Chart of Accounts", "Invoices"])
+
+            with tab1:
+                if st.button("Fetch Bank Transactions"):
+                    with st.spinner("Fetching data from Xero..."):
+                        try:
+                            data = client.get_bank_transactions(access_token, tenant['tenantId'])
+                            transactions = data.get('BankTransactions', [])
                             
-                    except Exception as e:
-                        st.error(f"Error fetching transactions: {e}")
+                            if transactions:
+                                df = pd.json_normalize(transactions)
+                                st.write(f"Found {len(transactions)} transactions.")
+                                st.dataframe(df)
+                            else:
+                                st.info("No bank transactions found.")
+                        except Exception as e:
+                            st.error(f"Error fetching bank transactions: {e}")
+
+            with tab2:
+                if st.button("Fetch Chart of Accounts"):
+                    with st.spinner("Fetching Accounts..."):
+                        try:
+                            data = client.get_accounts(access_token, tenant['tenantId'])
+                            accounts = data.get('Accounts', [])
+                            
+                            if accounts:
+                                df = pd.json_normalize(accounts)
+                                st.write(f"Found {len(accounts)} accounts.")
+                                # Display key columns cleanly
+                                cols = ['Code', 'Name', 'Type', 'Status', 'TaxType']
+                                # Intersection of desired cols and actual cols
+                                valid_cols = [c for c in cols if c in df.columns]
+                                st.dataframe(df[valid_cols] if valid_cols else df)
+                            else:
+                                st.info("No accounts found.")
+                        except Exception as e:
+                            st.error(f"Error fetching accounts: {e}")
+
+            with tab3:
+                if st.button("Fetch Invoices (AR/AP)"):
+                    with st.spinner("Fetching Invoices..."):
+                        try:
+                            # Note: This checks ALL invoices. Might be large.
+                            data = client.get_invoices(access_token, tenant['tenantId'])
+                            invoices = data.get('Invoices', [])
+                            
+                            if invoices:
+                                df = pd.json_normalize(invoices)
+                                st.write(f"Found {len(invoices)} invoices.")
+                                st.dataframe(df)
+                            else:
+                                st.info("No invoices found.")
+                        except Exception as e:
+                            st.error(f"Error fetching invoices: {e}")
             
             if st.button("Logout"):
                 st.session_state.token = None
