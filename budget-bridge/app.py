@@ -63,8 +63,14 @@ else:
     # DEBUG: Show scopes
     if 'scope' in token:
         scopes_list = token['scope'].split()
+        missing = []
         if "accounting.reports.read" not in scopes_list:
-             st.error("⚠️ MISSING PERMISSION: 'accounting.reports.read'. Please click LOGOUT below and reconnect to grant this permission.")
+             missing.append("accounting.reports.read")
+        if "accounting.journals.read" not in scopes_list:
+             missing.append("accounting.journals.read")
+        
+        if missing:
+             st.error(f"⚠️ MISSING PERMISSIONS: {', '.join(missing)}. Please click LOGOUT below and reconnect.")
         else:
              st.caption(f"Granted Scopes: {token['scope']}")
     else:
