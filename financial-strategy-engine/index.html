@@ -12,6 +12,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
     <!-- SheetJS for Excel Reading -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Inlined Config for reliability (Restored) -->
+    <script>
+        window.firebaseConfig = {
+            apiKey: "AIzaSyBcezJRuEx8vsThQKhi8Az_XdL_XSM6u8g",
+            authDomain: "st-mary-somerset.firebaseapp.com",
+            projectId: "st-mary-somerset",
+            storageBucket: "st-mary-somerset.firebasestorage.app",
+            messagingSenderId: "924281338278",
+            appId: "1:924281338278:web:83affbb1aff93ba797f767"
+        };
+        // Initialize immediately
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            firebase.initializeApp(window.firebaseConfig);
+        }
+        // Make db available globally for the Babel script
+        if (typeof firebase !== 'undefined') {
+            window.db = firebase.firestore();
+        }
+    </script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
