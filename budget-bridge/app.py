@@ -49,6 +49,20 @@ except ValueError:
         except Exception as e2:
              print(f"File Init failed: {e2}")
 
+if db is None:
+    st.warning("⚠️ Database Initialization Failed. Debug Info:")
+    st.write(f"- Env Var Present: {bool(firebase_creds_str)}")
+    st.write(f"- Key File Path: {CRED_PATH}")
+    st.write(f"- Key File Exists: {os.path.exists(CRED_PATH)}")
+    st.write(f"- Local Key File Exists: {os.path.exists('firebase_key.json')}")
+    try:
+        app = firebase_admin.get_app()
+        st.write(f"- Firebase App Status: Initialized ({app.name})")
+    except ValueError:
+        st.write("- Firebase App Status: Not Initialized")
+    except Exception as e:
+        st.write(f"- Firebase App Check Error: {e}")
+
 st.set_page_config(page_title="Budget Bridge", layout="wide")
 
 st.title("Virgin Money <-> Xero Budget Bridge")
