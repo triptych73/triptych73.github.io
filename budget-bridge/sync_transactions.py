@@ -208,8 +208,26 @@ def sync_job():
         # Journals endpoint returns 100 at a time. Offset is "Last JournalNumber seen".
         # We loop until we get < 100 results.
         print("Fetching Journals...")
+        print("Fetching Journals...")
         journals_ref = db.collection('xero_journals')
         offset = 0
+        total_journals = 0
+        
+        # Incremental Sync: Get the last JournalNumber we synced
+        # To do this efficiently, we need an Index on 'JournalNumber' DESC.
+        # Fallback: If no index, or first run, offset is 0.
+        try:
+            # Order by JournalNumber descending, limit 1
+            last_snapshot = journals_ref.order_by('JournalNumber', direction=firestore.Query.DESCENDING).limit(1).get()
+            if last_snapshot:
+                last_j = last_snapshot[0].to_dict()
+                offset = last_j.get('JournalNumber', 0)
+                print(f"Resuming sync from JournalNumber: {offset}")
+            else:
+                print("No existing journals found. Starting full sync.")
+        except Exception as ex_idx:
+            print(f"Index warning (ignorable if first run): {ex_idx}")
+            offset = 0
         total_journals = 0
         
         while True:
