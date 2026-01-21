@@ -207,91 +207,48 @@ else:
                             st.error(f"Error fetching report: {e}")
 
 
-            with st.expander("Account Transactions Report (Detailed Ledger)"):
-                st.write("Fetch item-by-item details including GL Codes and Tax Rates.")
+            with st.expander("Journals / GL View (Account Transactions)"):
+                st.write("Fetch full General Ledger lines (Journals). Requires 'accounting.journals.read' permission.")
                 
-                col_a1, col_a2 = st.columns(2)
-                with col_a1:
-                    at_start = st.date_input("From", pd.to_datetime("2020-01-01"), key="at_start")
-                with col_a2:
-                    at_end = st.date_input("To", pd.to_datetime("today"), key="at_end")
-                
-                if st.button("Fetch Detailed Ledger"):
-                    with st.spinner("Fetching Account Transactions..."):
+                if st.button("Fetch Journals (Last 100)"):
+                    with st.spinner("Fetching Journals..."):
                         try:
-                            # Fetch Report (All Accounts)
-                            report = client.get_account_transactions_report(
-                                access_token, 
-                                tenant['tenantId'], 
-                                str(at_start), 
-                                str(at_end)
-                            )
+                            # Fetch Journals (Offset 0 = Latest/First page)
+                            # Note: To get ALL, we would loop. For UI MVP, just get one page.
+                            data = client.get_journals(access_token, tenant['tenantId'])
+                            journals = data.get('Journals', [])
                             
-                            # Parse Headers to find Columns
-                            # Reports[0] -> Rows
-                            rows = report.get('Reports', [{}])[0].get('Rows', [])
-                            
-                            # Flatten Data
-                            simpler_rows = []
-                            for row in rows:
-                                if row.get('RowType') == 'Row':
-                                    cells = row.get('Cells', [])
-                                    # We capture the raw text for now.
-                                    # Expected cols: Date, Description, Source, Reference, Debit, Credit, Gross, VAT, Account??
-                                    # The 'Account' column might depend on grouping.
-                                    # If not grouped, it usually appears.
-                                    
-                                    row_data = [c.get('Value') for c in cells]
-                                    simpler_rows.append(row_data)
-                            
-                            if simpler_rows:
-                                st.write(f"Found {len(simpler_rows)} lines.")
-                                st.dataframe(pd.DataFrame(simpler_rows)) 
-                                st.json(report) 
-                            else:
-                                st.warning("No data rows found in report.")
-                                st.json(report)
-
-                        except Exception as e:
-                            st.warning(f"Report fetch failed (likely API path 404): {e}")
-                            st.info("Falling back to parsing raw Bank Transactions...")
-                            
-                            # Fallback: Fetch Bank Transactions and explode LineItems
-                            try:
-                                # Fetch logic similar to Tab 1 but we process differently
-                                data_fallback = client.get_bank_transactions(access_token, tenant['tenantId'])
-                                txs = data_fallback.get('BankTransactions', [])
+                            flat_rows = []
+                            for j in journals:
+                                j_date = j.get('JournalDateString')
+                                j_num = j.get('JournalNumber')
+                                j_ref = j.get('Reference')
+                                j_source = j.get('SourceType')
                                 
-                                detailed_rows = []
-                                for tx in txs:
-                                    base_info = {
-                                        'Date': tx.get('DateString'),
-                                        'Type': tx.get('Type'),
-                                        'Reference': tx.get('Reference'),
-                                        'Total': tx.get('Total')
-                                    }
-                                    # Iterate LineItems
-                                    for line in tx.get('LineItems', []):
-                                        row = base_info.copy()
-                                        row['Description'] = line.get('Description')
-                                        row['Quantity'] = line.get('Quantity')
-                                        row['UnitAmount'] = line.get('UnitAmount')
-                                        row['AccountCode'] = line.get('AccountCode')
-                                        row['TaxType'] = line.get('TaxType')
-                                        row['LineAmount'] = line.get('LineAmount')
-                                        detailed_rows.append(row)
-                                        
-                                if detailed_rows:
-                                    df_det = pd.DataFrame(detailed_rows)
-                                    st.success(f"Successfully parsed {len(detailed_rows)} line items from Bank Transactions.")
-                                    # Show AccountCode and TaxType prominently
-                                    st.dataframe(df_det)
-                                else:
-                                    st.warning("No line items found in transactions.")
-                                    
-                            except Exception as ex2:
-                                st.error(f"Fallback failed: {ex2}")
-                                st.json(report) # Show the original 404 payload if helpful
+                                for line in j.get('JournalLines', []):
+                                    flat_rows.append({
+                                        'Date': j_date,
+                                        'Journal #': j_num,
+                                        'Source': j_source,
+                                        'Reference': j_ref,
+                                        'AccountCode': line.get('AccountCode'),
+                                        'AccountName': line.get('AccountName'),
+                                        'Description': line.get('Description'),
+                                        'Gross': line.get('GrossAmount'),
+                                        'Net': line.get('NetAmount'),
+                                        'TaxType': line.get('TaxType'),
+                                        'TaxName': line.get('TaxName')
+                                    })
+                            
+                            if flat_rows:
+                                st.success(f"Fetched {len(journals)} journals containing {len(flat_rows)} line items.")
+                                st.dataframe(pd.DataFrame(flat_rows))
+                            else:
+                                st.warning("No journals found.")
+                                
+                        except Exception as e:
+                            st.error(f"Error fetching journals: {e}")
+                            st.info("Did you remember to Logout & Re-Connect to approve the new Journals permission?")
             
             if st.button("Logout (Reset Connection)"):
                 st.session_state.token = None
