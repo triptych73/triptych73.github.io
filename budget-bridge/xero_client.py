@@ -152,3 +152,32 @@ class XeroClient:
              return {"BankTransactions": []} # Not modified
         else:
             raise Exception(f"Failed to fetch bank transactions: {response.text}")
+
+    def get_accounts(self, access_token, tenant_id):
+        url = f"{self.api_base}/Accounts"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Xero-Tenant-Id": tenant_id,
+            "Accept": "application/json"
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to fetch accounts: {response.text}")
+
+    def get_invoices(self, access_token, tenant_id):
+        # Fetch all invoices (no paging logic for MVP, might hit limits if massive)
+        # Xero API supports paging, but 'Invoices' endpoint without filters returns a lot.
+        # We might want to filter by status or date in future.
+        url = f"{self.api_base}/Invoices"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Xero-Tenant-Id": tenant_id,
+            "Accept": "application/json"
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to fetch invoices: {response.text}")

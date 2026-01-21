@@ -1,0 +1,3 @@
+Drawings Sheets: ['ADR UP', 'APPR. D', 'ARCH', 'EDR UP', 'ENGINEERING', 'PLANNING']
+Thumbnail Sheets: ['01', '03 + D', 'A0', 'A1', 'A2+', 'CONDITIONS']
+Overlap: []

@@ -82,37 +82,68 @@ def sync_job():
         data = client.get_bank_transactions(access_token, tenant_id)
         transactions = data.get('BankTransactions', [])
         
-        if not transactions:
-            print("No new transactions found.")
-            return
-            
         print(f"Found {len(transactions)} transactions. Saving to Firestore...")
         
-        # 4. Save to Firestore
+        # 3a. Save Transactions
         batch = db.batch()
         count = 0
-        
         collection_ref = db.collection('xero_transactions')
         
         for tx in transactions:
-            # Use TransactionID as doc ID to prevent duplicates
             doc_ref = collection_ref.document(tx['BankTransactionID'])
-            
-            # Convert Xero date strings if needed, or store as is
             tx['synced_at'] = firestore.SERVER_TIMESTAMP
-            
-            # Add to batch
             batch.set(doc_ref, tx, merge=True)
             count += 1
-            
-            # Commit every 400 items (Firestore limit is 500)
             if count >= 400:
                 batch.commit()
                 batch = db.batch()
                 count = 0
-                
         if count > 0:
             batch.commit()
+
+        # 4. Fetch & Save Accounts (GL Chart of Accounts)
+        print("Syncing Chart of Accounts...")
+        data_acc = client.get_accounts(access_token, tenant_id)
+        accounts = data_acc.get('Accounts', [])
+
+        batch = db.batch()
+        count = 0
+        acc_ref = db.collection('xero_accounts')
+        
+        for acc in accounts:
+            doc_ref = acc_ref.document(acc['AccountID'])
+            acc['synced_at'] = firestore.SERVER_TIMESTAMP
+            batch.set(doc_ref, acc, merge=True)
+            count += 1
+            if count >= 400:
+                batch.commit()
+                batch = db.batch()
+                count = 0
+        if count > 0:
+            batch.commit()
+        print(f"Saved {len(accounts)} accounts.")
+
+        # 5. Fetch & Save Invoices (Consolidated Data)
+        print("Syncing Invoices (Consolidated)...")
+        data_inv = client.get_invoices(access_token, tenant_id)
+        invoices = data_inv.get('Invoices', [])
+        
+        batch = db.batch()
+        count = 0
+        inv_ref = db.collection('xero_invoices')
+        
+        for inv in invoices:
+            doc_ref = inv_ref.document(inv['InvoiceID'])
+            inv['synced_at'] = firestore.SERVER_TIMESTAMP
+            batch.set(doc_ref, inv, merge=True)
+            count += 1
+            if count >= 400:
+                batch.commit()
+                batch = db.batch()
+                count = 0
+        if count > 0:
+            batch.commit()
+        print(f"Saved {len(invoices)} invoices.")
             
         print("Sync complete.")
 

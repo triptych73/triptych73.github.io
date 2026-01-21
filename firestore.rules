@@ -24,11 +24,11 @@ service cloud.firestore {
     match /transactions/{docId} {
       allow read, write: if isAuthenticated();
     }
-    
-    // NEW: Background Sync Collection
+
+    // Xero Transactions (Bank Feed):
+    // Read-access for backend sync and frontend display
     match /xero_transactions/{docId} {
       allow read: if isAuthenticated();
-      // Write logic is handled by Admin SDK (backend), so 'write' not strictly needed for client, but good for debugging if needed.
       allow write: if isAuthenticated();
     }
     
