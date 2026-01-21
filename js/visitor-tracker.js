@@ -50,7 +50,7 @@
         const sessionId = getSessionId();
         const detectedBot = isBot();
 
-        // Data payload
+        // Data payload base
         const visitData = {
             sessionId: sessionId,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -58,17 +58,46 @@
             referrer: document.referrer || 'direct',
             userAgent: navigator.userAgent,
             isBot: detectedBot,
-            screen: `${window.screen.width}x${window.screen.height}`
+            screen: `${window.screen.width}x${window.screen.height}`,
+            language: navigator.language || 'en-US'
         };
 
-        try {
-            // We use a specific collection 'site_visits'
-            // meaningful ID: sessID_timestamp to avoid dupes if reloaded quickly? 
-            // Actually auto-ID is fine for clickstream, but for simple "visitor count" 
-            // we might want to just update a "Last Seen" on a session document?
-            // Option: "Events" vs "Sessions". 
-            // Plan: Log an EVENT. Aggregation will happen on read.
+        // 4. Enhance with IP/Location (Async)
+        // Check localStorage first to save API calls
+        const cachedLoc = localStorage.getItem('visitor_loc_cache');
+        if (cachedLoc) {
+            try {
+                const loc = JSON.parse(cachedLoc);
+                visitData.ip = loc.ip;
+                visitData.city = loc.city;
+                visitData.country = loc.country_name;
+                visitData.org = loc.org; // ISP
+            } catch (e) { console.warn('Loc cache parse error', e); }
+        } else {
+            try {
+                // timeout after 2s so we don't hang
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 2000);
 
+                const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+                if (res.ok) {
+                    const loc = await res.json();
+                    if (!loc.error) {
+                        visitData.ip = loc.ip;
+                        visitData.city = loc.city;
+                        visitData.country = loc.country_name;
+                        visitData.org = loc.org;
+
+                        // Cache it indefinitely (or you could add expiry)
+                        localStorage.setItem('visitor_loc_cache', JSON.stringify(loc));
+                    }
+                }
+            } catch (e) {
+                console.log('IP fetch skipped:', e.message);
+            }
+        }
+
+        try {
             await db.collection('site_visits').add(visitData);
             console.log("SMS-1694: Visit logged.", detectedBot ? "(Bot Detected)" : "");
         } catch (e) {

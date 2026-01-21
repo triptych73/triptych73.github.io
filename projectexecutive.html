@@ -234,8 +234,23 @@
 
                 <!-- Visitor Stats Widget (New) -->
                 <div>
-                    <h3 class="font-mono text-[10px] uppercase tracking-widest text-white/40 mb-3 ml-1">Live Analytics
-                    </h3>
+                    <div class="flex items-center justify-between mb-3 ml-1">
+                        <h3 class="font-mono text-[10px] uppercase tracking-widest text-white/40">Live Analytics</h3>
+                        <!-- History Icon -->
+                        <div id="view-history-btn"
+                            class="group relative cursor-pointer opacity-50 hover:opacity-100 transition-opacity">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="w-4 h-4 text-white">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            <div
+                                class="absolute right-0 top-full mt-1 w-max px-2 py-1 bg-black/90 border border-white/10 rounded text-[9px] text-white/70 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                View History
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Stats Grid -->
                     <div class="grid grid-cols-2 gap-4">
                         <!-- Metric 1 -->
                         <div class="glass-panel p-4 rounded-lg flex items-center justify-between">
@@ -605,6 +620,52 @@
         </footer>
     </div>
 
+    </div>
+    </div>
+
+    <!-- VISITOR HISTORY MODAL -->
+    <div id="history-modal" style="display: none;"
+        class="fixed inset-0 z-[100] bg-midnight/90 backdrop-blur-sm flex items-center justify-center">
+        <div class="glass-panel rounded-lg w-full max-w-4xl h-[80vh] flex flex-col relative border border-white/10">
+            <!-- Header -->
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-black/20">
+                <h3 class="font-serif text-xl text-white">Visitor History</h3>
+                <button id="close-history-btn" class="text-white/40 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Table Container -->
+            <div class="flex-grow overflow-auto custom-scrollbar p-6">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="text-[10px] text-white/30 uppercase tracking-widest font-mono border-b border-white/10">
+                            <th class="pb-3 pl-2">Time</th>
+                            <th class="pb-3">IP / Location</th>
+                            <th class="pb-3">Path</th>
+                            <th class="pb-3">Device / OS</th>
+                            <th class="pb-3">Org</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="text-xs text-white/70">
+                        <tr>
+                            <td colspan="5" class="py-8 text-center text-white/20">Loading data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-white/10 bg-black/20 text-right">
+                <span class="text-[10px] text-white/20 font-mono">Showing last 50 entries</span>
+            </div>
+        </div>
+    </div>
+
     <!-- LOG MODAL (Hidden) -->
     <div id="log-modal" style="display: none;"
         class="fixed inset-0 z-[100] bg-midnight/90 backdrop-blur-sm flex items-center justify-center">
@@ -674,6 +735,8 @@
                         initVisitorStats();
                         // Initialize Site Log
                         initSiteLog();
+                        // Initialize History
+                        initHistory();
                     }, 500);
                 } else {
                     // Not Authenticated: Redirect
@@ -788,6 +851,78 @@
                         container.appendChild(el);
                     });
                 });
+            }
+
+            // --- HISTORY LOGIC (New) ---
+            function initHistory() {
+                const db = firebase.firestore();
+                const modal = document.getElementById('history-modal');
+                const btn = document.getElementById('view-history-btn');
+                const closeBtn = document.getElementById('close-history-btn');
+                const tbody = document.getElementById('history-table-body');
+                let listener = null;
+
+                // Toggle Modal
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        modal.style.display = 'flex';
+                        loadHistory();
+                    });
+                }
+
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        modal.style.display = 'none';
+                        if (listener) listener(); // Unsubscribe
+                    });
+                }
+
+                function loadHistory() {
+                    if (listener) listener(); // clear old if exists
+
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/20 animate-pulse">Fetching records...</td></tr>';
+
+                    listener = db.collection('site_visits')
+                        .orderBy('timestamp', 'desc')
+                        .limit(50)
+                        .onSnapshot((snapshot) => {
+                            if (snapshot.empty) {
+                                tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/20">No history found.</td></tr>';
+                                return;
+                            }
+
+                            tbody.innerHTML = ''; // Clear loading
+
+                            snapshot.docs.forEach(doc => {
+                                const d = doc.data();
+                                const ts = d.timestamp ? d.timestamp.toDate() : new Date();
+                                const timeStr = ts.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+                                const locationStr = d.city ? `${d.city}, ${d.country}` : '<span class="text-white/20">Unknown</span>';
+                                const ipStr = d.ip ? d.ip : '<span class="text-white/20">-</span>';
+                                const orgStr = d.org || '-';
+
+                                // Parse UA simpler
+                                let device = 'Desktop';
+                                if (/mobile/i.test(d.userAgent)) device = 'Mobile';
+                                const browser = /chrome/i.test(d.userAgent) ? 'Chrome' : 'Safari';
+
+                                const row = document.createElement('tr');
+                                row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
+                                row.innerHTML = `
+                                    <td class="py-3 pl-2 font-mono text-white/50">${timeStr}</td>
+                                    <td class="py-3">
+                                        <div class="text-white font-mono text-[11px]">${ipStr}</div>
+                                        <div class="text-[10px] text-white/40">${locationStr}</div>
+                                    </td>
+                                    <td class="py-3 font-mono text-bronze">${d.path}</td>
+                                    <td class="py-3 text-white/50">${device} <span class="text-white/20">/</span> ${browser}</td>
+                                    <td class="py-3 text-white/40 text-[10px] truncate max-w-[150px]">${orgStr}</td>
+                                `;
+                                tbody.appendChild(row);
+                            });
+                        });
+                }
             }
         }
     </script>
