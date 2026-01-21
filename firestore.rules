@@ -25,6 +25,13 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
     
+    // NEW: Background Sync Collection
+    match /xero_transactions/{docId} {
+      allow read: if isAuthenticated();
+      // Write logic is handled by Admin SDK (backend), so 'write' not strictly needed for client, but good for debugging if needed.
+      allow write: if isAuthenticated();
+    }
+    
     // Annual Reports: Global configuration
     match /annual_reports/{year} {
       allow read, write: if isAuthenticated();

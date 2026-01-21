@@ -12,53 +12,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
     <!-- SheetJS for Excel Reading -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <!-- Recharts -->
-    <script src="https://unpkg.com/react/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
-
-    <!-- Inlined Config for reliability -->
-    <script>
-        window.firebaseConfig = {
-            apiKey: "AIzaSyBcezJRuEx8vsThQKhi8Az_XdL_XSM6u8g",
-            authDomain: "st-mary-somerset.firebaseapp.com",
-            projectId: "st-mary-somerset",
-            storageBucket: "st-mary-somerset.firebasestorage.app",
-            messagingSenderId: "924281338278",
-            appId: "1:924281338278:web:83affbb1aff93ba797f767"
-        };
-        // Initialize immediately
-        if (!firebase.apps.length) {
-            firebase.initializeApp(window.firebaseConfig);
-        }
-        // Make db available globally for the Babel script
-        window.db = firebase.firestore();
-    </script>
-    <!-- <script src="firebase-config.js"></script> -->
-
-    <!-- Error Handler -->
-    <script>
-        window.onerror = function (msg, url, line, col, error) {
-            const div = document.createElement('div');
-            div.style.color = 'red';
-            div.style.padding = '20px';
-            div.style.fontFamily = 'monospace';
-            div.style.backgroundColor = '#fee';
-            div.style.borderBottom = '1px solid #ecc';
-            div.innerHTML = `<h3>Application Error</h3><p><strong>${msg}</strong></p><p>Location: ${url}:${line}:${col}</p><pre>${error ? error.stack : ''}</pre>`;
-            document.body.prepend(div);
-            return false;
-        };
-    </script>
-
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- React & ReactDOM (React 17 - Unpkg) -->
+    <!-- React 17 & ReactDOM 17 (UMD) - Development versions for better errors, switch to production for speed -->
     <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
 
-    <!-- Recharts (v1.8.5 - Known Stable UMD) -->
+    <!-- Recharts (v1.8.5) - Needs Prop-Types -->
     <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
     <script src="https://unpkg.com/recharts@1.8.5/umd/Recharts.min.js"></script>
 
