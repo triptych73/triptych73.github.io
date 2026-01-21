@@ -1,6 +1,7 @@
 import time
 import schedule
 import os
+import json  # Added missing import
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -11,6 +12,7 @@ from datetime import datetime
 # Priority 1: Environment Variable (JSON String)
 firebase_creds_str = os.getenv("FIREBASE_CREDENTIALS")
 CRED_PATH = "/data/firebase_key.json"
+db = None
 
 if firebase_creds_str:
     try:
@@ -21,16 +23,29 @@ if firebase_creds_str:
         print("Initialized Firebase via Environment Variable.")
     except Exception as e:
         print(f"Error initializing Firebase from Env Var: {e}")
-        db = None
-# Priority 2: File in /data volume
-elif os.path.exists(CRED_PATH):
-    cred = credentials.Certificate(CRED_PATH)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("Initialized Firebase via Key File.")
-else:
-    print(f"Warning: No Firebase credentials found (checked env var FIREBASE_CREDENTIALS and {CRED_PATH}). Sync will fail.")
-    db = None
+        print("Falling back to key file...")
+
+# Priority 2: File in /data volume (Run if Env Var failed or wasn't present)
+if not db and os.path.exists(CRED_PATH):
+    try:
+        cred = credentials.Certificate(CRED_PATH)
+        # Avoid duplicate initialization if env var failed but app tried init? 
+        # Actually initializing_app multiple times might raise ValueError if app name default, 
+        # but if the first one failed, ideally it didn't initialize?
+        # Safe pattern: check if already initialized? 
+        # But for simple scripts, simpler is better.
+        try:
+            firebase_admin.get_app() 
+        except ValueError:
+             firebase_admin.initialize_app(cred)
+             
+        db = firestore.client()
+        print("Initialized Firebase via Key File.")
+    except Exception as e:
+         print(f"Error initializing form file: {e}")
+
+if not db:
+    print(f"Warning: No valid Firebase credentials found. Sync will fail.")
 
 client = XeroClient()
 
