@@ -199,11 +199,7 @@ else:
                                     
                         except Exception as e:
                             st.error(f"Error fetching report: {e}")
-            
-                                    st.json(report)
-                                    
-                        except Exception as e:
-                            st.error(f"Error fetching report: {e}")
+
 
             with st.expander("Account Transactions Report (Detailed Ledger)"):
                 st.write("Fetch item-by-item details including GL Codes and Tax Rates.")
