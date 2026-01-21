@@ -1,0 +1,9 @@
+# OneDrive Indexer (Existing)
+34.9.39.101.sslip.io {
+    reverse_proxy localhost:8501
+}
+
+# Budget Bridge (New)
+budget.34.9.39.101.sslip.io {
+    reverse_proxy localhost:8502
+}

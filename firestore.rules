@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check auth
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    // Helper to check ownership (if using per-user isolation)
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // --- COLLECTION RULES ---
+    
+    // Settings: Private per user
+    match /settings/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Transactions: 
+    // Ideally should be namespaced by user, but current app uses global 'transactions' collection.
+    // If single-tenant (just you), allow any authenticated user.
+    match /transactions/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Annual Reports: Global configuration
+    match /annual_reports/{year} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // --- OTHER APPS ---
+    
+    // Door Designer: Users save their own designs
+    match /doors/{doorId} {
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if isAuthenticated(); // Broadened for simplicity, ideal is resource.data.uid == request.auth.uid
+    }
+    
+    // Dossier Requests (Lead Generation)
+    // CRITICAL: Must allow PUBLIC creation for the landing page form to work
+    match /dossier_requests/{requestId} {
+      allow create: if true; // Public write access
+      allow read, update, delete: if isAuthenticated(); // Staff only
+    }
+    
+    // Project Timeline & Zonal Analysis
+    // Read-only for authenticated users (populated by backend scripts)
+    match /project_dashboard/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Allow scripts/staff to update
+    }
+    
+    match /indexer_analysis/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // Site Tasks / Todo App (Kanban)
+    // Uses nested path: artifacts/site-tasks/global/board/tasks
+    match /artifacts/{appId}/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /site_visits/{document=**} {
+      allow create: if true;  // Allows public visitor logging
+      allow read: if request.auth != null; // Protects data so only you see it
+    }
+
+    // --- PLANNING HELPER (NEW) ---
+    // Currently open for development/demo ease.
+    // Can be restricted to isAuthenticated() once fully integrated.
+    match /planning_sections/{document=**} {
+      allow read, write: if true; 
+    }
+    
+    match /planning_zones/{document=**} {
+        allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,14 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    container_name: budget_bridge_app
+    ports:
+      - "8502:8501" # Host Port 8502 -> Container Port 8501
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: streamlit run app.py --server.port 8501 --server.enableCORS false --server.enableXsrfProtection false
+    restart: unless-stopped

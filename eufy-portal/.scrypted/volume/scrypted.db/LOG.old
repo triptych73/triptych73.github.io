@@ -1,3 +1,5 @@
-2026/01/18-17:02:13.575767 789057bff6c0 Recovering log #34
-2026/01/18-17:02:13.581504 789057bff6c0 Level-0 table #36: started
-2026/01/18-17:02:13.585113 789057bff6c0 Level-0 table #36: 0 bytes IO error: /server/volume/scrypted.db/000036.ldb: Input/output error
+2026/01/18-17:03:09.950562 76ccf33ff6c0 Recovering log #34
+2026/01/18-17:03:09.959286 76ccf33ff6c0 Level-0 table #36: started
+2026/01/18-17:03:09.980632 76ccf33ff6c0 Level-0 table #36: 175428 bytes OK
+2026/01/18-17:03:09.996520 76ccf33ff6c0 Delete type=0 #34
+2026/01/18-17:03:09.997792 76ccf33ff6c0 Delete type=3 #32

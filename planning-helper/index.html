@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St Mary Somerset | Planning Helper</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@300;400;500&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js (Required for 3D Viewer) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Add CSS2DRenderer -->
+    <script src="https://unpkg.com/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portland': '#F5F5F0',
+                        'midnight': '#0F1115',
+                        'bronze': '#9A8C74',
+                        'paper': '#F0F0EB',
+                        'selected': '#E0E0DA'
+                    },
+                    fontFamily: {
+                        'serif': ['Cinzel', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['Courier Prime', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F0F0EB;
+            color: #0F1115;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 17, 21, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(154, 140, 116, 0.4);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(154, 140, 116, 0.7);
+        }
+
+        .tab-active {
+            border-bottom: 2px solid #9A8C74;
+            color: #0F1115;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body class="selection:bg-midnight selection:text-white h-screen flex flex-col">
+
+    <!-- Auth Guard Overlay (Copied from dossier.html) -->
+    <div id="loading-overlay"
+        style="position:fixed; inset:0; background:#0F1115; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+        <div
+            style="width: 4rem; height: 4rem; border: 1px solid rgba(154, 140, 116, 0.3); border-top-color: #9A8C74; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;">
+        </div>
+        <div
+            style="font-family: 'Cinzel', serif; color: #9A8C74; letter-spacing: 0.2em; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">
+            VERIFYING CREDENTIALS</div>
+        <style>
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
+
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            @keyframes pulse {
+
+                0%,
+                100% {
+                    opacity: 1;
+                }
+
+                50% {
+                    opacity: .5;
+                }
+            }
+        </style>
+    </div>
+
+    <!-- Protected Content -->
+    <div id="protected-content" class="flex-1 flex flex-col h-full hidden">
+
+        <!-- Header -->
+        <header
+            class="bg-paper/80 backdrop-blur-sm border-b border-midnight/10 h-16 flex items-center justify-between px-6 z-10 shrink-0">
+            <div class="flex items-center gap-4">
+                <a href="../index.html"
+                    class="font-serif tracking-widest text-xs uppercase text-midnight hover:text-bronze transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Home
+                </a>
+                <div class="h-4 w-px bg-midnight/10"></div>
+                <h1 class="font-serif text-lg text-midnight">Planning Helper</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="global-save-btn"
+                    class="font-sans text-[10px] tracking-[0.2em] uppercase text-bronze border border-bronze hover:bg-bronze hover:text-white transition-colors px-4 py-1 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Save Changes
+                </button>
+                <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-midnight/40">Non-Material
+                    Amendment</span>
+                <span
+                    class="font-sans text-[10px] tracking-[0.2em] uppercase text-bronze border border-bronze/30 px-2 py-1 bg-bronze/5">Restricted</span>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="flex-1 flex overflow-hidden">
+
+            <!-- Sidebar -->
+            <aside class="w-80 border-r border-midnight/10 bg-white/50 overflow-y-auto flex flex-col">
+                <div class="p-6 border-b border-midnight/5 sticky top-0 bg-white/95 backdrop-blur z-10">
+                    <h2 class="font-serif text-sm text-midnight mb-1">Sections</h2>
+                    <p class="font-sans text-xs text-midnight/40">Select a section to view details</p>
+                </div>
+                <ul id="section-list" class="flex-1 p-2 space-y-1">
+                    <!-- Javascript will populate this -->
+                </ul>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 flex flex-col bg-portland overflow-hidden relative">
+
+                <!-- Only shown when nothing selected -->
+                <div id="empty-state"
+                    class="absolute inset-0 flex items-center justify-center text-center opacity-30 pointer-events-none">
+                    <div>
+                        <div
+                            class="w-16 h-16 border border-bronze rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="font-serif text-2xl text-bronze">S</span>
+                        </div>
+                        <p class="font-serif text-lg text-midnight">Select a section from the list</p>
+                    </div>
+                </div>
+
+                <!-- Content Panel (Hidden by default) -->
+                <div id="content-panel" class="flex flex-col h-full hidden">
+
+                    <!-- Content Header -->
+                    <div class="bg-white border-b border-midnight/5 px-8 py-6 shrink-0">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span id="content-id"
+                                    class="font-sans text-xs tracking-[0.2em] text-bronze uppercase block mb-2">Section
+                                    01</span>
+                                <h2 id="content-title" class="font-serif text-2xl text-midnight">Title Goes Here</h2>
+                            </div>
+                        </div>
+
+                        <!-- Tabs -->
+                        <div class="flex gap-8 mt-8 border-b border-midnight/10">
+                            <button
+                                class="tab-btn pb-3 font-sans text-xs tracking-wider uppercase text-midnight/50 hover:text-midnight transition-colors tab-active"
+                                data-tab="content">Content</button>
+                            <button
+                                class="tab-btn pb-3 font-sans text-xs tracking-wider uppercase text-midnight/50 hover:text-midnight transition-colors"
+                                data-tab="drawings">Drawings</button>
+                            <button
+                                class="tab-btn pb-3 font-sans text-xs tracking-wider uppercase text-midnight/50 hover:text-midnight transition-colors"
+                                data-tab="comparison">Before / After</button>
+                            <!-- 
+                              New "Locate" tab added for 3D Configurator. 
+                              The 3D Viewer Logic (3d-viewer.js) will hook into this.
+                            -->
+                            <button
+                                class="tab-btn pb-3 font-sans text-xs tracking-wider uppercase text-midnight/50 hover:text-midnight transition-colors"
+                                data-tab="locate">Locate</button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Content -->
+                    <div class="flex-1 overflow-y-auto p-8 relative">
+
+                        <!-- Tab: Content -->
+                        <div id="tab-content" class="tab-pane space-y-6 max-w-3xl">
+                            <!-- Injected Content -->
+                        </div>
+
+                        <!-- Tab: Drawings -->
+                        <div id="tab-drawings" class="tab-pane hidden space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="drawings-grid">
+                                <!-- Injected Drawings Placeholders -->
+                            </div>
+                        </div>
+
+                        <!-- Tab: Comparison -->
+                        <div id="tab-comparison" class="tab-pane hidden max-w-4xl">
+                            <div
+                                class="grid grid-cols-2 gap-px bg-midnight/10 border border-midnight/10 rounded-lg overflow-hidden">
+                                <div class="bg-white p-6">
+                                    <h3
+                                        class="font-serif text-sm text-midnight/50 mb-4 uppercase tracking-widest border-b border-midnight/5 pb-2">
+                                        Existing / Previous</h3>
+                                    <p id="comp-before" class="font-sans text-sm text-midnight leading-relaxed"></p>
+                                </div>
+                                <div class="bg-portland p-6">
+                                    <h3
+                                        class="font-serif text-sm text-bronze mb-4 uppercase tracking-widest border-b border-bronze/20 pb-2">
+                                        Proposed</h3>
+                                    <p id="comp-after" class="font-sans text-sm text-midnight leading-relaxed"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Locate (3D Viewer) -->
+                        <div id="tab-locate" class="tab-pane hidden h-full flex flex-col md:flex-row gap-6"
+                            style="min-height: 500px;">
+                            <!-- Viewer Container -->
+                            <div id="viewer-container"
+                                class="flex-1 bg-white border border-midnight/10 rounded relative overflow-hidden shadow-inner">
+                                <!-- Three.js Canvas will be injected here -->
+                                <div class="absolute top-4 left-4 z-10 pointer-events-none">
+                                    <span
+                                        class="font-mono text-[10px] text-midnight/40 bg-white/80 px-2 py-1 rounded">3D
+                                        • Voxel Grid</span>
+                                </div>
+                            </div>
+
+                            <!-- Controls -->
+                            <div class="w-full md:w-64 shrink-0 space-y-6">
+                                <div class="bg-white p-6 border border-midnight/5 rounded">
+                                    <h4 class="font-serif text-xs uppercase text-bronze mb-4">Configurator</h4>
+
+                                    <!-- Edit Mode Toggle -->
+                                    <div class="flex items-center justify-between mb-6">
+                                        <span class="font-sans text-xs text-midnight/70">Edit Mode</span>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="edit-mode-toggle" class="sr-only peer">
+                                            <div
+                                                class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-bronze">
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Z-Level Slider -->
+                                    <div id="z-slider-container"
+                                        class="space-y-2 opacity-50 pointer-events-none transition-opacity">
+                                        <div class="flex justify-between">
+                                            <span
+                                                class="font-sans text-[10px] uppercase text-midnight/40">Z-Level</span>
+                                            <span id="z-level-val" class="font-mono text-xs text-midnight">0</span>
+                                        </div>
+                                        <input id="z-slider" type="range" min="0" max="14" value="0" step="1"
+                                            class="w-full h-1 bg-midnight/10 rounded-lg appearance-none cursor-pointer accent-bronze">
+                                    </div>
+
+                                    <!-- Labels Section -->
+                                    <div id="labels-container"
+                                        class="opacity-50 pointer-events-none transition-opacity border-t border-midnight/5 pt-4 mt-4">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h5 class="font-serif text-xs uppercase text-bronze">Labels</h5>
+                                            <button id="add-label-btn"
+                                                class="text-xs hover:text-bronze transition-colors flex items-center gap-1"
+                                                title="Add Label">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                    viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M12 4v16m8-8H4" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <!-- Label List -->
+                                        <div id="label-list" class="space-y-2 max-h-32 overflow-y-auto pr-1">
+                                            <!-- Labels injected here -->
+                                            <p class="font-sans text-[10px] text-midnight/30 italic text-center py-2">No
+                                                labels added</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Instructions -->
+                                    <div class="mt-8 pt-6 border-t border-midnight/5">
+                                        <p class="font-sans text-[10px] text-midnight/40 leading-relaxed italic">
+                                            Toggle 'Edit Mode' to enable controls. Click to add/remove zones.
+                                            Shift+Click to delete.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts: Logic -->
+    <script src="/planning-helper/data.js"></script>
+    <script src="/planning-helper/zones.js"></script>
+    <script src="/planning-helper/3d-viewer.js"></script>
+    <script src="/planning-helper/app.js"></script>
+
+    <!-- Firebase Integration -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+    <script src="../firebase-config.js"></script>
+
+    <script>
+        // Init 3D Viewer Global
+        const viewer3D = new Viewer3D('viewer-container');
+
+        // Init Firebase & Auth
+        if (typeof firebase !== 'undefined') {
+            if (typeof firebaseConfig !== 'undefined') {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                window.db = firebase.firestore();
+
+                // Auth Guard
+                firebase.auth().onAuthStateChanged((user) => {
+                    const overlay = document.getElementById('loading-overlay');
+                    const content = document.getElementById('protected-content');
+                    if (user) {
+                        console.log("User authenticated:", user.uid);
+                        if (overlay) {
+                            overlay.style.opacity = '0';
+                            setTimeout(() => overlay.style.display = 'none', 500);
+                        }
+                        if (content) content.classList.remove('hidden');
+
+                        // Force a resize calculation for 3D viewer if it exists
+                        window.dispatchEvent(new Event('resize'));
+                    } else {
+                        console.warn("User not logged in. Redirecting...");
+                        window.location.href = '../login.html';
+                    }
+                });
+            } else {
+                console.error("Firebase Config not found. Check ../firebase-config.js path.");
+            }
+        } else {
+            console.error("Firebase SDK not loaded.");
+        }
+    </script>
+</body>
+
+</html>

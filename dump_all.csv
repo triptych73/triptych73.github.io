@@ -1,0 +1,240 @@
+--- Sheet: ARCH ---
+0,1,2,3,4,5,6,7,8,9,10
+,,,,,,,,,,
+,SCHEDULE OF DETAILS FROM BMA CONSTRUCTION SET,,,,,,,,,
+,,,,,,,,,,
+Dwg,Description,Detail #,Detail Description,Status,Useful?,Phase,Colorcode,,,01 site plan.pdf
+26A,lift details,1,section thru lift shaft,Item moved,Replace,Phase 1,,,,02 elevations.pdf
+,,2,plan @ structure level 4 including lift pump,Item moved,Replace,Phase 1,,,,03B sections.pdf
+,,3,typical lift door head and cill detail,Item moved,Replace,Phase 1,,,,04B GA plan level 01.pdf
+,,4,typical lift plan levels 4 - 6,Item moved,Replace,Phase 1,,,,05B GA plan level 02.pdf
+,,5,typical lift head+cill details levels 7 - 8,Item moved,Replace,Phase 1,,,,06B GA plan level 03.pdf
+,,6,typical lift plan levels 7 - 9,Item moved,Replace,Phase 1,,,,07B GA plan level 04.pdf
+
+--- Sheet: ENGINEERING ---
+0,1,2,3,4,5,6,7,8,9
+,,,,,,,,,
+,,Detail,Location,Description,Comment,Status,Useful?,Phase,Colour
+,LEVEL 10,D01,location G371/20,Level 10 roof section - 1:10,Main roof,Design changed,Replace,Phase 2,
+,LEVEL 9,D02,location G371/19,Level 9 perimeter section - 1:10,,,As is,Phase 2,
+,,D03,location G371/19,Level 9 perimeter section - 1:10,,Needs changing as now keeping concrete grid,Replace,Phase 2,
+,,D04,location G371/19,Level 9 typical angle fixing detail - 1:10,,,As is,Phase 2,
+,LEVEL 8,D05,location G371/18,Level 8 beam detail - 1:10,Detail for junction of joists with original internal lift shaft,Lift Removed,No,,
+,LEVEL 7,D06,location G371/17,Level 7 extension roof - 1:20,Extension roof over old stairs,"Much stuctural steelwork here not needed without hanging stairs.
+=D07",No,,
+,,D07,location G371/17,section thru roof Lvl 7 - 1:10,E side extension roof section,Wall construction differs,Amend (Slight),Phase 1,
+,,D08,location G371/17,section thru roof flitch beam Lvl 7 - 1:10,Middle of extension roof section,Wall construction differs,Amend (Slight),,
+
+--- Sheet: APPR. D ---
+0,1,2,3,4,5,6,7
+,,,,,,,
+,Drawing Number,Further Reference,Scale,Title,Status,Action,Notes
+,01 Site Plan,-,As indicated,Site Plan (red line plan),Approved 12/05/05,no change,
+,02,-,1:50,GA plan level 1,Approved 12/05/05,superceded,
+,03,-,1:50,GA plan level 2,Approved 12/05/05,superceded,
+,04,-,1:50,GA plan level 3,Approved 12/05/05,superceded,
+,05,-,1:50,GA plan level 4,Approved 12/05/05,superceded,
+,06,-,1:50,GA plan level 5,Approved 12/05/05,superceded,
+,07,-,1:50,GA plan level 6,Approved 12/05/05,superceded,
+,08,-,1:50,GA plan level 7,Approved 12/05/05,superceded,
+
+--- Sheet: PPORT ---
+0,1,2,3,4
+,,,,
+,2005,,,
+,ORIGINAL PLANNING APPLICATION,,,
+,,,,
+,2006,,,
+,"DISCHARGE OF CONDITIONS E, F",,,
+1.0,06_00283_LDC-53480-ELEVATIONS_EAST__NORTH__WEST___SOUTH-53480 - 02.pdf,06_00283_LDC-53480,ELEVATIONS_EAST__NORTH__WEST___SOUTH, 02.pdf
+2.0,06_00283_LDC-53484-EXTENSION_STONE_DETAILS-53484- 093.pdf,06_00283_LDC-53484,EXTENSION_STONE_DETAILS, 093.pdf
+3.0,06_00283_LDC-53483-EXTENSION_OF_ROOF_DETAILS-53483 - 71.pdf,06_00283_LDC-53483,EXTENSION_OF_ROOF_DETAILS, 71.pdf
+4.0,06_00283_LDC-53485-STONE_DETAILS_1-53485 - S1.pdf,06_00283_LDC-53485,STONE_DETAILS_1, S1.pdf
+
+--- Sheet: ENG ---
+0,1,2
+2005,ALAN BAXTER & ASSOCIATES,
+,,
+SK11,SKETCH OF THE NEW STONE EXTENSION AND ITS PROPOSED FOUNDATIONS,Link
+SK12,SKETCH DETAIL OF NEW BC SLABS WITHIN THE NEW STONE EXTENSION,Link
+SK14,SKETCH DETAIL SHOWING PROPOSED REINFORCMENT WITHIN NEW STONE EXTENSION - SHEET 1,Link
+SK15,SKETCH DETAIL SHOWING PROPOSED REINFORCMENT WITHIN NEW STONE EXTENSION - SHEET 2,Link
+SK16,CONNECTION DETAIL OF NEW STEEL BEAMS,Link
+SK17,SKETCH DETAIL SHOWING PROPOSED METHOD FOR RESUPPORTING EXISTING TIMBER BEAM,Link
+SK18,SKETCH DETAIL OF PROPOSED ENLARGEMENT TO EXSITING OPENING,Link
+SK19,SUPPORT DETAIL FOR NEW FLOOR STRUCTURES,Link
+
+--- Sheet: 01 ---
+0,1,2,3,4,5
+Approved Documents,PDF,,PNG,,IMAGE
+,,,,,
+01 site plan,,,,,
+02  plan level 01 ,,,,,
+03 plan level 02,,,,,
+04 plan level 03,,,,,
+05 plan level 04,,,,,
+06 plan level 05,,,,,
+07 plan level 06,,,,,
+08 plan level 07,,,,,
+
+--- Sheet: 03 + D ---
+0,1,2,3,4,5
+,PDF,DWG,PNG,,IMAGE
+,,,,,
+01 site plan,,,,,
+02 elevations,,,,,
+03B sections,,,,,
+04B GA plan level 01,,Link,,,
+05B GA plan level 02,,,,,
+06B GA plan level 03,,,,,
+07B GA plan level 04,,,,,
+08B GA plan level 05,,,,,
+
+--- Sheet: A0 ---
+0,1,2,3,4,5
+Current Working,PDF,DWG,,,IMAGE
+,,,,,
+A001,,Link,,,
+A002,,,,,
+A003,,,,,
+A004,,,,,
+A005,,,,,
+A006,,,,,
+A007,,Link,,,
+A008,,,,,
+
+--- Sheet: A1 ---
+0,1,2,3,4,5
+Current Working,PDF,DWG,PNG,,IMAGE
+,,,,,
+A101 v3,,Link,,,
+A102,,Link,,,
+A103,,Link,,,
+A104 V2,,Link,,,
+A105,,Link,,,
+A106,,Link,,,
+A107,,Link,,,
+A108,,Link,,,
+
+--- Sheet: A2+ ---
+0,1,2,3,4,5,6
+Current Working,Descr.,PDF,DWG,PNG,,IMAGE
+,,,,,,
+A200-P1,Elevations All Sides,,Link,,So far unadapted,
+A250-P1,Sections All,,Link,,,
+A251-P1,Section SN (Facing W) BOTTOM,,Link,,need to xref in,
+A252-P1,Section SN (Facing W) TOP,,Link,,need to xref in,
+A253-P1,Section NS (Facing E) BOTTOM,,Link,,need to xref in,
+A254-P1,Section NS (Facing E) TOP,,Link,,need to xref in,
+A255-P1,Section WE thru Extension,,Link,,need to xref in,
+A256-P1,Section WE thru Stair BOTTOM,,Link,,need to xref in,
+
+--- Sheet: ADR ---
+0,1
+,
+Architectural Drawing Register  - St Mary Somerset ,
+,
+A101,GA Plan Level 1
+A102,GA Plan Level 2
+A103,GA Plan Level 3
+A104,GA Plan Level 4
+A105,GA Plan Level 5
+A106,GA Plan Level 6
+A107,GA Plan Level 7
+
+--- Sheet: ADR UP ---
+0,1,2,3,4
+Architectural Drawing Schedule,,,,
+,,,,
+Drawing Number,Description,Date Produced,Produced by,Checked by
+1407-A090-P1,GA Plan Levels 1-6,2014-06-15 00:00:00,PE,GR
+1407-A091-P1,GA Plan Levels 7-11,2014-06-15 00:00:00,PE,GR
+1407-A101-P1,GA Plan Level 1,2014-06-15 00:00:00,PE,GR
+1407-A102-P1,GA Plan Level 2,2014-06-15 00:00:00,PE,GR
+1407-A103-P1,GA Plan Level 3,2014-06-15 00:00:00,PE,GR
+1407-A104-P1,GA Plan Level 4,2014-06-15 00:00:00,PE,GR
+1407-A105-P1,GA Plan Level 5,2014-06-15 00:00:00,PE,GR
+
+--- Sheet: EDR UP ---
+0,1,2,3,4
+Engineering Drawing Schedule,,,,
+,,,,
+Drawing number,Description,Date Produced,Produced by,Checked by
+1368-300A,Typical Sections and General Notes,2014-08-01 00:00:00,AA,GR
+1368-301A,"Level 01, Showing Structures at 01 Level",2014-08-01 00:00:00,AA,GR
+1368-302A,"Level 01, Showing Structures at Top of Side Retaining Walls",2014-08-01 00:00:00,AA,GR
+1368-303A,"Level 02, Showing Structures at 02 Level",2014-08-01 00:00:00,AA,GR
+1368-304A,,2014-08-01 00:00:00,AA,GR
+1368-305B,"Level 04, Showing Structures at 04 Level",2014-08-01 00:00:00,AA,GR
+1368-306A,"Level 05, Showing Structures at 05 Level",2014-08-01 00:00:00,AA,GR
+
+--- Sheet: NMA SECTS ---
+0,1,2,3,4,5,6
+#,Section,Planning Approved Drawings,Drawings,Figures,Condition,Notes
+1,Overall Arrangement of Rooms,2005:GA02-GA12,2018:GA1-10,,,Can this be applied for under Discharge of Condition?
+2,Simplification of Interior Spaces,"2007:013; 2005:GA06,GA07, 025",2018:GA1-10,,,What is this really - better to breakdown into specific changes
+3,Trapdoors,"2005:GA06, GA07, GA08, GA10","2018:GA5,GA6,GA7,GA9",,,
+4,"Variation of Design of ""Slot Window""","2005:028; 2006:38,68,69,Window Schedule 2","2018:68A,69A,Window Schedule 2 Rev A",,,
+5,Extension Parapet Detail,"2005:013,015,016,06,029; 2006:02,71",,,,New  stonework detail
+6,Masonry Support Detail,,,,,New stoneowrk detail
+7,Level 2 Entrance Height & Level 3 Change of Use,"2005:GA04,013,015; 2006:S2,093",,,,
+8,Main Entrance Door,"2005:023,026; 2006:S1,S2",,,,
+9,Improvement to Fire Route,"2005:02,016; 2006:093",,,,
+
+--- Sheet: CONDITIONS ---
+0,1,2,3
+Condition,Current Headings,Current Summary,Need to Include
+(a) particulars and samples of the materials to be used on all external surfaces of the building; ,,,
+(b) details of all alterations to the existing façade …,,"Stone Louvres
+L5/L6 Openings","
+L2 Opening Shift"
+,,,
+but also including:,,,
+,,,
+·        cleaning and repair methods,request full external cleaning,,
+·        external lighting,omitted for now,,
+(c) details of new windows and external joinery;,,"Wooden Louvres
+Slot Windows
+Main Entrance Door
+Fan Light over L1 Doors",New extension louvres?
+,,,
+
+--- Sheet: Amendments ---
+0,1,2,3,4,5,6,7,8,9
+"1407 - St Mary Somerset Tower, Lambeth Hill, EC4",,,,,,,,,
+Planning Ammendments Schedule,,,,,,,,,
+,,,,,,,,,
+,Planning Comparison Reference,Levels,Description,Planning Consideration,P&P Drawing Code,Primary,Secondary,,
+,,,,,,,,,checked
+LEVEL 01,,,,,,,,,
+,L01.02,L01,New joinery steps and platform added to east doorway recess.,"Connects level 01 to the new opening to the spiral staircase, as well to the garden, through the east door (refer to L01.01).",A-101 / A-250,,Y,,x
+,L01.03,L01,The operable and fixed doors on east elevation switched around to allow access to/from spiral and main room.,Provides access to garden from platform (refer to L01.02).,A-101 / A-200,,Y,,x
+,L01.04,L01,Removal of fire exit door from east elevation of extension.,Positive Impact - Improves eastern elevation of extension.,A-101 / A-200,,Y,,x
+,L01.05,L01,New WC off kitchen in NE corner of extension.,Necessary to provide suitable provision for occupants of Level 01 (Level 05 nearest otherwise).,A-101,,Y,,x
+
+--- Sheet: PLANNING ---
+0,1,2,3,4,5,6,7
+,,,,,,,
+ST MARY SOMERSET TOWER,,,,,,,
+,,,,,,,
+Drawing Accompanying Application for Planning Permission & Listed Building Consent,,,Current Equivalent Construction/,,,,Comment on Planning Issues
+,,,Pre-Tender Status Drawing used for comparative purposes,,,Change,(Breda  changes green underlined) 
+,,,,,,,Yellow highlight = get more details
+,,,,,,,Ö= agree w/BD - change as appro.  
+,,,,,,,
+Dwg No,Title,Date,Dwg No,Title,Date,,
+1,Site Plan,2.05,1,Site Plan & Site Compound,1.07,Suggested temporary and access works added.  Temporary diversion of pedestrian route indicated.,highways issue
+
+--- Sheet: Amendments (2) ---
+0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17
+"1407 - St Mary Somerset Tower, Lambeth Hill, EC4",,,,,,,,,,,,,,,,,
+Planning Ammendments Schedule,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,Planning Comparison Reference,Levels,Description,Planning Consideration,P&P Drawing Code,Primary,Secondary,,Planning Relevant,LBC Relevant,Planning Workaround Available,LBC Workaround Available,Workaround Description,Discharge of Conditions?,Kate's comments ,Greg's Response to Kate's,Kate response to Greg's 
+,,,,,,,,,,,,,,,,,
+LEVEL 01,L01.01,L01,New opening into historic fabric of spiral staircase at level 01 and spiral staircase dug down to allow for provision of additional risers.,"Access from spiral required at level 01 as lift no longer serves. Proposed layout prevents the need for a staircase protruding into the room, preserving the existing internal volume beneath dome.",A-101 / A-250,Y,,,no,yes,,no,Omit for now,,,,
+,L01.02,L01,New joinery steps and platform added to east doorway recess.,"Connects level 01 to the new opening to the spiral staircase, as well to the garden, through the east door (refer to L01.01).",A-101 / A-250,,Y,,no,no,,,Omit for now,,,,
+,L01.03,L01,The operable and fixed doors on east elevation switched around to allow access to/from spiral and main room.,Provides access to garden from platform (refer to L01.02).,A-101 / A-200,,Y,,yes,no?,yes,n/a?,Do not implement new doors.. Have entrance in currently functioning South doorway with furniture steps down.,,the steel fabricators can build the steel door frame when installing the steels  for the extension in case the door must be installed.,"Yes, I suppose safest.",
+,L01.04,L01,Removal of fire exit door from east elevation of extension.,Positive Impact - Improves eastern elevation of extension.,A-101 / A-200,,Y,,yes,yes,yes,?,Planning: argue that since a supposedly invisible door there is no change. LBC: discharge of conditions.,yes ,the steel fabricators can build the steel door frame when installing the steels  for the extension in case the door must be installed.,"Yes, I suppose safest.",
+,L01.05,L01,New WC off kitchen in NE corner of extension.,Necessary to provide suitable provision for occupants of Level 01 (Level 05 nearest otherwise).,A-101,,Y,,no,yes,,yes,Omit for now or build as temporary workers' WC?,,,,
+

@@ -1,0 +1,361 @@
+Inspecting: assets/docs/Drawing List v2.xlsm
+Sheet names: ['ARCH', 'ENGINEERING', 'APPR. D', 'PPORT', 'ENG', '01', '03 + D', 'A0', 'A1', 'A2+', 'ADR', 'ADR UP', 'EDR UP', 'NMA SECTS', 'CONDITIONS', 'Amendments', 'PLANNING', 'Amendments (2)']
+
+====================
+Sheet: ARCH
+====================
+Columns: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9', 'Unnamed: 10']
+----------
+First 10 rows:
+  Unnamed: 0                                     Unnamed: 1 Unnamed: 2                                    Unnamed: 3  Unnamed: 4 Unnamed: 5 Unnamed: 6 Unnamed: 7  Unnamed: 8  Unnamed: 9               Unnamed: 10
+0        NaN  SCHEDULE OF DETAILS FROM BMA CONSTRUCTION SET        NaN                                           NaN         NaN        NaN        NaN        NaN         NaN         NaN                       NaN
+1        NaN                                            NaN        NaN                                           NaN         NaN        NaN        NaN        NaN         NaN         NaN                       NaN
+2        Dwg                                    Description   Detail #                            Detail Description      Status    Useful?      Phase  Colorcode         NaN         NaN          01 site plan.pdf
+3        26A                                   lift details          1                       section thru lift shaft  Item moved    Replace    Phase 1        NaN         NaN         NaN         02 elevations.pdf
+4        NaN                                            NaN          2  plan @ structure level 4 including lift pump  Item moved    Replace    Phase 1        NaN         NaN         NaN          03B sections.pdf
+5        NaN                                            NaN          3        typical lift door head and cill detail  Item moved    Replace    Phase 1        NaN         NaN         NaN  04B GA plan level 01.pdf
+6        NaN                                            NaN          4                typical lift plan levels 4 - 6  Item moved    Replace    Phase 1        NaN         NaN         NaN  05B GA plan level 02.pdf
+7        NaN                                            NaN          5   typical lift head+cill details levels 7 - 8  Item moved    Replace    Phase 1        NaN         NaN         NaN  06B GA plan level 03.pdf
+8        NaN                                            NaN          6                typical lift plan levels 7 - 9  Item moved    Replace    Phase 1        NaN         NaN         NaN  07B GA plan level 04.pdf
+9        NaN                                            NaN          7                        section thru lift base  Item moved    Replace    Phase 1        NaN         NaN         NaN  08B GA plan level 05.pdf
+
+
+
+====================
+Sheet: ENGINEERING
+====================
+Columns: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9']
+----------
+First 10 rows:
+   Unnamed: 0 Unnamed: 1 Unnamed: 2        Unnamed: 3                                  Unnamed: 4                                                       Unnamed: 5                                                              Unnamed: 6      Unnamed: 7 Unnamed: 8 Unnamed: 9
+0         NaN        NaN     Detail          Location                                 Description                                                          Comment                                                                  Status         Useful?      Phase     Colour
+1         NaN   LEVEL 10        D01  location G371/20                Level 10 roof section - 1:10                                                        Main roof                                                          Design changed         Replace    Phase 2        NaN
+2         NaN    LEVEL 9        D02  location G371/19            Level 9 perimeter section - 1:10                                                              NaN                                                                     NaN           As is    Phase 2        NaN
+3         NaN        NaN        D03  location G371/19            Level 9 perimeter section - 1:10                                                              NaN                             Needs changing as now keeping concrete grid         Replace    Phase 2        NaN
+4         NaN        NaN        D04  location G371/19  Level 9 typical angle fixing detail - 1:10                                                              NaN                                                                     NaN           As is    Phase 2        NaN
+5         NaN    LEVEL 8        D05  location G371/18                  Level 8 beam detail - 1:10  Detail for junction of joists with original internal lift shaft                                                            Lift Removed              No        NaN        NaN
+6         NaN    LEVEL 7        D06  location G371/17               Level 7 extension roof - 1:20                                   Extension roof over old stairs  Much stuctural steelwork here not needed without hanging stairs.\n=D07              No        NaN        NaN
+7         NaN        NaN        D07  location G371/17              section thru roof Lvl 7 - 1:10                                    E side extension roof section                                               Wall construction differs  Amend (Slight)    Phase 1        NaN
+8         NaN        NaN        D08  location G371/17  section thru roof flitch beam Lvl 7 - 1:10                                 Middle of extension roof section                                               Wall construction differs  Amend (Slight)        NaN        NaN
+9         NaN        NaN        D09  location G371/17              support to cut oak beam - 1:10                  Supporting for orig oak beam cut for lift shaft                                                            Lift Removed              No        NaN        NaN
+
+
+
+====================
+Sheet: APPR. D
+====================
+Columns: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7']
+----------
+First 10 rows:
+   Unnamed: 0      Unnamed: 1         Unnamed: 2    Unnamed: 3                 Unnamed: 4         Unnamed: 5  Unnamed: 6 Unnamed: 7
+0         NaN  Drawing Number  Further Reference         Scale                      Title             Status      Action      Notes
+1         NaN    01 Site Plan                  -  As indicated  Site Plan (red line plan)  Approved 12/05/05   no change        NaN
+2         NaN              02                  -          1:50            GA plan level 1  Approved 12/05/05  superceded        NaN
+3         NaN              03                  -          1:50            GA plan level 2  Approved 12/05/05  superceded        NaN
+4         NaN              04                  -          1:50            GA plan level 3  Approved 12/05/05  superceded        NaN
+5         NaN              05                  -          1:50            GA plan level 4  Approved 12/05/05  superceded        NaN
+6         NaN              06                  -          1:50            GA plan level 5  Approved 12/05/05  superceded        NaN
+7         NaN              07                  -          1:50            GA plan level 6  Approved 12/05/05  superceded        NaN
+8         NaN              08                  -          1:50            GA plan level 7  Approved 12/05/05  superceded        NaN
+9         NaN              09                  -          1:50            GA plan level 8  Approved 12/05/05  superceded        NaN
+
+
+
+====================
+Sheet: PPORT
+====================
+Columns: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4']
+----------
+First 10 rows:
+   Unnamed: 0                                                              Unnamed: 1          Unnamed: 2                            Unnamed: 3 Unnamed: 4
+0         NaN                                                                    2005                 NaN                                   NaN        NaN
+1         NaN                                           ORIGINAL PLANNING APPLICATION                 NaN                                   NaN        NaN
+2         NaN                                                                     NaN                 NaN                                   NaN        NaN
+3         NaN                                                                    2006                 NaN                                   NaN        NaN
+4         NaN                                            DISCHARGE OF CONDITIONS E, F                 NaN                                   NaN        NaN
+5         1.0  06_00283_LDC-53480-ELEVATIONS_EAST__NORTH__WEST___SOUTH-53480 - 02.pdf  06_00283_LDC-53480  ELEVATIONS_EAST__NORTH__WEST___SOUTH     02.pdf
+6         2.0               06_00283_LDC-53484-EXTENSION_STONE_DETAILS-53484- 093.pdf  06_00283_LDC-53484               EXTENSION_STONE_DETAILS    093.pdf
+7         3.0             06_00283_LDC-53483-EXTENSION_OF_ROOF_DETAILS-53483 - 71.pdf  06_00283_LDC-53483             EXTENSION_OF_ROOF_DETAILS     71.pdf
+8         4.0                       06_00283_LDC-53485-STONE_DETAILS_1-53485 - S1.pdf  06_00283_LDC-53485                       STONE_DETAILS_1     S1.pdf
+9         5.0                       06_00283_LDC-53486-STONE_DETAILS_2-53486 - S2.pdf  06_00283_LDC-53486                       STONE_DETAILS_2     S2.pdf
+
+
+
+====================
+Sheet: ENG
+====================
+Columns: [2005, 'ALAN BAXTER & ASSOCIATES', 'Unnamed: 2']
+----------
+First 10 rows:
+   2005                                                          ALAN BAXTER & ASSOCIATES Unnamed: 2
+0   NaN                                                                               NaN        NaN
+1  SK11                    SKETCH OF THE NEW STONE EXTENSION AND ITS PROPOSED FOUNDATIONS       Link
+2  SK12                      SKETCH DETAIL OF NEW BC SLABS WITHIN THE NEW STONE EXTENSION       Link
+3  SK14  SKETCH DETAIL SHOWING PROPOSED REINFORCMENT WITHIN NEW STONE EXTENSION - SHEET 1       Link
+4  SK15  SKETCH DETAIL SHOWING PROPOSED REINFORCMENT WITHIN NEW STONE EXTENSION - SHEET 2       Link
+5  SK16                                              CONNECTION DETAIL OF NEW STEEL BEAMS       Link
+6  SK17       SKETCH DETAIL SHOWING PROPOSED METHOD FOR RESUPPORTING EXISTING TIMBER BEAM       Link
+7  SK18                         SKETCH DETAIL OF PROPOSED ENLARGEMENT TO EXSITING OPENING       Link
+8  SK19                                           SUPPORT DETAIL FOR NEW FLOOR STRUCTURES       Link
+
+
+
+====================
+Sheet: 01
+====================
+Columns: ['Approved Documents', 'PDF', 'Unnamed: 2', 'PNG', 'Unnamed: 4', 'IMAGE']
+----------
+First 10 rows:
+   Approved Documents  PDF  Unnamed: 2  PNG  Unnamed: 4  IMAGE
+0                 NaN  NaN         NaN  NaN         NaN    NaN
+1        01 site plan  NaN         NaN  NaN         NaN    NaN
+2  02  plan level 01   NaN         NaN  NaN         NaN    NaN
+3    03 plan level 02  NaN         NaN  NaN         NaN    NaN
+4    04 plan level 03  NaN         NaN  NaN         NaN    NaN
+5    05 plan level 04  NaN         NaN  NaN         NaN    NaN
+6    06 plan level 05  NaN         NaN  NaN         NaN    NaN
+7    07 plan level 06  NaN         NaN  NaN         NaN    NaN
+8    08 plan level 07  NaN         NaN  NaN         NaN    NaN
+9    09 plan level 08  NaN         NaN  NaN         NaN    NaN
+
+
+
+====================
+Sheet: 03 + D
+====================
+Columns: ['Unnamed: 0', 'PDF', 'DWG', 'PNG', 'Unnamed: 4', 'IMAGE']
+----------
+First 10 rows:
+             Unnamed: 0  PDF   DWG  PNG  Unnamed: 4  IMAGE
+0                   NaN  NaN   NaN  NaN         NaN    NaN
+1          01 site plan  NaN   NaN  NaN         NaN    NaN
+2         02 elevations  NaN   NaN  NaN         NaN    NaN
+3          03B sections  NaN   NaN  NaN         NaN    NaN
+4  04B GA plan level 01  NaN  Link  NaN         NaN    NaN
+5  05B GA plan level 02  NaN   NaN  NaN         NaN    NaN
+6  06B GA plan level 03  NaN   NaN  NaN         NaN    NaN
+7  07B GA plan level 04  NaN   NaN  NaN         NaN    NaN
+8  08B GA plan level 05  NaN   NaN  NaN         NaN    NaN
+9  09B GA plan level 06  NaN   NaN  NaN         NaN    NaN
+
+
+
+====================
+Sheet: A0
+====================
+Columns: ['Current Working', 'PDF', 'DWG', 'Unnamed: 3', 'Unnamed: 4', 'IMAGE']
+----------
+First 10 rows:
+  Current Working  PDF   DWG  Unnamed: 3  Unnamed: 4  IMAGE
+0             NaN  NaN   NaN         NaN         NaN    NaN
+1            A001  NaN  Link         NaN         NaN    NaN
+2            A002  NaN   NaN         NaN         NaN    NaN
+3            A003  NaN   NaN         NaN         NaN    NaN
+4            A004  NaN   NaN         NaN         NaN    NaN
+5            A005  NaN   NaN         NaN         NaN    NaN
+6            A006  NaN   NaN         NaN         NaN    NaN
+7            A007  NaN  Link         NaN         NaN    NaN
+8            A008  NaN   NaN         NaN         NaN    NaN
+9            A009  NaN   NaN         NaN         NaN    NaN
+
+
+
+====================
+Sheet: A1
+====================
+Columns: ['Current Working', 'PDF', 'DWG', 'PNG', 'Unnamed: 4', 'IMAGE']
+----------
+First 10 rows:
+  Current Working  PDF   DWG  PNG  Unnamed: 4  IMAGE
+0             NaN  NaN   NaN  NaN         NaN    NaN
+1         A101 v3  NaN  Link  NaN         NaN    NaN
+2            A102  NaN  Link  NaN         NaN    NaN
+3            A103  NaN  Link  NaN         NaN    NaN
+4         A104 V2  NaN  Link  NaN         NaN    NaN
+5            A105  NaN  Link  NaN         NaN    NaN
+6            A106  NaN  Link  NaN         NaN    NaN
+7            A107  NaN  Link  NaN         NaN    NaN
+8            A108  NaN  Link  NaN         NaN    NaN
+9            A109  NaN  Link  NaN         NaN    NaN
+
+
+
+====================
+Sheet: A2+
+====================
+Columns: ['Current Working', 'Descr.', 'PDF', 'DWG', 'PNG', 'Unnamed: 5', 'IMAGE']
+----------
+First 10 rows:
+  Current Working                        Descr.  PDF   DWG  PNG        Unnamed: 5  IMAGE
+0             NaN                           NaN  NaN   NaN  NaN               NaN    NaN
+1         A200-P1          Elevations All Sides  NaN  Link  NaN  So far unadapted    NaN
+2         A250-P1                  Sections All  NaN  Link  NaN               NaN    NaN
+3         A251-P1  Section SN (Facing W) BOTTOM  NaN  Link  NaN   need to xref in    NaN
+4         A252-P1     Section SN (Facing W) TOP  NaN  Link  NaN   need to xref in    NaN
+5         A253-P1  Section NS (Facing E) BOTTOM  NaN  Link  NaN   need to xref in    NaN
+6         A254-P1     Section NS (Facing E) TOP  NaN  Link  NaN   need to xref in    NaN
+7         A255-P1     Section WE thru Extension  NaN  Link  NaN   need to xref in    NaN
+8         A256-P1  Section WE thru Stair BOTTOM  NaN  Link  NaN   need to xref in    NaN
+9         A257-P1     Section WE thru Stair TOP  NaN  Link  NaN   need to xref in    NaN
+
+
+
+====================
+Sheet: ADR
+====================
+Columns: ['Unnamed: 0', 'Unnamed: 1']
+----------
+First 10 rows:
+                                            Unnamed: 0       Unnamed: 1
+0  Architectural Drawing Register  - St Mary Somerset               NaN
+1                                                  NaN              NaN
+2                                                 A101  GA Plan Level 1
+3                                                 A102  GA Plan Level 2
+4                                                 A103  GA Plan Level 3
+5                                                 A104  GA Plan Level 4
+6                                                 A105  GA Plan Level 5
+7                                                 A106  GA Plan Level 6
+8                                                 A107  GA Plan Level 7
+9                                                 A108  GA Plan Level 8
+
+
+
+====================
+Sheet: ADR UP
+====================
+Columns: ['Architectural Drawing Schedule', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4']
+----------
+First 10 rows:
+  Architectural Drawing Schedule           Unnamed: 1           Unnamed: 2   Unnamed: 3  Unnamed: 4
+0                            NaN                  NaN                  NaN          NaN         NaN
+1                 Drawing Number          Description        Date Produced  Produced by  Checked by
+2                   1407-A090-P1   GA Plan Levels 1-6  2014-06-15 00:00:00           PE          GR
+3                   1407-A091-P1  GA Plan Levels 7-11  2014-06-15 00:00:00           PE          GR
+4                   1407-A101-P1      GA Plan Level 1  2014-06-15 00:00:00           PE          GR
+5                   1407-A102-P1      GA Plan Level 2  2014-06-15 00:00:00           PE          GR
+6                   1407-A103-P1      GA Plan Level 3  2014-06-15 00:00:00           PE          GR
+7                   1407-A104-P1      GA Plan Level 4  2014-06-15 00:00:00           PE          GR
+8                   1407-A105-P1      GA Plan Level 5  2014-06-15 00:00:00           PE          GR
+9                   1407-A106-P1      GA Plan Level 6  2014-06-15 00:00:00           PE          GR
+
+
+
+====================
+Sheet: EDR UP
+====================
+Columns: ['Engineering Drawing Schedule', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4']
+----------
+First 10 rows:
+  Engineering Drawing Schedule                                                   Unnamed: 1           Unnamed: 2   Unnamed: 3  Unnamed: 4
+0                          NaN                                                          NaN                  NaN          NaN         NaN
+1               Drawing number                                                  Description        Date Produced  Produced by  Checked by
+2                    1368-300A                           Typical Sections and General Notes  2014-08-01 00:00:00           AA          GR
+3                    1368-301A                     Level 01, Showing Structures at 01 Level  2014-08-01 00:00:00           AA          GR
+4                    1368-302A  Level 01, Showing Structures at Top of Side Retaining Walls  2014-08-01 00:00:00           AA          GR
+5                    1368-303A                     Level 02, Showing Structures at 02 Level  2014-08-01 00:00:00           AA          GR
+6                    1368-304A                                                          NaN  2014-08-01 00:00:00           AA          GR
+7                    1368-305B                     Level 04, Showing Structures at 04 Level  2014-08-01 00:00:00           AA          GR
+8                    1368-306A                     Level 05, Showing Structures at 05 Level  2014-08-01 00:00:00           AA          GR
+9                    1368-307A                     Level 06, Showing Structures at 06 Level  2014-08-01 00:00:00           AA          GR
+
+
+
+====================
+Sheet: NMA SECTS
+====================
+Columns: ['#', 'Section', 'Planning Approved Drawings', 'Drawings', 'Figures', 'Condition', 'Notes']
+----------
+First 10 rows:
+    #                                          Section                 Planning Approved Drawings                              Drawings  Figures  Condition                                                            Notes
+0   1                     Overall Arrangement of Rooms                             2005:GA02-GA12                           2018:GA1-10      NaN        NaN            Can this be applied for under Discharge of Condition?
+1   2                Simplification of Interior Spaces              2007:013; 2005:GA06,GA07, 025                           2018:GA1-10      NaN        NaN  What is this really - better to breakdown into specific changes
+2   3                                        Trapdoors                2005:GA06, GA07, GA08, GA10                  2018:GA5,GA6,GA7,GA9      NaN        NaN                                                              NaN
+3   4             Variation of Design of "Slot Window"  2005:028; 2006:38,68,69,Window Schedule 2  2018:68A,69A,Window Schedule 2 Rev A      NaN        NaN                                                              NaN
+4   5                         Extension Parapet Detail        2005:013,015,016,06,029; 2006:02,71                                   NaN      NaN        NaN                                            New  stonework detail
+5   6                           Masonry Support Detail                                        NaN                                   NaN      NaN        NaN                                             New stoneowrk detail
+6   7  Level 2 Entrance Height & Level 3 Change of Use             2005:GA04,013,015; 2006:S2,093                                   NaN      NaN        NaN                                                              NaN
+7   8                               Main Entrance Door                   2005:023,026; 2006:S1,S2                                   NaN      NaN        NaN                                                              NaN
+8   9                        Improvement to Fire Route                      2005:02,016; 2006:093                                   NaN      NaN        NaN                                                              NaN
+9  10                                  Level 1 Changes                                  2005:GA02                                   NaN      NaN        NaN    Can this be applied for under Discharge of Condition? WC etc.
+
+
+
+====================
+Sheet: CONDITIONS
+====================
+Columns: ['Condition', 'Current Headings', 'Current Summary', 'Need to Include']
+----------
+First 10 rows:
+                                                                                            Condition                Current Headings                                                            Current Summary                  Need to Include
+0  (a) particulars and samples of the materials to be used on all external surfaces of the building;                              NaN                                                                        NaN                              NaN
+1                                             (b) details of all alterations to the existing façade …                             NaN                                              Stone Louvres\nL5/L6 Openings               \nL2 Opening Shift
+2                                                                                                 NaN                             NaN                                                                        NaN                              NaN
+3                                                                                 but also including:                             NaN                                                                        NaN                              NaN
+4                                                                                                 NaN                             NaN                                                                        NaN                              NaN
+5                                                                ·        cleaning and repair methods  request full external cleaning                                                                        NaN                              NaN
+6                                                                          ·        external lighting                 omitted for now                                                                        NaN                              NaN
+7                                                    (c) details of new windows and external joinery;                             NaN  Wooden Louvres\nSlot Windows\nMain Entrance Door\nFan Light over L1 Doors           New extension louvres?
+8                                                                                                 NaN                             NaN                                                                        NaN                              NaN
+9                                       (d) details of new double-glazed inserts to existing windows;                             NaN                                                                        NaN  Omit: easy to send on if needed
+
+
+
+====================
+Sheet: Amendments
+====================
+Columns: ['1407 - St Mary Somerset Tower, Lambeth Hill, EC4', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9']
+----------
+First 10 rows:
+  1407 - St Mary Somerset Tower, Lambeth Hill, EC4                     Unnamed: 1 Unnamed: 2                                                                                                    Unnamed: 3                                                                                                                     Unnamed: 4        Unnamed: 5 Unnamed: 6 Unnamed: 7  Unnamed: 8 Unnamed: 9
+0                    Planning Ammendments Schedule                            NaN        NaN                                                                                                           NaN                                                                                                                            NaN               NaN        NaN        NaN         NaN        NaN
+1                                              NaN                            NaN        NaN                                                                                                           NaN                                                                                                                            NaN               NaN        NaN        NaN         NaN        NaN
+2                                              NaN  Planning Comparison Reference     Levels                                                                                                   Description                                                                                                         Planning Consideration  P&P Drawing Code    Primary  Secondary         NaN        NaN
+3                                              NaN                            NaN        NaN                                                                                                           NaN                                                                                                                            NaN               NaN        NaN        NaN         NaN    checked
+4                                         LEVEL 01                            NaN        NaN                                                                                                           NaN                                                                                                                            NaN               NaN        NaN        NaN         NaN        NaN
+5                                              NaN                         L01.02        L01                                                  New joinery steps and platform added to east doorway recess.  Connects level 01 to the new opening to the spiral staircase, as well to the garden, through the east door (refer to L01.01).     A-101 / A-250        NaN          Y         NaN          x
+6                                              NaN                         L01.03        L01  The operable and fixed doors on east elevation switched around to allow access to/from spiral and main room.                                                                     Provides access to garden from platform (refer to L01.02).     A-101 / A-200        NaN          Y         NaN          x
+7                                              NaN                         L01.04        L01                                                   Removal of fire exit door from east elevation of extension.                                                                     Positive Impact - Improves eastern elevation of extension.     A-101 / A-200        NaN          Y         NaN          x
+8                                              NaN                         L01.05        L01                                                                 New WC off kitchen in NE corner of extension.                                Necessary to provide suitable provision for occupants of Level 01 (Level 05 nearest otherwise).             A-101        NaN          Y         NaN          x
+9                                              NaN                         L01.06        L01               New vent added to east extension window (identical to the one approved on the west elevation).                                                                                                 Extraction from kitchen and WC.     A-101 / A-200        NaN          Y         NaN          x
+
+
+
+====================
+Sheet: PLANNING
+====================
+Columns: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7']
+----------
+First 10 rows:
+                                                                           Unnamed: 0 Unnamed: 1 Unnamed: 2                                               Unnamed: 3                 Unnamed: 4 Unnamed: 5                                                                                       Unnamed: 6                                                                                  Unnamed: 7
+0                                                              ST MARY SOMERSET TOWER        NaN        NaN                                                      NaN                        NaN        NaN                                                                                              NaN                                                                                         NaN
+1                                                                                 NaN        NaN        NaN                                                      NaN                        NaN        NaN                                                                                              NaN                                                                                         NaN
+2  Drawing Accompanying Application for Planning Permission & Listed Building Consent        NaN        NaN                         Current Equivalent Construction/                        NaN        NaN                                                                                              NaN                                                                  Comment on Planning Issues
+3                                                                                 NaN        NaN        NaN  Pre-Tender Status Drawing used for comparative purposes                        NaN        NaN                                                                                           Change                                                          (Breda  changes green underlined) 
+4                                                                                 NaN        NaN        NaN                                                      NaN                        NaN        NaN                                                                                              NaN                                                         Yellow highlight = get more details
+5                                                                                 NaN        NaN        NaN                                                      NaN                        NaN        NaN                                                                                              NaN                                                          Ö= agree w/BD - change as appro.  
+6                                                                                 NaN        NaN        NaN                                                      NaN                        NaN        NaN                                                                                              NaN                                                                                         NaN
+7                                                                              Dwg No      Title       Date                                                   Dwg No                      Title       Date                                                                                              NaN                                                                                         NaN
+8                                                                                   1  Site Plan       2.05                                                        1  Site Plan & Site Compound       1.07  Suggested temporary and access works added.  Temporary diversion of pedestrian route indicated.                                                                              highways issue
+9                                                                                   2   GA Plan        2.05                                               Demolition       Survey & Demolition        5.06                                                 Additional Excavation for wine cellar indicated.  Proposal for below ground wine cellar dropped. Ensure that its not shown on the drawings Ö
+
+
+
+====================
+Sheet: Amendments (2)
+====================
+Columns: ['1407 - St Mary Somerset Tower, Lambeth Hill, EC4', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9', 'Unnamed: 10', 'Unnamed: 11', 'Unnamed: 12', 'Unnamed: 13', 'Unnamed: 14', 'Unnamed: 15', 'Unnamed: 16', 'Unnamed: 17']
+----------
+First 10 rows:
+  1407 - St Mary Somerset Tower, Lambeth Hill, EC4                     Unnamed: 1 Unnamed: 2                                                                                                                                   Unnamed: 3                                                                                                                                                                                           Unnamed: 4        Unnamed: 5 Unnamed: 6 Unnamed: 7  Unnamed: 8         Unnamed: 9   Unnamed: 10                    Unnamed: 11               Unnamed: 12                                                                                                                             Unnamed: 13               Unnamed: 14                                                                                                                             Unnamed: 15                Unnamed: 16               Unnamed: 17
+0                    Planning Ammendments Schedule                            NaN        NaN                                                                                                                                          NaN                                                                                                                                                                                                  NaN               NaN        NaN        NaN         NaN                NaN           NaN                            NaN                       NaN                                                                                                                                     NaN                       NaN                                                                                                                                     NaN                        NaN                       NaN
+1                                              NaN                            NaN        NaN                                                                                                                                          NaN                                                                                                                                                                                                  NaN               NaN        NaN        NaN         NaN                NaN           NaN                            NaN                       NaN                                                                                                                                     NaN                       NaN                                                                                                                                     NaN                        NaN                       NaN
+2                                              NaN  Planning Comparison Reference     Levels                                                                                                                                  Description                                                                                                                                                                               Planning Consideration  P&P Drawing Code    Primary  Secondary         NaN  Planning Relevant  LBC Relevant  Planning Workaround Available  LBC Workaround Available                                                                                                                  Workaround Description  Discharge of Conditions?                                                                                                                        Kate's comments   Greg's Response to Kate's  Kate response to Greg's 
+3                                              NaN                            NaN        NaN                                                                                                                                          NaN                                                                                                                                                                                                  NaN               NaN        NaN        NaN         NaN                NaN           NaN                            NaN                       NaN                                                                                                                                     NaN                       NaN                                                                                                                                     NaN                        NaN                       NaN
+4                                         LEVEL 01                         L01.01        L01  New opening into historic fabric of spiral staircase at level 01 and spiral staircase dug down to allow for provision of additional risers.  Access from spiral required at level 01 as lift no longer serves. Proposed layout prevents the need for a staircase protruding into the room, preserving the existing internal volume beneath dome.     A-101 / A-250          Y        NaN         NaN                 no           yes                            NaN                        no                                                                                                                            Omit for now                       NaN                                                                                                                                     NaN                        NaN                       NaN
+5                                              NaN                         L01.02        L01                                                                                 New joinery steps and platform added to east doorway recess.                                                                        Connects level 01 to the new opening to the spiral staircase, as well to the garden, through the east door (refer to L01.01).     A-101 / A-250        NaN          Y         NaN                 no            no                            NaN                       NaN                                                                                                                            Omit for now                       NaN                                                                                                                                     NaN                        NaN                       NaN
+6                                              NaN                         L01.03        L01                                 The operable and fixed doors on east elevation switched around to allow access to/from spiral and main room.                                                                                                                                           Provides access to garden from platform (refer to L01.02).     A-101 / A-200        NaN          Y         NaN                yes           no?                            yes                      n/a?                            Do not implement new doors.. Have entrance in currently functioning South doorway with furniture steps down.                       NaN  the steel fabricators can build the steel door frame when installing the steels  for the extension in case the door must be installed.     Yes, I suppose safest.                       NaN
+7                                              NaN                         L01.04        L01                                                                                  Removal of fire exit door from east elevation of extension.                                                                                                                                           Positive Impact - Improves eastern elevation of extension.     A-101 / A-200        NaN          Y         NaN                yes           yes                            yes                         ?                                Planning: argue that since a supposedly invisible door there is no change. LBC: discharge of conditions.                      yes   the steel fabricators can build the steel door frame when installing the steels  for the extension in case the door must be installed.     Yes, I suppose safest.                       NaN
+8                                              NaN                         L01.05        L01                                                                                                New WC off kitchen in NE corner of extension.                                                                                                      Necessary to provide suitable provision for occupants of Level 01 (Level 05 nearest otherwise).             A-101        NaN          Y         NaN                 no           yes                            NaN                       yes                                                                                         Omit for now or build as temporary workers' WC?                       NaN                                                                                                                                     NaN                        NaN                       NaN
+9                                              NaN                         L01.06        L01                                              New vent added to east extension window (identical to the one approved on the west elevation).                                                                                                                                                                       Extraction from kitchen and WC.     A-101 / A-200        NaN          Y         NaN                yes           yes                            yes                       yes  Omit. Vent can be via riser instead if necessary or instal a temp steel blank plate in window and replace with vent plate in phase 2 .                       NaN                                                                                                                                     NaN                        NaN                       NaN
+
+
