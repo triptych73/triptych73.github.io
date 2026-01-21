@@ -62,7 +62,11 @@ else:
     
     # DEBUG: Show scopes
     if 'scope' in token:
-        st.caption(f"Granted Scopes: {token['scope']}")
+        scopes_list = token['scope'].split()
+        if "accounting.reports.read" not in scopes_list:
+             st.error("⚠️ MISSING PERMISSION: 'accounting.reports.read'. Please click LOGOUT below and reconnect to grant this permission.")
+        else:
+             st.caption(f"Granted Scopes: {token['scope']}")
     else:
         st.caption("Scopes not found in token.")
     
@@ -174,8 +178,14 @@ else:
                         except Exception as e:
                             st.error(f"Error fetching report: {e}")
             
-            if st.button("Logout"):
+            if st.button("Logout (Reset Connection)"):
                 st.session_state.token = None
+                # Delete the token file to force a fresh OAuth flow (needed for scope updates)
+                if os.path.exists("/data/xero_token.json"):
+                    os.remove("/data/xero_token.json")
+                if os.path.exists("xero_token.json"): # Fallback for local dev
+                    os.remove("xero_token.json")
+                
                 st.query_params.clear()
                 st.rerun()
 
