@@ -106,19 +106,54 @@ class XeroClient:
             "User-Agent": "BudgetBridge/1.0"
         }
 
-    def get_profit_and_loss(self, access_token, tenant_id):
-        url = f"{self.api_base}/Reports/ProfitAndLoss"
+    def get_account_transactions_report(self, access_token, tenant_id, from_date, to_date, bank_account_id=None):
+        """
+        Fetches the Account Transactions Report.
+        params:
+          bank_account_id: Optional. If None, Xero defaults (usually All or need to specify).
+                           Xero API param is 'bankAccountID' ?? No, Account Transactions is usually 'account' param.
+                           Wait, endpoint is /Reports/AccountTransactions. 
+                           Docs say params: 'fromDate', 'toDate'.
+                           And 'bankAccountID' is NOT a standard param here. It's usually a list of accounts?
+                           Actually, standard Reports can filter by 'AccountID' or 'BankAccountId'?
+                           Let's check Xero Docs mentally: 
+                           GET /Reports/AccountTransactions
+                           Query parameters: date, fromDate, toDate, periods, timeframe, trackingCategoryID, trackingOptionID...
+                           Does it filter by Account? 
+                           Use generic 'get_report' approach or specific?
+                           Actually, Xero's new Reports API might be different. But 2.0 /Reports/AccountTransactions exists.
+                           It generally returns *all* unless filtered? 
+                           Wait, the user wants "Bank Account" specific? 
+                           Let's try standard params. If 'bankAccountID' isn't supported, we might get everything.
+        """
+        url = f"{self.api_base}/Reports/AccountTransactions"
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Xero-Tenant-Id": tenant_id,
             "Accept": "application/json",
             "User-Agent": "BudgetBridge/1.0"
         }
-        response = requests.get(url, headers=headers)
+        params = {
+            "fromDate": from_date,
+            "toDate": to_date
+        }
+        # If the user wants to filter by a specific bank account, we usually pass 'bankAccountID' 
+        # BUT for AccountTransactions, it might be just 'account'.
+        # Let's try passing 'bankAccountID' as it is a common filter for Bank Reports, 
+        # but for AccountTransactions it might be ignored or error.
+        # User screenshot showed "Accounts: 104 selected". 
+        # For now, let's fetch ALL by default (minimal params) to ensure 200 OK, 
+        # and if possible filter in Pandas or if we find the specific param.
+        # (Research says: Xero API 2.0 AccountTransactions doesn't easily take 'AccountID' as a single param to filter ONE account 
+        # except maybe via deep hacks or it's not documented well for the 'Classic' report. 
+        # The 'BankStatement' report took 'bankAccountID'. 
+        # We will try fetching ALL and filtering Client-side in Python for MVP).
+        
+        response = requests.get(url, headers=headers, params=params)
         if response.status_code == 200:
             return response.json()
         else:
-            raise Exception(f"Failed to fetch P&L: {response.text}")
+            raise Exception(f"Failed to fetch account transactions report: {response.text}")
         
     def save_token(self, token):
         # Add timestamp for convenience

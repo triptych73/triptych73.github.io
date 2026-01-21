@@ -200,6 +200,59 @@ else:
                         except Exception as e:
                             st.error(f"Error fetching report: {e}")
             
+                                    st.json(report)
+                                    
+                        except Exception as e:
+                            st.error(f"Error fetching report: {e}")
+
+            with st.expander("Account Transactions Report (Detailed Ledger)"):
+                st.write("Fetch item-by-item details including GL Codes and Tax Rates.")
+                
+                col_a1, col_a2 = st.columns(2)
+                with col_a1:
+                    at_start = st.date_input("From", pd.to_datetime("2020-01-01"), key="at_start")
+                with col_a2:
+                    at_end = st.date_input("To", pd.to_datetime("today"), key="at_end")
+                
+                if st.button("Fetch Detailed Ledger"):
+                    with st.spinner("Fetching Account Transactions..."):
+                        try:
+                            # Fetch Report (All Accounts)
+                            report = client.get_account_transactions_report(
+                                access_token, 
+                                tenant['tenantId'], 
+                                str(at_start), 
+                                str(at_end)
+                            )
+                            
+                            # Parse Headers to find Columns
+                            # Reports[0] -> Rows
+                            rows = report.get('Reports', [{}])[0].get('Rows', [])
+                            
+                            # Flatten Data
+                            simpler_rows = []
+                            for row in rows:
+                                if row.get('RowType') == 'Row':
+                                    cells = row.get('Cells', [])
+                                    # We capture the raw text for now.
+                                    # Expected cols: Date, Description, Source, Reference, Debit, Credit, Gross, VAT, Account??
+                                    # The 'Account' column might depend on grouping.
+                                    # If not grouped, it usually appears.
+                                    
+                                    row_data = [c.get('Value') for c in cells]
+                                    simpler_rows.append(row_data)
+                            
+                            if simpler_rows:
+                                st.write(f"Found {len(simpler_rows)} lines.")
+                                st.dataframe(pd.DataFrame(simpler_rows)) # No headers yet, user can inspect
+                                st.json(report) # Show full JSON too for debug
+                            else:
+                                st.warning("No data rows found in report.")
+                                st.json(report)
+
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+            
             if st.button("Logout (Reset Connection)"):
                 st.session_state.token = None
                 # Delete the token file to force a fresh OAuth flow (needed for scope updates)
