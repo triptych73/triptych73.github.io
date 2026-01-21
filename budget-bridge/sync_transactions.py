@@ -7,16 +7,29 @@ from firebase_admin import firestore
 from xero_client import XeroClient
 from datetime import datetime
 
-# Initialize Firebase (Expects service key at /data/firebase_key.json)
-# You need to place your firebase service account json in the mapped data volume
+# Initialize Firebase
+# Priority 1: Environment Variable (JSON String)
+firebase_creds_str = os.getenv("FIREBASE_CREDENTIALS")
 CRED_PATH = "/data/firebase_key.json"
 
-if os.path.exists(CRED_PATH):
+if firebase_creds_str:
+    try:
+        cred_dict = json.loads(firebase_creds_str)
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        print("Initialized Firebase via Environment Variable.")
+    except Exception as e:
+        print(f"Error initializing Firebase from Env Var: {e}")
+        db = None
+# Priority 2: File in /data volume
+elif os.path.exists(CRED_PATH):
     cred = credentials.Certificate(CRED_PATH)
     firebase_admin.initialize_app(cred)
     db = firestore.client()
+    print("Initialized Firebase via Key File.")
 else:
-    print(f"Warning: Firebase credentials not found at {CRED_PATH}. Sync will fail.")
+    print(f"Warning: No Firebase credentials found (checked env var FIREBASE_CREDENTIALS and {CRED_PATH}). Sync will fail.")
     db = None
 
 client = XeroClient()
