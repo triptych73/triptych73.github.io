@@ -174,6 +174,8 @@ else:
                                 for ba in bank_accs:
                                     st.subheader(f"Report for {ba['Name']}")
                                     
+                                    st.write(f"**Debug Params:** AccID=`{ba['AccountID']}` | From=`{str(start_date)}` | To=`{str(end_date)}`")
+                                    
                                     report = client.get_bank_statement_report(
                                         access_token, 
                                         tenant['tenantId'], 
