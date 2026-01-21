@@ -240,14 +240,52 @@ else:
                             
                             if simpler_rows:
                                 st.write(f"Found {len(simpler_rows)} lines.")
-                                st.dataframe(pd.DataFrame(simpler_rows)) # No headers yet, user can inspect
-                                st.json(report) # Show full JSON too for debug
+                                st.dataframe(pd.DataFrame(simpler_rows)) 
+                                st.json(report) 
                             else:
                                 st.warning("No data rows found in report.")
                                 st.json(report)
 
                         except Exception as e:
-                            st.error(f"Error: {e}")
+                            st.warning(f"Report fetch failed (likely API path 404): {e}")
+                            st.info("Falling back to parsing raw Bank Transactions...")
+                            
+                            # Fallback: Fetch Bank Transactions and explode LineItems
+                            try:
+                                # Fetch logic similar to Tab 1 but we process differently
+                                data_fallback = client.get_bank_transactions(access_token, tenant['tenantId'])
+                                txs = data_fallback.get('BankTransactions', [])
+                                
+                                detailed_rows = []
+                                for tx in txs:
+                                    base_info = {
+                                        'Date': tx.get('DateString'),
+                                        'Type': tx.get('Type'),
+                                        'Reference': tx.get('Reference'),
+                                        'Total': tx.get('Total')
+                                    }
+                                    # Iterate LineItems
+                                    for line in tx.get('LineItems', []):
+                                        row = base_info.copy()
+                                        row['Description'] = line.get('Description')
+                                        row['Quantity'] = line.get('Quantity')
+                                        row['UnitAmount'] = line.get('UnitAmount')
+                                        row['AccountCode'] = line.get('AccountCode')
+                                        row['TaxType'] = line.get('TaxType')
+                                        row['LineAmount'] = line.get('LineAmount')
+                                        detailed_rows.append(row)
+                                        
+                                if detailed_rows:
+                                    df_det = pd.DataFrame(detailed_rows)
+                                    st.success(f"Successfully parsed {len(detailed_rows)} line items from Bank Transactions.")
+                                    # Show AccountCode and TaxType prominently
+                                    st.dataframe(df_det)
+                                else:
+                                    st.warning("No line items found in transactions.")
+                                    
+                            except Exception as ex2:
+                                st.error(f"Fallback failed: {ex2}")
+                                st.json(report) # Show the original 404 payload if helpful
             
             if st.button("Logout (Reset Connection)"):
                 st.session_state.token = None
