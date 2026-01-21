@@ -564,41 +564,15 @@
                     <div class="p-4 overflow-y-auto flex-grow space-y-6 custom-scrollbar">
 
                         <!-- New Entry Input Hint -->
-                        <div
+                        <div id="add-log-btn"
                             class="border border-dashed border-white/20 rounded-lg p-3 text-center cursor-pointer hover:border-bronze/50 hover:bg-white/[0.02] transition-colors group">
                             <span class="text-xs text-white/40 group-hover:text-bronze">+ Add Log Entry</span>
                         </div>
 
-                        <!-- Entry -->
-                        <div class="relative pl-4 border-l border-white/10">
-                            <div class="absolute -left-1 top-0 w-2 h-2 bg-success rounded-full"></div>
-                            <div class="text-[10px] text-white/30 font-mono mb-1">JAN 05, 2026</div>
-                            <h4 class="text-sm text-white/90 font-medium">Utilities Connected</h4>
-                            <p class="text-xs text-white/50 mt-1">UKPN & Water mains live. Metering installed.</p>
-                        </div>
-
-                        <!-- Entry -->
-                        <div class="relative pl-4 border-l border-white/10">
-                            <div class="absolute -left-1 top-0 w-2 h-2 bg-bronze rounded-full"></div>
-                            <div class="text-[10px] text-white/30 font-mono mb-1">NOV 22, 2025</div>
-                            <h4 class="text-sm text-white/90 font-medium">Extension Structure Complete</h4>
-                            <p class="text-xs text-white/50 mt-1">Brickwork to coping level signed off.</p>
-                        </div>
-
-                        <!-- Entry -->
-                        <div class="relative pl-4 border-l border-white/10">
-                            <div class="absolute -left-1 top-0 w-2 h-2 bg-white/20 rounded-full"></div>
-                            <div class="text-[10px] text-white/30 font-mono mb-1">OCT 15, 2025</div>
-                            <h4 class="text-sm text-white/90 font-medium">M&E Backbone Installed</h4>
-                            <p class="text-xs text-white/50 mt-1">First fix containment and primary pipe runs.</p>
-                        </div>
-
-                        <!-- Entry -->
-                        <div class="relative pl-4 border-l border-white/10">
-                            <div class="absolute -left-1 top-0 w-2 h-2 bg-white/20 rounded-full"></div>
-                            <div class="text-[10px] text-white/30 font-mono mb-1">SEP 01, 2025</div>
-                            <h4 class="text-sm text-white/90 font-medium">Phase 2 Commenced</h4>
-                            <p class="text-xs text-white/50 mt-1">Fit-out works initiated.</p>
+                        <div id="site-log-container" class="p-4 overflow-y-auto flex-grow space-y-6 custom-scrollbar">
+                            <!-- Content via Firestore -->
+                            <div class="flex items-center justify-center h-full text-white/20 animate-pulse text-xs">
+                                Loading Logs...</div>
                         </div>
 
                     </div>
@@ -610,6 +584,56 @@
         <footer class="text-center py-8 text-[10px] text-white/20 font-mono uppercase tracking-widest">
             St Mary Somerset | Project ID: SMS-1694 | System V2.1
         </footer>
+    </div>
+
+    <!-- LOG MODAL (Hidden) -->
+    <div id="log-modal" style="display: none;"
+        class="fixed inset-0 z-[100] bg-midnight/90 backdrop-blur-sm flex items-center justify-center">
+        <div class="glass-panel p-8 rounded-lg w-full max-w-md relative">
+            <h3 class="font-serif text-xl text-white mb-6">Add Log Entry</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Title</label>
+                    <input id="log-title" type="text"
+                        class="w-full bg-white/5 border border-white/10 rounded p-2 text-white text-sm focus:border-bronze outline-none"
+                        placeholder="e.g. Structure Complete">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Type</label>
+                        <select id="log-type"
+                            class="w-full bg-white/5 border border-white/10 rounded p-2 text-white text-sm focus:border-bronze outline-none">
+                            <option value="success" class="bg-midnight">Success</option>
+                            <option value="milestone" class="bg-midnight">Milestone</option>
+                            <option value="info" class="bg-midnight">Info</option>
+                            <option value="issue" class="bg-midnight">Issue</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Date</label>
+                        <input id="log-date" type="date"
+                            class="w-full bg-white/5 border border-white/10 rounded p-2 text-white text-sm focus:border-bronze outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Description</label>
+                    <textarea id="log-desc" rows="3"
+                        class="w-full bg-white/5 border border-white/10 rounded p-2 text-white text-sm focus:border-bronze outline-none"
+                        placeholder="Details..."></textarea>
+                </div>
+
+                <div class="flex gap-4 mt-4 pt-4 border-t border-white/10">
+                    <button id="cancel-log-btn"
+                        class="flex-1 py-2 text-xs uppercase tracking-widest text-white/40 hover:text-white transition-colors">Cancel</button>
+                    <button id="save-log-btn"
+                        class="flex-1 py-2 bg-bronze text-white text-xs uppercase tracking-widest rounded hover:bg-bronze-dark transition-colors shadow-lg">Save
+                        Entry</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -629,6 +653,8 @@
 
                         // Initialize Analytics
                         initVisitorStats();
+                        // Initialize Site Log
+                        initSiteLog();
                     }, 500);
                 } else {
                     // Not Authenticated: Redirect
@@ -636,41 +662,113 @@
                 }
             });
 
+            // --- VISITOR STATS (Existing) ---
             function initVisitorStats() {
                 const db = firebase.firestore();
                 const statLive = document.getElementById('stat-live');
                 const statToday = document.getElementById('stat-today');
 
-                // 1. Live Visitors (Last 5 Minutes)
                 const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+                db.collection('site_visits').where('timestamp', '>', fiveMinsAgo).onSnapshot((snapshot) => {
+                    const uniqueSessions = new Set();
+                    snapshot.docs.forEach(doc => { if (!doc.data().isBot) uniqueSessions.add(doc.data().sessionId); });
+                    statLive.innerText = uniqueSessions.size;
+                });
 
-                // Using onSnapshot for real-time updates
-                db.collection('site_visits')
-                    .where('timestamp', '>', fiveMinsAgo)
-                    .onSnapshot((snapshot) => {
-                        // Filter bots and count unique sessions
-                        const uniqueSessions = new Set();
-                        snapshot.docs.forEach(doc => {
-                            const data = doc.data();
-                            if (!data.isBot) uniqueSessions.add(data.sessionId);
-                        });
-                        statLive.innerText = uniqueSessions.size;
-                    });
-
-                // 2. Today's Total
                 const todayStart = new Date();
                 todayStart.setHours(0, 0, 0, 0);
+                db.collection('site_visits').where('timestamp', '>', todayStart).onSnapshot((snapshot) => {
+                    const uniqueSessions = new Set();
+                    snapshot.docs.forEach(doc => { if (!doc.data().isBot) uniqueSessions.add(doc.data().sessionId); });
+                    statToday.innerText = uniqueSessions.size;
+                });
+            }
 
-                db.collection('site_visits')
-                    .where('timestamp', '>', todayStart)
-                    .onSnapshot((snapshot) => {
-                        const uniqueSessions = new Set();
-                        snapshot.docs.forEach(doc => {
-                            const data = doc.data();
-                            if (!data.isBot) uniqueSessions.add(data.sessionId);
+            // --- SITE LOG LOGIC (New) ---
+            function initSiteLog() {
+                const db = firebase.firestore();
+                const container = document.getElementById('site-log-container');
+                const modal = document.getElementById('log-modal');
+                const logBtn = document.getElementById('add-log-btn');
+                const cancelBtn = document.getElementById('cancel-log-btn');
+                const saveBtn = document.getElementById('save-log-btn');
+                const logDateInput = document.getElementById('log-date');
+
+                // Set default date to today
+                logDateInput.value = new Date().toISOString().split('T')[0];
+
+                // 1. OPEN/CLOSE MODAL
+                logBtn.addEventListener('click', () => { modal.style.display = 'flex'; });
+                cancelBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+
+                // 2. SAVE ENTRY
+                saveBtn.addEventListener('click', async () => {
+                    const title = document.getElementById('log-title').value;
+                    const desc = document.getElementById('log-desc').value;
+                    const type = document.getElementById('log-type').value;
+                    const dateVal = logDateInput.value;
+
+                    if (!title || !dateVal) return alert('Title and Date are required');
+
+                    saveBtn.innerText = 'Saving...';
+
+                    try {
+                        await db.collection('site_logs').add({
+                            title: title,
+                            description: desc,
+                            type: type,
+                            date: dateVal,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
                         });
-                        statToday.innerText = uniqueSessions.size;
+
+                        // Reset & Close
+                        document.getElementById('log-title').value = '';
+                        document.getElementById('log-desc').value = '';
+                        logDateInput.value = new Date().toISOString().split('T')[0]; // Reset to today
+                        modal.style.display = 'none';
+                        saveBtn.innerText = 'Save Entry';
+
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error saving log: ' + e.message);
+                        saveBtn.innerText = 'Save Entry';
+                    }
+                });
+
+                // 3. RENDER LOGS (Real-time)
+                // Order by 'date' string desc (YYYY-MM-DD) so newest dates are top
+                db.collection('site_logs').orderBy('date', 'desc').onSnapshot(snapshot => {
+                    container.innerHTML = ''; // Clear current
+
+                    if (snapshot.empty) {
+                        container.innerHTML = '<div class="text-white/20 text-center text-xs py-4">No logs found.</div>';
+                        return;
+                    }
+
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+
+                        // Determine color
+                        let colorClass = 'bg-white/20'; // default info
+                        if (data.type === 'milestone') colorClass = 'bg-bronze';
+                        if (data.type === 'issue') colorClass = 'bg-alert';
+                        if (data.type === 'success') colorClass = 'bg-success';
+
+                        // Format Date (Simple)
+                        const dateObj = new Date(data.date + 'T00:00:00'); // Add T00:00:00 to ensure correct date parsing in some browsers
+                        const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
+
+                        const el = document.createElement('div');
+                        el.className = 'relative pl-4 border-l border-white/10';
+                        el.innerHTML = `
+                            <div class="absolute -left-1 top-0 w-2 h-2 ${colorClass} rounded-full"></div>
+                            <div class="text-[10px] text-white/30 font-mono mb-1">${dateStr}</div>
+                            <h4 class="text-sm text-white/90 font-medium">${data.title}</h4>
+                            <p class="text-xs text-white/50 mt-1">${data.description}</p>
+                        `;
+                        container.appendChild(el);
                     });
+                });
             }
         }
     </script>
