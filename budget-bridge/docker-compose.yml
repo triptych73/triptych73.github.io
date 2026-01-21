@@ -5,10 +5,26 @@ services:
     build: .
     container_name: budget_bridge_app
     ports:
-      - "8502:8501" # Host Port 8502 -> Container Port 8501
+      - "8502:8501"
     env_file:
       - .env
     volumes:
       - .:/app
+      - ./data:/data
     command: streamlit run app.py --server.port 8501 --server.enableCORS false --server.enableXsrfProtection false
     restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: budget_bridge_worker
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./data:/data
+    # Run the python script directly. 
+    # Since it uses the same image, dependencies are there.
+    command: python -u sync_transactions.py
+    restart: unless-stopped
+    depends_on:
+      - app

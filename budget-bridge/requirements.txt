@@ -2,3 +2,5 @@ streamlit
 requests
 pandas
 python-dotenv
+firebase-admin
+schedule

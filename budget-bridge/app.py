@@ -15,18 +15,33 @@ client = XeroClient()
 
 # Initialize session state for auth
 if 'token' not in st.session_state:
-    st.session_state.token = None
+    # Try to load from file first
+    saved_token = client.load_token()
+    if saved_token:
+        # Check if valid/refresh needed
+        try:
+            refreshed_token = client.refresh_token() 
+            if refreshed_token:
+                st.session_state.token = refreshed_token
+            else:
+                st.session_state.token = saved_token
+        except:
+             st.session_state.token = None
+    else:
+        st.session_state.token = None
 
 # Handle Callback
 query_params = st.query_params
-if "code" in query_params and st.session_state.token is None:
+if "code" in query_params:
     code = query_params["code"]
     try:
+        # client.exchange_code now automatically saves to file
         token_data = client.exchange_code(code)
         st.session_state.token = token_data
         st.success("Successfully connected to Xero!")
         # Clear query params to prevent re-exchange on refresh
         st.query_params.clear()
+        st.rerun()
     except Exception as e:
         st.error(f"Error connecting to Xero: {e}")
 
