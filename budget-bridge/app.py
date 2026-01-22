@@ -406,7 +406,8 @@ else:
                     if st.button("Load Report", key="load_custom_report"):
                         with st.spinner("Loading report from database..."):
                             try:
-                                report_docs = db.collection('xero_custom_report').order_by('JournalNumber', direction=firestore.Query.DESCENDING).limit(1000).stream()
+                                # Fetch ALL records (no limit)
+                                report_docs = db.collection('xero_custom_report').order_by('JournalNumber', direction=firestore.Query.DESCENDING).stream()
                                 rows = []
                                 for doc in report_docs:
                                     rows.append(doc.to_dict())
@@ -418,8 +419,19 @@ else:
                                     display_cols = ['Date', 'JournalNumber', 'Reference', 'Description', 'AccountCode', 'AccountName', 'Net', 'Tax', 'Gross', 'TaxType']
                                     display_cols = [c for c in display_cols if c in df.columns]
                                     
-                                    st.success(f"Loaded {len(df)} line items (showing up to 1000).")
-                                    st.dataframe(df[display_cols], use_container_width=True)
+                                    # Calculate totals
+                                    total_net = df['Net'].sum() if 'Net' in df.columns else 0
+                                    total_tax = df['Tax'].sum() if 'Tax' in df.columns else 0
+                                    total_gross = df['Gross'].sum() if 'Gross' in df.columns else 0
+                                    
+                                    # Display summary
+                                    st.success(f"**Total Transactions: {len(df)}**")
+                                    col1, col2, col3 = st.columns(3)
+                                    col1.metric("Total Net", f"£{total_net:,.2f}")
+                                    col2.metric("Total Tax", f"£{total_tax:,.2f}")
+                                    col3.metric("Total Gross", f"£{total_gross:,.2f}")
+                                    
+                                    st.dataframe(df[display_cols], use_container_width=True, height=600)
                                     
                                     # CSV Download
                                     csv = df[display_cols].to_csv(index=False).encode('utf-8')
