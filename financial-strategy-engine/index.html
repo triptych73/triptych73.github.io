@@ -585,10 +585,8 @@
             "2023-02": 364.5
         };
 
-        // Current RPI Reference (e.g., Feb 2023 or Latest Available)
-        // User's formula RPI!$B$560 likely refers to the "Current" or "Sale/Exit" date RPI.
-        // We will default to a recent high value or let user configure. 
-        const CURRENT_RPI = 370.0;
+        // Indexation Allowance Frozen for Companies at Dec 2017
+        const RPI_FROZEN_VALUE = 278.1; // Dec 2017
 
         const getRPI = (date) => {
             // date is Date object
@@ -606,12 +604,13 @@
             const d = new Date(dateStr);
             if (isNaN(d.getTime())) return amount;
 
-            // Legislation: Only index historic transactions up to 1/1/2018
+            // Legislation: Only index historic transactions up to 31 Dec 2017
             const cutoff = new Date('2018-01-01');
             if (d < cutoff) {
                 const rpiAtDate = getRPI(d);
                 if (rpiAtDate > 0) {
-                    return amount * (CURRENT_RPI / rpiAtDate);
+                    // Frozen at Dec 2017. No indexation thereafter.
+                    return amount * (RPI_FROZEN_VALUE / rpiAtDate);
                 }
             }
             return amount;
