@@ -1909,15 +1909,16 @@
 
                 const autoDeeds = [];
                 const fifoLoans = [];
-                const cutoff = autoAssignmentDate ? new Date(autoAssignmentDate) : null;
+                // Use String Comparison for robustness (ISO YYYY-MM-DD works lexicographically)
+                const cutoff = autoAssignmentDate || null;
 
                 // 2. Split Loans: Auto vs FIFO
                 sortedLoans.forEach(loan => {
-                    const d = new Date(loan.fullDate || (loan.year + '-01-01'));
-                    if (cutoff && d > cutoff) {
+                    const loanDate = loan.fullDate || (loan.year + '-01-01');
+                    if (cutoff && loanDate > cutoff) {
                         // AUTO ASSIGN (1:1 Exact Match)
                         // Create a specific deed for this loan on its date
-                        const year = parseInt((loan.fullDate || String(loan.year)).split('-')[0]);
+                        const year = parseInt(loanDate.split('-')[0]);
                         autoDeeds.push({
                             id: 'auto-' + loan.id,
                             date: loan.fullDate || loan.year + '-01-01',
