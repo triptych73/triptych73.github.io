@@ -307,17 +307,54 @@ def sync_job():
         total_j_count = len(all_journals)
         print(f"Loaded {total_j_count} journals. Processing...")
         
+        # Debug: Print sample journal keys to verify field names
+        if all_journals:
+            sample_j = all_journals[0].to_dict()
+            print(f"DEBUG - Sample Journal Keys: {list(sample_j.keys())}")
+            if sample_j.get('JournalLines'):
+                print(f"DEBUG - Sample JournalLine Keys: {list(sample_j['JournalLines'][0].keys())}")
+        
         report_ref = db.collection('xero_custom_report')
+        
+        # Clear old report data before regenerating (to avoid duplicates)
+        print("Clearing old report data...")
+        old_docs = report_ref.limit(500).stream()
+        delete_batch = db.batch()
+        del_count = 0
+        for old_doc in old_docs:
+            delete_batch.delete(old_doc.reference)
+            del_count += 1
+            if del_count >= 400:
+                delete_batch.commit()
+                delete_batch = db.batch()
+                del_count = 0
+                old_docs = report_ref.limit(500).stream() # Fetch next batch
+        if del_count > 0:
+            delete_batch.commit()
+        print("Old data cleared.")
+        
         batch_rep = db.batch()
         batch_count_r = 0
         processed_count = 0
         
         for j_doc in all_journals:
             j = j_doc.to_dict()
-            j_date = j.get('JournalDateString')
+            
+            # JournalDate is the correct field (ISO format like "2024-01-15T00:00:00")
+            # Some records may have JournalDateString as fallback
+            j_date_raw = j.get('JournalDate') or j.get('JournalDateString')
+            # Format to just date if it's a full timestamp
+            if j_date_raw and 'T' in str(j_date_raw):
+                j_date = str(j_date_raw).split('T')[0]
+            else:
+                j_date = j_date_raw
+                
             j_num = j.get('JournalNumber')
-            j_ref = j.get('Reference')
-            j_source_id = j.get('SourceID') 
+            j_source_id = j.get('SourceID')
+            
+            # Get Reference - Journals don't have top-level Reference, 
+            # but we can try to get it from the source or use JournalID
+            j_ref = j.get('Reference') or j.get('JournalID', '')[:8] # Fallback to first 8 chars of JournalID
             
             # Iterate Lines
             for line in j.get('JournalLines', []):
@@ -326,12 +363,15 @@ def sync_job():
                 # Filter Logic: Skip VAT/Tax Control Accounts (double entry side)
                 if acc_code in vat_account_codes:
                     continue
+                
+                # Get line-level description, fallback to empty string
+                line_desc = line.get('Description') or ''
                     
                 flat_item = {
                     'Date': j_date,
                     'JournalNumber': j_num,
                     'Reference': j_ref,
-                    'Description': line.get('Description'),
+                    'Description': line_desc,
                     'AccountCode': acc_code,
                     'AccountName': acc_map.get(acc_code, "Unknown"),
                     'Net': line.get('NetAmount'),
