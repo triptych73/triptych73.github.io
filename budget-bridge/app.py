@@ -415,8 +415,8 @@ else:
                                 if rows:
                                     df = pd.DataFrame(rows)
                                     
-                                    # Reorder columns for readability
-                                    display_cols = ['Date', 'JournalNumber', 'Reference', 'Description', 'AccountCode', 'AccountName', 'Net', 'Tax', 'Gross', 'TaxType']
+                                    # Reorder columns for readability (updated to match sync script output)
+                                    display_cols = ['Date', 'JournalNumber', 'Reference', 'Description', 'AccountName', 'AccountType', 'Net', 'Tax', 'Gross']
                                     display_cols = [c for c in display_cols if c in df.columns]
                                     
                                     # Calculate totals

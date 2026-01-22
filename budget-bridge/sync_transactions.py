@@ -318,20 +318,21 @@ def sync_job():
         
         # Clear old report data before regenerating (to avoid duplicates)
         print("Clearing old report data...")
-        old_docs = report_ref.limit(500).stream()
-        delete_batch = db.batch()
-        del_count = 0
-        for old_doc in old_docs:
-            delete_batch.delete(old_doc.reference)
-            del_count += 1
-            if del_count >= 400:
-                delete_batch.commit()
-                delete_batch = db.batch()
-                del_count = 0
-                old_docs = report_ref.limit(500).stream() # Fetch next batch
-        if del_count > 0:
+        total_deleted = 0
+        while True:
+            # Fetch a batch of documents to delete
+            old_docs = list(report_ref.limit(400).stream())
+            if not old_docs:
+                break  # No more documents
+            
+            delete_batch = db.batch()
+            for old_doc in old_docs:
+                delete_batch.delete(old_doc.reference)
             delete_batch.commit()
-        print("Old data cleared.")
+            total_deleted += len(old_docs)
+            print(f"Deleted {total_deleted} old records...")
+        
+        print(f"Old data cleared. Total deleted: {total_deleted}")
         
         batch_rep = db.batch()
         batch_count_r = 0
@@ -358,10 +359,17 @@ def sync_job():
             
             # Iterate Lines
             for line in j.get('JournalLines', []):
-                acc_code = line.get('AccountCode')
+                # Use AccountName directly from Xero (it's already in the line!)
+                acc_name = line.get('AccountName', 'Unknown')
+                acc_type = line.get('AccountType', '')
                 
                 # Filter Logic: Skip VAT/Tax Control Accounts (double entry side)
-                if acc_code in vat_account_codes:
+                # Check by AccountName since AccountCode isn't in the line
+                if 'VAT' in acc_name.upper() or 'TAX CONTROL' in acc_name.upper():
+                    continue
+                
+                # Also skip BANK type accounts (the other side of the double entry)
+                if acc_type == 'BANK':
                     continue
                 
                 # Get line-level description, fallback to empty string
@@ -372,12 +380,12 @@ def sync_job():
                     'JournalNumber': j_num,
                     'Reference': j_ref,
                     'Description': line_desc,
-                    'AccountCode': acc_code,
-                    'AccountName': acc_map.get(acc_code, "Unknown"),
+                    'AccountID': line.get('AccountID', ''),  # UUID, not human-friendly
+                    'AccountName': acc_name,
+                    'AccountType': acc_type,
                     'Net': line.get('NetAmount'),
                     'Tax': line.get('TaxAmount'),
                     'Gross': line.get('GrossAmount'),
-                    'TaxType': line.get('TaxType'),
                     'SourceID': j_source_id,
                     'SyncedAt': firestore.SERVER_TIMESTAMP
                 }
