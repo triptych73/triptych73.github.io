@@ -866,6 +866,7 @@
             const [dateRange, setDateRange] = useState({ start: '', end: '' });
             const [searchQuery, setSearchQuery] = useState('');
             const [showAdvancedHelp, setShowAdvancedHelp] = useState(false);
+            const [hideCancelled, setHideCancelled] = useState(false);
             const [sortConfig, setSortConfig] = useState({ key: 'Date', direction: 'desc' });
 
             // Advanced Search Parser - Supports: space=AND, comma=OR, minus=NOT, "quotes"=exact
@@ -898,6 +899,46 @@
             // 1. Filter and Sort Transactions
             const filteredData = useMemo(() => {
                 let data = transactions || [];
+
+                // Cancellation Logic (Hide matching pairs: +/- same amount, same contact)
+                if (hideCancelled && data.length > 0) {
+                    const amountMap = new Map();
+                    const cancelledIndices = new Set();
+
+                    // Group by absolute amount
+                    data.forEach((t, idx) => {
+                        const net = parseFloat(t.Net) || 0;
+                        if (net === 0) return;
+                        const abs = Math.abs(net).toFixed(2);
+                        if (!amountMap.has(abs)) amountMap.set(abs, []);
+                        amountMap.get(abs).push({ idx, net, contact: (t.Contact || '').trim().toLowerCase() });
+                    });
+
+                    // Find pairs
+                    for (const [_, items] of amountMap) {
+                        if (items.length < 2) continue;
+                        const processed = new Set();
+                        for (let i = 0; i < items.length; i++) {
+                            if (processed.has(i)) continue;
+                            const t1 = items[i];
+                            for (let j = i + 1; j < items.length; j++) {
+                                if (processed.has(j)) continue;
+                                const t2 = items[j];
+                                // Match: Opposite signs, Same Contact
+                                if (Math.sign(t1.net) !== Math.sign(t2.net) && t1.contact === t2.contact) {
+                                    processed.add(i);
+                                    processed.add(j);
+                                    cancelledIndices.add(t1.idx);
+                                    cancelledIndices.add(t2.idx);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (cancelledIndices.size > 0) {
+                        data = data.filter((_, idx) => !cancelledIndices.has(idx));
+                    }
+                }
 
                 // Date Filter (handle new Date field format)
                 if (dateRange.start) {
@@ -948,7 +989,7 @@
                 }
 
                 return data;
-            }, [transactions, dateRange, searchQuery, sortConfig]);
+            }, [transactions, dateRange, searchQuery, sortConfig, hideCancelled]);
 
             // 2. Summary Stats
             const stats = useMemo(() => {
@@ -1017,6 +1058,17 @@
                             <div>
                                 <label className="text-xs font-semibold text-gray-500 uppercase">To</label>
                                 <input type="date" className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" value={dateRange.end} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} />
+                            </div>
+                            <div className="flex items-center pb-3">
+                                <label className="flex items-center cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                        checked={hideCancelled}
+                                        onChange={e => setHideCancelled(e.target.checked)}
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700">Hide Cancelled</span>
+                                </label>
                             </div>
                         </div>
                     </Card>

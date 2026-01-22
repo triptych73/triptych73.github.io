@@ -325,23 +325,16 @@ def sync_job():
         
         report_ref = db.collection('xero_custom_report')
         
-        # Clear old report data before regenerating (to avoid duplicates)
-        print("Clearing old report data...")
-        total_deleted = 0
-        while True:
-            # Fetch a batch of documents to delete
-            old_docs = list(report_ref.limit(400).stream())
-            if not old_docs:
-                break  # No more documents
-            
-            delete_batch = db.batch()
-            for old_doc in old_docs:
-                delete_batch.delete(old_doc.reference)
-            delete_batch.commit()
-            total_deleted += len(old_docs)
-            print(f"Deleted {total_deleted} old records...")
         
-        print(f"Old data cleared. Total deleted: {total_deleted}")
+        # Zero Downtime Sync Strategy:
+        # 1. Don't delete everything first.
+        # 2. Use deterministic Doc IDs (J{Number}_{LineID}).
+        # 3. Update/Set documents.
+        # 4. Track processed IDs and delete stale ones at the end.
+        
+        print("Starting Zero-Downtime Sync...")
+        processed_ids = set()
+
         
         batch_rep = db.batch()
         batch_count_r = 0
@@ -376,27 +369,27 @@ def sync_job():
             contact_name = contact_map.get(j_source_id, '')
             
             # Iterate Lines
-            for line in j.get('JournalLines', []):
-                # Use AccountName directly from Xero (it's already in the line!)
+            for idx, line in enumerate(j.get('JournalLines', [])):
+                # Use AccountName directly from Xero
                 acc_name = line.get('AccountName', 'Unknown')
                 acc_type = line.get('AccountType', '')
                 
-                # Filter Logic: Skip VAT/Tax Control Accounts (double entry side)
-                # Check by AccountName since AccountCode isn't in the line
                 if 'VAT' in acc_name.upper() or 'TAX CONTROL' in acc_name.upper():
                     continue
-                
-                # Also skip BANK type accounts (the other side of the double entry)
                 if acc_type == 'BANK':
                     continue
                 
-                # Get line-level description, fallback to empty string
                 line_desc = line.get('Description') or ''
+                
+                # Deterministic ID: J{JournalNumber}_{JournalLineID or idx}
+                line_id = line.get('JournalLineID', f"idx{idx}")
+                doc_id = f"J{j_num}_{line_id}"
+                processed_ids.add(doc_id)
                     
                 flat_item = {
                     'Date': j_date,
                     'JournalNumber': j_num,
-                    'Contact': contact_name,  # Vendor/Customer from Bank Transaction
+                    'Contact': contact_name,
                     'Description': line_desc,
                     'AccountName': acc_name,
                     'AccountType': acc_type,
@@ -407,11 +400,8 @@ def sync_job():
                     'SyncedAt': firestore.SERVER_TIMESTAMP
                 }
                 
-                # Use a deterministic ID helps avoid duplicates on re-runs
-                # {JournalID}_{index (we need an index)} is best if we had it.
-                # using random ID for now via batch.create() (which is what set() on new ref does)
-                new_doc_ref = report_ref.document()
-                batch_rep.set(new_doc_ref, flat_item)
+                doc_ref = report_ref.document(doc_id)
+                batch_rep.set(doc_ref, flat_item)
                 
                 batch_count_r += 1
 
@@ -429,6 +419,31 @@ def sync_job():
         if batch_count_r > 0:
              print("Committing final batch...")
              batch_rep.commit()
+        
+        print(f"Upsert Complete. Processed {processed_count} items.")
+        
+        # Cleanup Stale Records
+        print("Pruning stale records...")
+        # Use list_documents() to get refs efficiently (no data read cost, just ID)
+        all_docs_refs = list(report_ref.list_documents()) 
+        stale_docs = [d for d in all_docs_refs if d.id not in processed_ids]
+        
+        if stale_docs:
+            print(f"Found {len(stale_docs)} stale records to delete.")
+            del_batch = db.batch()
+            del_count = 0
+            for d in stale_docs:
+                del_batch.delete(d)
+                del_count += 1
+                if del_count >= 400:
+                    del_batch.commit()
+                    del_batch = db.batch()
+                    del_count = 0
+            if del_count > 0:
+                del_batch.commit()
+            print("Pruning complete.")
+        else:
+            print("No stale records found.")
                 
         print("Flattened Report Generation Complete.")
 
