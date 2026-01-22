@@ -1896,59 +1896,73 @@
             };
 
             const allocation = useMemo(() => {
+                // 1. Prepare Data
                 const sortedLoans = [...activeLoans].sort((a, b) => (a.year - b.year) || (a.id - b.id));
-                const sortedDeeds = [...deeds];
 
-                // Auto-Assign Logic (Virtual Deeds)
-                if (autoAssignmentDate) {
-                    const cutoff = new Date(autoAssignmentDate);
-                    // Create virtual deeds for loans AFTER the cutoff
-                    const autoDeeds = sortedLoans.filter(l => {
-                        const d = new Date(l.fullDate || (l.year + '-01-01'));
-                        return d > cutoff;
-                    }).map(l => ({
-                        id: 'auto-' + l.id,
-                        date: l.fullDate || l.year + '-01-01',
-                        amount: l.amount,
-                        isAuto: true
-                    }));
-                    sortedDeeds.push(...autoDeeds);
-                }
-
-                // Sort deeds by date
-                sortedDeeds.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                const deedBuckets = sortedDeeds.map(d => ({
+                // Manual Deeds (FIFO Pool)
+                const manualDeeds = deeds.map(d => ({
                     ...d,
                     remainingCapacity: d.amount,
-                    assignedLoans: []
-                }));
+                    assignedLoans: [],
+                    isAuto: false
+                })).sort((a, b) => new Date(a.date) - new Date(b.date));
 
+                const autoDeeds = [];
+                const fifoLoans = [];
+                const cutoff = autoAssignmentDate ? new Date(autoAssignmentDate) : null;
+
+                // 2. Split Loans: Auto vs FIFO
+                sortedLoans.forEach(loan => {
+                    const d = new Date(loan.fullDate || (loan.year + '-01-01'));
+                    if (cutoff && d > cutoff) {
+                        // AUTO ASSIGN (1:1 Exact Match)
+                        // Create a specific deed for this loan on its date
+                        const year = parseInt((loan.fullDate || String(loan.year)).split('-')[0]);
+                        autoDeeds.push({
+                            id: 'auto-' + loan.id,
+                            date: loan.fullDate || loan.year + '-01-01',
+                            amount: loan.amount, // Deed size matches loan exactly
+                            remainingCapacity: 0, // Fully used
+                            assignedLoans: [{
+                                originalLoan: loan,
+                                amount: loan.amount, // 100% of loan
+                                year: loan.year,
+                                source: loan.source,
+                                taperStartYear: year
+                            }],
+                            isAuto: true
+                        });
+                    } else {
+                        fifoLoans.push(loan);
+                    }
+                });
+
+                // 3. FIFO Matching (for remaining loans -> manual deeds)
                 const unassignedLoans = [];
                 let loanIdx = 0;
 
-                // FIFO Matching
-                while (loanIdx < sortedLoans.length) {
-                    let loan = { ...sortedLoans[loanIdx] };
+                while (loanIdx < fifoLoans.length) {
+                    let loan = { ...fifoLoans[loanIdx] };
                     let loanAmountRemaining = loan.amount;
-                    let assignedToAny = false;
 
-                    for (const bucket of deedBuckets) {
+                    for (const bucket of manualDeeds) {
                         if (bucket.remainingCapacity <= 0.01) continue;
 
                         const amountToAssign = Math.min(loanAmountRemaining, bucket.remainingCapacity);
+
+                        // Parse year from deed date for Taper calculation
+                        const deedYear = parseInt(bucket.date.split('-')[0]);
 
                         bucket.assignedLoans.push({
                             originalLoan: loan,
                             amount: amountToAssign,
                             year: loan.year,
                             source: loan.source,
-                            taperStartYear: parseInt(bucket.date.split('-')[0])
+                            taperStartYear: deedYear
                         });
 
                         bucket.remainingCapacity -= amountToAssign;
                         loanAmountRemaining -= amountToAssign;
-                        assignedToAny = true;
                         if (loanAmountRemaining <= 0.01) break;
                     }
 
@@ -1963,8 +1977,12 @@
                     }
                     loanIdx++;
                 }
-                return { deedBuckets, unassignedLoans };
-            }, [activeLoans, deeds]);
+
+                // 4. Combine Results
+                const allDeeds = [...manualDeeds, ...autoDeeds].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                return { deedBuckets: allDeeds, unassignedLoans };
+            }, [activeLoans, deeds, autoAssignmentDate]);
 
             // Calculations
             const calculations = useMemo(() => {
