@@ -266,7 +266,13 @@ def sync_job():
                     # Safety break if we can't determine next offset
                     break
                 
-                # If we got less than 100, we are done
+                if len(journals) < 100:
+                    break
+
+            except Exception as e:
+                print(f"Error fetching journals page: {e}")
+                break
+        
         print(f"Sync complete. Total Journals synced: {total_journals}")
         
         # 7. Post-Process: Create Flattened "Single Entry" Report
