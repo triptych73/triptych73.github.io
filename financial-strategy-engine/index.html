@@ -1499,8 +1499,44 @@
                     </th>
                 );
             };
+
+            // DEBUG COMPONENT
+            const DebugXeroRaw = ({ data }) => {
+                // Show first 5 items that are NOT inverted despite being negative?
+                // Or just first 5 items generally to see AccountType
+                const sample = data.slice(0, 5);
+                return (
+                    <div className="bg-yellow-50 p-4 rounded border border-yellow-200 mb-4 text-xs font-mono overflow-x-auto">
+                        <strong>DEBUG: Raw Xero Data Sample (Top 5 visible)</strong>
+                        <table className="w-full mt-2 border-collapse">
+                            <thead>
+                                <tr className="border-b border-yellow-300">
+                                    <th className="text-left p-1">Contact</th>
+                                    <th className="text-left p-1">AccountName</th>
+                                    <th className="text-left p-1">AccountType (Raw)</th>
+                                    <th className="text-right p-1">Net (Raw)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sample.map((t, i) => (
+                                    <tr key={i} className="border-b border-yellow-100">
+                                        <td className="p-1">{t.Contact}</td>
+                                        <td className="p-1">{t.AccountName}</td>
+                                        <td className="p-1 text-red-600 font-bold">{t.AccountType || '(MISSING)'}</td>
+                                        <td className="p-1 text-right">{t.Net}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            };
+
             return (
                 <div className="space-y-6">
+                    {/* DEBUG PANEL */}
+                    <DebugXeroRaw data={filteredData} />
+
                     {/* Controls */}
                     <Card title="Xero Transactions Filters">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
