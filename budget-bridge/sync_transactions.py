@@ -278,7 +278,8 @@ def sync_job():
         # 7. Post-Process: Create Flattened "Single Entry" Report
         print("Generating Flattened Custom Report...")
         
-        # A. Load Account Map
+        # A. Load Account Map (not needed now since AccountName is in JournalLines, but kept for reference)
+        print("Loading accounts...")
         accounts_ref = db.collection('xero_accounts').stream()
         acc_map = {}
         vat_account_codes = []
@@ -287,18 +288,26 @@ def sync_job():
             code = ad.get('Code')
             name = ad.get('Name', '')
             acc_map[code] = name
-            
-            # Smart Guess VAT accounts (815, 820, or verify by name)
             if 'VAT' in name.upper() or 'TAX' in name.upper():
-                 # Exclude "Income Tax", etc? User said "815 entries". 
-                 # Let's track them but mostly rely on Line Type.
-                 vat_account_codes.append(code)
+                vat_account_codes.append(code)
 
-        # B. Load All Journals (Optimization: Incremental? For MVP redraw all or just new?)
-        # For simplicity in this logic request, we redraw or process recent. 
-        # But user wants a full report. Let's process everything for now (if < 10k ok).
-        # To be safe, let's process last 500 or just do it.
-        # Given "Sync complete" is fast, maybe we just stream properly.
+        # B. Load Contact Map from Bank Transactions (SourceID -> Contact Name)
+        # This allows us to show who the vendor/customer was for each journal entry
+        print("Loading contacts from bank transactions...")
+        tx_ref = db.collection('xero_transactions').stream()
+        contact_map = {}  # BankTransactionID -> Contact Name
+        for tx_doc in tx_ref:
+            tx = tx_doc.to_dict()
+            tx_id = tx.get('BankTransactionID')
+            contact = tx.get('Contact', {})
+            if isinstance(contact, dict):
+                contact_name = contact.get('Name', '')
+            else:
+                contact_name = str(contact) if contact else ''
+            if tx_id and contact_name:
+                contact_map[tx_id] = contact_name
+        print(f"Loaded {len(contact_map)} contacts.")
+
         
         # B. Load All Journals
         print("Loading all journals for reporting...")
@@ -341,21 +350,31 @@ def sync_job():
         for j_doc in all_journals:
             j = j_doc.to_dict()
             
-            # JournalDate is the correct field (ISO format like "2024-01-15T00:00:00")
-            # Some records may have JournalDateString as fallback
+            # Parse JournalDate - Xero returns Microsoft JSON date format: /Date(1234567890000+0000)/
             j_date_raw = j.get('JournalDate') or j.get('JournalDateString')
-            # Format to just date if it's a full timestamp
-            if j_date_raw and 'T' in str(j_date_raw):
-                j_date = str(j_date_raw).split('T')[0]
-            else:
-                j_date = j_date_raw
+            j_date = ''
+            if j_date_raw:
+                date_str = str(j_date_raw)
+                # Check for Microsoft JSON date format: /Date(milliseconds+offset)/
+                if '/Date(' in date_str:
+                    import re
+                    match = re.search(r'/Date\((\d+)', date_str)
+                    if match:
+                        from datetime import datetime
+                        timestamp_ms = int(match.group(1))
+                        dt = datetime.utcfromtimestamp(timestamp_ms / 1000)
+                        j_date = dt.strftime('%Y-%m-%d')
+                elif 'T' in date_str:
+                    # ISO format: 2024-01-15T00:00:00
+                    j_date = date_str.split('T')[0]
+                else:
+                    j_date = date_str
                 
             j_num = j.get('JournalNumber')
             j_source_id = j.get('SourceID')
             
-            # Get Reference - Journals don't have top-level Reference, 
-            # but we can try to get it from the source or use JournalID
-            j_ref = j.get('Reference') or j.get('JournalID', '')[:8] # Fallback to first 8 chars of JournalID
+            # Get Contact/Vendor name from our contact_map (loaded from Bank Transactions)
+            contact_name = contact_map.get(j_source_id, '')
             
             # Iterate Lines
             for line in j.get('JournalLines', []):
@@ -378,9 +397,8 @@ def sync_job():
                 flat_item = {
                     'Date': j_date,
                     'JournalNumber': j_num,
-                    'Reference': j_ref,
+                    'Contact': contact_name,  # Vendor/Customer from Bank Transaction
                     'Description': line_desc,
-                    'AccountID': line.get('AccountID', ''),  # UUID, not human-friendly
                     'AccountName': acc_name,
                     'AccountType': acc_type,
                     'Net': line.get('NetAmount'),
