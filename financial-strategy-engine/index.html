@@ -144,6 +144,51 @@
             { "year": 2023, "unindexed": 0, "indexed": 22825.77 }
         ];
 
+        // --- RPI DATA (Partial/Sample) ---
+        // TODO: Populate with full monthly RPI table (Jan 2004 - Present)
+        // Format: 'YYYY-MM': IndexValue
+        const RPI_TABLE = {
+            '2004-01': 183.1,
+            '2010-01': 217.9,
+            '2015-01': 255.4,
+            '2018-01': 278.1,
+            '2023-01': 360.3,
+            '2023-02': 364.5,
+            '2023-03': 367.2
+        };
+
+        // Current RPI Reference (e.g., Feb 2023 or Latest Available)
+        // User's formula RPI!$B$560 likely refers to the "Current" or "Sale/Exit" date RPI.
+        // We will default to a recent high value or let user configure. 
+        const CURRENT_RPI = 370.0;
+
+        const getRPI = (date) => {
+            // date is Date object
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const key = `${y}-${m}`;
+            // Simple lookup or interpolation? Excel VLOOKUP usually finds exact or nearest.
+            // We'll try exact, then fallback to linear interpolation or nearest if missing?
+            // For now, return a default if missing to avoid breaking.
+            return RPI_TABLE[key] || 250.0; // Fallback
+        };
+
+        const calculateIndexedCost = (amount, dateStr) => {
+            if (!amount) return 0;
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return amount;
+
+            // Legislation: Only index historic transactions up to 1/1/2018
+            const cutoff = new Date('2018-01-01');
+            if (d < cutoff) {
+                const rpiAtDate = getRPI(d);
+                if (rpiAtDate > 0) {
+                    return amount * (CURRENT_RPI / rpiAtDate);
+                }
+            }
+            return amount;
+        };
+
         // Shared Logic Helper
         const isAdvancedLoan = (t) => {
             const s = (t.source || "").toLowerCase();
@@ -551,7 +596,7 @@
                                                                 <tbody className="divide-y divide-gray-100">
                                                                     {filteredCosts.filter(c => c.year === row.year).map(c => (
                                                                         <tr key={c.id}>
-                                                                            <td className="py-2 px-3 text-gray-500 whitespace-nowrap">{c.period}</td>
+                                                                            <td className="py-2 px-3 text-gray-500 whitespace-nowrap">{c.fullDate || c.period}</td>
                                                                             <td className="py-2 px-3 text-gray-700">{c.source}</td>
                                                                             <td className="py-2 px-3 text-right font-mono">{formatCurrency(c.amount)}</td>
                                                                             <td className="py-2 px-3 text-right font-mono text-gray-500">{formatCurrency(c.indexed_amount || 0)}</td>
@@ -1222,10 +1267,14 @@
                 const CUTOFF_DATE = '2023-03-01'; // Start of Xero Data validity
 
                 // 1. Process Legacy Excel Data (Pre-Cutoff)
+                // 1. Process Legacy Excel Data (Pre-Cutoff)
                 const legacy = rawTransactions.filter(t => {
                     // Assuming 'period' format YYYY-MM
                     const dateStr = t.period + '-01';
                     return dateStr < CUTOFF_DATE;
+                }).map(t => {
+                    const fullDate = t.period + '-01';
+                    return { ...t, fullDate, indexed_amount: calculateIndexedCost(t.amount, fullDate) };
                 });
 
                 // 2. Process Xero Data (Post-Cutoff)
@@ -1238,9 +1287,10 @@
                     // Therefore: Invert Net.
                     const rawAmount = parseFloat(t.Net) || 0;
                     const type = (t.AccountType || '').toUpperCase();
+                    const accName = (t.AccountName || '').toLowerCase();
                     let amount = rawAmount;
-                    // Invert Expenses (Neg -> Pos), Keep Liabilities (Neg).
-                    if (['OVERHEADS', 'DIRECTCOSTS', 'EXPENSE', 'COST OF GOODS SOLD'].some(et => type.includes(et))) {
+                    // Broadened list to catch all costs
+                    if (['OVERHEADS', 'DIRECTCOSTS', 'EXPENSE', 'COST OF GOODS SOLD', 'DIRECT COSTS', 'DIRECT EXPENSES'].some(et => type.includes(et))) {
                         amount = rawAmount * -1;
                     }
 
@@ -1251,14 +1301,20 @@
                     // Source: Use Contact Name (Vendor)
                     let source = t.Contact || t.Description || 'Unknown';
                     source = source.trim();
+                    if (!source) source = "Unknown Xero Tx";
+
+                    if (accName.includes('loan')) {
+                        source += " - Loan";
+                    }
 
                     return {
                         id: t.id,
                         period,
                         year,
+                        fullDate: d,
                         source,
                         amount,
-                        indexed_amount: 0 // Xero data doesn't have indexation yet
+                        indexed_amount: calculateIndexedCost(amount, d)
                     };
                 });
 
