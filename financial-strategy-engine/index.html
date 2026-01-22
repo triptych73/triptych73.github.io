@@ -634,7 +634,8 @@
                 premium: 2000,
                 payout: 1000000,
                 termStartYear: 2022
-            }
+            },
+            autoAssignmentDate: '' // New Default
         };
 
         const { useState, useEffect, useMemo, useCallback } = React;
@@ -930,7 +931,11 @@
                 const sortedYears = Array.from(years).sort((a, b) => a - b);
 
                 return sortedYears.map(year => {
-                    const yearTrans = filteredCosts.filter(c => c.year === year);
+                    // Sort transactions by Date Ascending
+                    const yearTrans = filteredCosts
+                        .filter(c => c.year === year)
+                        .sort((a, b) => (a.fullDate || '').localeCompare(b.fullDate || ''));
+
                     const sumUnindexed = yearTrans.reduce((acc, c) => acc + c.amount, 0);
                     // Dynamically calculate indexed sum if transaction data has it
                     const sumIndexed = yearTrans.reduce((acc, c) => acc + (c.indexed_amount || 0), 0);
@@ -1666,6 +1671,7 @@
             const [activeTab, setActiveTab] = useState('loans');
             const [expandedYear, setExpandedYear] = useState(null);
             const [isLoanSourcesOpen, setIsLoanSourcesOpen] = useState(true);
+            const [autoAssignmentDate, setAutoAssignmentDate] = useState(DEFAULT_DATA.autoAssignmentDate);
 
             // 1. Auth & Data
             useEffect(() => {
@@ -1684,6 +1690,7 @@
                                 if (s.enabledSources) setEnabledSources(s.enabledSources);
                                 if (s.insurance) setInsurance(s.insurance);
                                 if (s.deeds) setDeeds(s.deeds);
+                                if (s.autoAssignmentDate !== undefined) setAutoAssignmentDate(s.autoAssignmentDate);
                                 console.log("Loaded settings from Firestore");
                             }
                         });
@@ -1827,7 +1834,7 @@
                     alert("You must be logged in to save settings.");
                     return;
                 }
-                const settings = { salePrice, useIndexedCosts, saleYear, deathYear, areSharesOwnedByHeirs, enabledSources, insurance, deeds };
+                const settings = { salePrice, useIndexedCosts, saleYear, deathYear, areSharesOwnedByHeirs, enabledSources, insurance, deeds, autoAssignmentDate };
                 try {
                     // 1. Save Settings
                     await db.collection('settings').doc(user.uid).set(settings);
@@ -1888,10 +1895,28 @@
                 }
             };
 
-            // Allocation Logic (FIFO)
             const allocation = useMemo(() => {
                 const sortedLoans = [...activeLoans].sort((a, b) => (a.year - b.year) || (a.id - b.id));
-                const sortedDeeds = [...deeds].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const sortedDeeds = [...deeds];
+
+                // Auto-Assign Logic (Virtual Deeds)
+                if (autoAssignmentDate) {
+                    const cutoff = new Date(autoAssignmentDate);
+                    // Create virtual deeds for loans AFTER the cutoff
+                    const autoDeeds = sortedLoans.filter(l => {
+                        const d = new Date(l.fullDate || (l.year + '-01-01'));
+                        return d > cutoff;
+                    }).map(l => ({
+                        id: 'auto-' + l.id,
+                        date: l.fullDate || l.year + '-01-01',
+                        amount: l.amount,
+                        isAuto: true
+                    }));
+                    sortedDeeds.push(...autoDeeds);
+                }
+
+                // Sort deeds by date
+                sortedDeeds.sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 const deedBuckets = sortedDeeds.map(d => ({
                     ...d,
@@ -2525,6 +2550,18 @@
 
                             {/* DEEDS MANAGER CARD */}
                             <Card title="Deeds of Assignment">
+                                <div className="mb-4 pb-4 border-b border-gray-100">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Auto-Assign Loans After
+                                    </label>
+                                    <p className="text-xs text-gray-500 mb-2">Loans provided after this date are automatically treated as assigned immediately.</p>
+                                    <input
+                                        type="date"
+                                        value={autoAssignmentDate}
+                                        onChange={(e) => setAutoAssignmentDate(e.target.value)}
+                                        className="w-full text-sm border border-gray-300 rounded-lg p-2"
+                                    />
+                                </div>
                                 <DeedsManager deeds={deeds} onChange={setDeeds} />
                             </Card>
                         </div>
