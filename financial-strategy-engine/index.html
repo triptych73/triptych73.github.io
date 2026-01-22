@@ -1144,8 +1144,12 @@
 
                         // Load Xero Custom Report (pre-processed transactions)
                         const unsubscribeBank = db.collection('xero_custom_report').onSnapshot(snapshot => {
+                            console.log('xero_custom_report snapshot received:', snapshot.size, 'documents');
                             const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                            console.log('First doc sample:', data[0]);
                             setBankTransactions(data);
+                        }, error => {
+                            console.error('Error fetching xero_custom_report:', error);
                         });
 
                         return () => {
