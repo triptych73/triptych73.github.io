@@ -1534,8 +1534,7 @@
 
             return (
                 <div className="space-y-6">
-                    {/* DEBUG PANEL */}
-                    <DebugXeroRaw data={filteredData} />
+
 
                     {/* Controls */}
                     <Card title="Xero Transactions Filters">
@@ -1754,11 +1753,8 @@
                     const accName = (t.AccountName || '').toLowerCase();
                     let amount = rawAmount;
 
-                    // Invert Expenses (Neg -> Pos), Keep Liabilities (Neg).
-                    // Broadened list to catch all costs
-                    if (['OVERHEADS', 'DIRECTCOSTS', 'EXPENSE', 'COST OF GOODS SOLD', 'DIRECT COSTS', 'DIRECT EXPENSES'].some(et => type.includes(et))) {
-                        amount = rawAmount * -1;
-                    }
+                    // Raw Amount is POSITIVE for Costs (verified via Debug Panel).
+                    // So we use it directly.
 
                     const d = t.Date || t.date || t.DateString;
                     const year = parseInt(d.split('-')[0]);
