@@ -300,43 +300,33 @@ def sync_job():
         # To be safe, let's process last 500 or just do it.
         # Given "Sync complete" is fast, maybe we just stream properly.
         
-        all_journals = journals_ref.stream() # This might be big.
+        # B. Load All Journals
+        print("Loading all journals for reporting...")
+        # Optimization: Fetch only ID and data needed if possible, but stream() is okay for <10k.
+        all_journals = list(journals_ref.stream()) 
+        total_j_count = len(all_journals)
+        print(f"Loaded {total_j_count} journals. Processing...")
         
         report_ref = db.collection('xero_custom_report')
         batch_rep = db.batch()
         batch_count_r = 0
+        processed_count = 0
         
         for j_doc in all_journals:
             j = j_doc.to_dict()
             j_date = j.get('JournalDateString')
             j_num = j.get('JournalNumber')
             j_ref = j.get('Reference')
-            j_source_id = j.get('SourceID') # Link to Bank Tx
-            start_date = j.get('JournalDate') # Sortable timestamp?
+            j_source_id = j.get('SourceID') 
             
             # Iterate Lines
             for line in j.get('JournalLines', []):
                 acc_code = line.get('AccountCode')
                 
-                # Filter Logic:
-                # 1. Hide "VAT Control" lines? (User says "move 815 to VAT column")
-                #    If this line IS the VAT line, skip it (as it's the "double entry" balancing side).
-                #    Usually VAT lines have AccountType=CURRLIAB.
-                #    But simpler: If it's in our vat_account_codes list, skip.
+                # Filter Logic: Skip VAT/Tax Control Accounts (double entry side)
                 if acc_code in vat_account_codes:
                     continue
                     
-                # 2. Hide "Bank" lines? 
-                #    If we want "Analysis", we usually hide the Bank side and show the Expense Side.
-                #    How to detect? AccountType='BANK'. 
-                #    Wait, we need the Account Class from the map.
-                #    Let's assume we show everything ELSE.
-                
-                # 3. Calculate Fields
-                #    LineAmount is usually Net (if tax exclusive) or Gross (if inclusive).
-                #    GrossAmount, NetAmount, TaxAmount are explicit in API.
-                #    We use those.
-                
                 flat_item = {
                     'Date': j_date,
                     'JournalNumber': j_num,
@@ -352,21 +342,28 @@ def sync_job():
                     'SyncedAt': firestore.SERVER_TIMESTAMP
                 }
                 
-                # Create Deterministic ID: JournalID_AccountCode_Amount (to allow repeated runs)
-                # Or just JournalID_LineIndex? Xero lines don't have stable IDs.
-                # We'll use Append or Hash. Hash is safer.
-                # HashStr = f"{j['JournalID']}_{acc_code}_{line.get('NetAmount')}"
-                # doc_id = hashlib.md5(HashStr.encode()).hexdigest()
+                # Use a deterministic ID helps avoid duplicates on re-runs
+                # {JournalID}_{index (we need an index)} is best if we had it.
+                # using random ID for now via batch.create() (which is what set() on new ref does)
+                new_doc_ref = report_ref.document()
+                batch_rep.set(new_doc_ref, flat_item)
                 
-                # For now, auto-id. User can clear collection. 
-                # Ideally, we delete collection before regen? 
-                # "Save this new data table" -> Append/Update.
-                
-                report_ref.add(flat_item)
-                
-                # Batch limits? 500.
-                # If we do simple add(), it's slow.
-                # We'll rely on the basic loop for now as this is a background job.
+                batch_count_r += 1
+
+            processed_count += 1
+            if processed_count % 100 == 0:
+                print(f"Processed {processed_count}/{total_j_count} journals...")
+
+            if batch_count_r >= 400:
+                print("Committing batch of report items...")
+                batch_rep.commit()
+                batch_rep = db.batch()
+                batch_count_r = 0
+        
+        # Commit remaining
+        if batch_count_r > 0:
+             print("Committing final batch...")
+             batch_rep.commit()
                 
         print("Flattened Report Generation Complete.")
 
