@@ -2587,6 +2587,10 @@
                                 <div className="space-y-8">
                                     {/* DEED GROUPS */}
                                     {allocation.deedBuckets.map(bucket => {
+                                        // HIDE EMPTY AUTO-DEEDS
+                                        // If a virtual deed wasn't used (e.g. loan assigned to earlier manual deed), don't show it.
+                                        if (bucket.isAuto && bucket.assignedLoans.length === 0) return null;
+
                                         // Group bucket items by Year
                                         const byYear = bucket.assignedLoans.reduce((acc, item) => {
                                             acc[item.year] = acc[item.year] || [];
