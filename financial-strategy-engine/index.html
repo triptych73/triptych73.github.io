@@ -2615,7 +2615,12 @@
                                                             <div className="px-4 py-2 bg-gray-50 text-xs font-bold text-gray-500">{year}</div>
                                                             {byYear[year].map((item, idx) => (
                                                                 <div key={idx} className="px-4 py-2 flex justify-between items-center hover:bg-gray-50 text-sm">
-                                                                    <div className="flex-1 truncate pr-4">{item.source}</div>
+                                                                    <div className="flex-1 truncate pr-4">
+                                                                        {item.source}
+                                                                        <span className="text-xs text-gray-400 ml-2 font-mono">
+                                                                            ({item.originalLoan.fullDate || 'No Date'})
+                                                                        </span>
+                                                                    </div>
                                                                     <div className="text-right flex items-center gap-6">
                                                                         <span className="font-mono">{formatCurrency(item.amount)}</span>
                                                                         <span className="font-mono text-red-600 w-24 text-right">{formatCurrency(item.taxableValue)}</span>
@@ -2661,7 +2666,12 @@
                                                         <div className="px-4 py-2 bg-gray-50 text-xs font-bold text-gray-500">{year}</div>
                                                         {byYear[year].map((item, idx) => (
                                                             <div key={idx} className="px-4 py-2 flex justify-between items-center hover:bg-gray-50 text-sm">
-                                                                <div className="flex-1 truncate pr-4">{item.source}</div>
+                                                                <div className="flex-1 truncate pr-4">
+                                                                    {item.source}
+                                                                    <span className="text-xs text-gray-400 ml-2 font-mono">
+                                                                        ({item.originalLoan.fullDate || 'No Date'})
+                                                                    </span>
+                                                                </div>
                                                                 <div className="text-right flex items-center gap-6">
                                                                     <span className="font-mono">{formatCurrency(item.amount)}</span>
                                                                     <span className="font-mono text-red-600 w-24 text-right">{formatCurrency(item.taxableValue)}</span>
