@@ -357,10 +357,9 @@ def sync_job():
                 date_str = str(j_date_raw)
                 # Check for Microsoft JSON date format: /Date(milliseconds+offset)/
                 if '/Date(' in date_str:
-                    import re
-                    match = re.search(r'/Date\((\d+)', date_str)
+                    import re as re_mod  # Use alias to avoid any conflicts
+                    match = re_mod.search(r'/Date\((\d+)', date_str)
                     if match:
-                        from datetime import datetime
                         timestamp_ms = int(match.group(1))
                         dt = datetime.utcfromtimestamp(timestamp_ms / 1000)
                         j_date = dt.strftime('%Y-%m-%d')
