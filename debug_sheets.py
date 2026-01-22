@@ -1,12 +1,24 @@
-
-import zipfile
-import xml.etree.ElementTree as ET
+import pandas as pd
+import json
+import os
 
 INPUT_FILE = 'assets/docs/Drawing List v2.xlsm'
-NS = {'main': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+MAP_FILE = 'assets/data/thumbnail_map.json'
 
-with zipfile.ZipFile(INPUT_FILE, 'r') as z:
-    wb_xml = z.read('xl/workbook.xml')
-    root = ET.fromstring(wb_xml)
-    for sheet in root.findall('.//main:sheet', NS):
-        print(f"Sheet: {sheet.get('name')} | Id: {sheet.get('sheetId')}")
+print("--- PANDAS SHEET NAMES ---")
+try:
+    xls = pd.ExcelFile(INPUT_FILE)
+    print(xls.sheet_names)
+except Exception as e:
+    print(f"Pandas Error: {e}")
+
+print("\n--- THUMBNAIL MAP KEYS ---")
+try:
+    if os.path.exists(MAP_FILE):
+        with open(MAP_FILE, 'r') as f:
+            data = json.load(f)
+            print(list(data.keys()))
+    else:
+        print("Map file not found.")
+except Exception as e:
+    print(f"JSON Error: {e}")

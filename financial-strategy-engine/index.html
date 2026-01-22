@@ -1217,23 +1217,72 @@
             }, []);
 
 
+            // 1b. Unified Data Source (Legacy Excel + New Xero)
+            const unifiedTransactions = useMemo(() => {
+                const CUTOFF_DATE = '2023-03-01'; // Start of Xero Data validity
+
+                // 1. Process Legacy Excel Data (Pre-Cutoff)
+                const legacy = rawTransactions.filter(t => {
+                    // Assuming 'period' format YYYY-MM
+                    const dateStr = t.period + '-01';
+                    return dateStr < CUTOFF_DATE;
+                });
+
+                // 2. Process Xero Data (Post-Cutoff)
+                const xero = bankTransactions.filter(t => {
+                    const d = t.Date || t.date || t.DateString; // YYYY-MM-DD
+                    return d && d >= CUTOFF_DATE;
+                }).map(t => {
+                    // MAP Xero Schema to App Schema
+                    // Xero: Net is Negative for Money Out/Expense (based on observation), Excel: Amount is Positive for Cost.
+                    // Therefore: Invert Net.
+                    const rawAmount = parseFloat(t.Net) || 0;
+                    const type = (t.AccountType || '').toUpperCase();
+                    let amount = rawAmount;
+                    // Invert Expenses (Neg -> Pos), Keep Liabilities (Neg).
+                    if (['OVERHEADS', 'DIRECTCOSTS', 'EXPENSE', 'COST OF GOODS SOLD'].some(et => type.includes(et))) {
+                        amount = rawAmount * -1;
+                    }
+
+                    const d = t.Date || t.date || t.DateString;
+                    const year = parseInt(d.split('-')[0]);
+                    const period = d.slice(0, 7); // YYYY-MM
+
+                    // Source: Use Contact Name (Vendor)
+                    let source = t.Contact || t.Description || 'Unknown';
+                    source = source.trim();
+
+                    return {
+                        id: t.id,
+                        period,
+                        year,
+                        source,
+                        amount,
+                        indexed_amount: 0 // Xero data doesn't have indexation yet
+                    };
+                });
+
+                console.log(`Merged Data: ${legacy.length} Legacy + ${xero.length} Xero`);
+                return [...legacy, ...xero];
+            }, [rawTransactions, bankTransactions]);
+
             // 2. Identify Candidate Loan Sources
             const loanSources = useMemo(() => {
                 const uniqueSources = new Set();
-                rawTransactions.forEach(t => {
+                unifiedTransactions.forEach(t => {
                     if (isAdvancedLoan(t)) {
                         uniqueSources.add(t.source);
                     }
                 });
                 return [...uniqueSources].sort();
-            }, [rawTransactions]);
+            }, [unifiedTransactions]);
 
             // 3. Dynamic Split: Active Loans vs. Costs
             const { activeLoans, effectiveCosts } = useMemo(() => {
                 const l = [];
                 const c = [];
 
-                rawTransactions.forEach(t => {
+                unifiedTransactions.forEach(t => {
                     if (enabledSources.includes(t.source)) {
                         let loan = { ...t };
                         // LOAN LOGIC:
@@ -1253,7 +1302,7 @@
                 });
 
                 return { activeLoans: l, effectiveCosts: c };
-            }, [rawTransactions, enabledSources]);
+            }, [unifiedTransactions, enabledSources]);
 
             // 4. Persistence Save
             const saveData = async () => {

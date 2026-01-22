@@ -85,13 +85,17 @@ def parse_excel_to_json():
         if os.path.exists('assets/data/thumbnail_map.json'):
             with open('assets/data/thumbnail_map.json', 'r') as f:
                 thumbnail_map = json.load(f)
+            print(f"DEBUG: Loaded Thumbnail Map Keys: {list(thumbnail_map.keys())}")
 
         # Extract data
         sheet_data = []
+        data_row_counter = 0  # Tracks position within data rows (0-based)
+        
         for idx, row in df.iterrows():
             # Skip empty rows (where Number or Title is missing)
             number_col = next((k for k, v in col_map.items() if v == 'number'), None)
             if pd.isna(row[number_col]):
+                data_row_counter += 1  # Still increment since it's a row in Excel
                 continue
 
             item = {}
@@ -109,17 +113,18 @@ def parse_excel_to_json():
                 item[standard_key] = val
             
             # Add Thumbnail if exists
-            # XML Row Index = header_row_idx + 1 + df_index
-            # Note: df index usually starts at 0 for the first data row
-            xml_row_index = header_row_idx + 1 + idx
+            # Excel row (1-based) = header_row_idx (0-based) + 2 + data_row_counter
+            # header_row_idx + 1 = header row in 1-based
+            # header_row_idx + 2 = first data row in 1-based
+            excel_row = header_row_idx + 2 + data_row_counter
             
             if sheet_name in thumbnail_map:
-                # Keys in JSON are strings
-                key = str(xml_row_index)
+                key = str(excel_row)
                 if key in thumbnail_map[sheet_name]:
                     item['thumbnail'] = thumbnail_map[sheet_name][key]
             
             sheet_data.append(item)
+            data_row_counter += 1
             
         if sheet_data:
             all_drawings[sheet_name] = sheet_data
