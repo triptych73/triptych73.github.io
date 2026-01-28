@@ -1787,7 +1787,8 @@
                 });
 
                 console.log(`Merged Data: ${legacy.length} Legacy + ${xero.length} Xero`);
-                return [...legacy, ...xero];
+                // Fix: Sort merged data by fullDate (Oldest First) to ensure Allocation Engine fills deeds chronologically.
+                return [...legacy, ...xero].sort((a, b) => (a.fullDate || '').localeCompare(b.fullDate || ''));
             }, [rawTransactions, bankTransactions]);
 
             // 2. Identify Candidate Loan Sources
