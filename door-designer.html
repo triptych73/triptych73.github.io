@@ -343,6 +343,7 @@
                     if (!existingQuery.empty) {
                         // Update existing document
                         const existingDoc = existingQuery.docs[0];
+                        console.log('Updating existing design:', existingDoc.id);
                         await existingDoc.ref.update({
                             config: config,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -350,6 +351,7 @@
                         alert('Design Updated!');
                     } else {
                         // Create new document
+                        console.log('Creating new design:', designName);
                         await firebase.firestore().collection('doors').add({
                             uid: user.uid,
                             name: designName,
@@ -1719,7 +1721,7 @@
 
                 if (doors) {
                     doors.forEach(d => {
-                        const date = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString() : '';
+                        const date = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleString() : '';
                         const label = `${d.name} [${date}]`;
                         options[label] = d.id;
                     });
