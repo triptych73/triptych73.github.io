@@ -1487,7 +1487,7 @@
         }
 
         // ------------------------------------------------------------------
-        // VESTIBULE CONTEXT VISUALIZATION
+        // VESTIBULE CONTEXT VISUALIZATION (Subtractive Approach)
         // ------------------------------------------------------------------
         class Vestibule {
             constructor(scene) {
@@ -1500,8 +1500,16 @@
                     color: 0xD4C4A8,
                     transparent: true,
                     opacity: 0.3,
-                    side: THREE.DoubleSide,
+                    side: THREE.BackSide, // Render inside faces for hollow look
                     roughness: 0.8
+                });
+
+                this.outerMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xC4B498,
+                    transparent: true,
+                    opacity: 0.15,
+                    side: THREE.FrontSide,
+                    roughness: 0.9
                 });
 
                 this.generate();
@@ -1513,6 +1521,7 @@
 
             setOpacity(opacity) {
                 this.stoneMaterial.opacity = opacity;
+                this.outerMaterial.opacity = opacity * 0.5;
             }
 
             generate() {
@@ -1523,150 +1532,131 @@
                     this.meshGroup.remove(child);
                 }
 
-                // Dimensions (in meters)
-                const exteriorHalf = 6.120 / 2; // Square exterior half-width = 3.06m
-                const interiorRadius = 2.143;
-                const wallThickness = exteriorHalf - interiorRadius; // ~0.917m
-                const alcoveWidthDoor = 1.937;
-                const alcoveDepth = 0.95; // Nearly 1m deep alcoves
+                // === DIMENSIONS (meters) ===
+                const extSize = 6.120;          // Square exterior
+                const extHalf = extSize / 2;    // 3.06m
+                const height = 10.0;            // Total height
+                const intRadius = 2.143;        // Interior cylinder radius
+                const alcoveWidth = 1.937;      // Door opening width
+                const alcoveDepth = 0.95;       // Alcove depth into wall
                 const archRadius = 1.200;
                 const archCenterY = 2.900;
-                const archApex = archCenterY + archRadius; // 4.1m
-                const corniceOffset = 0.250;
+                const archApex = archCenterY + archRadius; // ~4.1m
+                const corniceY = archApex + 0.250;         // Cornice starts here
                 const corniceHeight = 0.250;
-                const corniceProtrusion = 0.250; // Protrudes INWARD
+                const corniceProtrusion = 0.250;
                 const oculusHeight = 6.116;
+                const oculusRadius = 0.5;
 
-                const corniceBottom = archApex + corniceOffset;
-                const corniceTop = corniceBottom + corniceHeight;
-                const domeBaseY = corniceTop;
-                const domeRadius = interiorRadius - corniceProtrusion; // Starts from inner cornice edge
+                // === OUTER SOLID BLOCK ===
+                const outerGeo = new THREE.BoxGeometry(extSize, height, extSize);
+                const outer = new THREE.Mesh(outerGeo, this.outerMaterial);
+                outer.position.y = height / 2;
+                this.meshGroup.add(outer);
 
-                // --- SQUARE EXTERIOR WALLS ---
-                const wallHeight = corniceBottom;
-                const wallGeo = new THREE.BoxGeometry(exteriorHalf * 2, wallHeight, wallThickness);
+                // === CYLINDRICAL INTERIOR CAVITY ===
+                // Cylinder from floor to cornice (carved out space)
+                const cylHeight = corniceY;
+                const cylGeo = new THREE.CylinderGeometry(intRadius, intRadius, cylHeight, 64, 1, true);
+                const cylinder = new THREE.Mesh(cylGeo, this.stoneMaterial);
+                cylinder.position.y = cylHeight / 2;
+                this.meshGroup.add(cylinder);
 
-                // Four walls forming square
+                // === ALCOVE TUNNELS (4 directions) ===
+                // Each alcove extends from cylinder wall outward
                 for (let i = 0; i < 4; i++) {
-                    const wall = new THREE.Mesh(wallGeo, this.stoneMaterial);
-                    wall.position.y = wallHeight / 2;
-
-                    if (i === 0) { // Front (door side)
-                        wall.position.z = exteriorHalf - wallThickness / 2;
-                    } else if (i === 1) { // Back
-                        wall.position.z = -exteriorHalf + wallThickness / 2;
-                    } else if (i === 2) { // Left
-                        wall.rotation.y = Math.PI / 2;
-                        wall.position.x = -exteriorHalf + wallThickness / 2;
-                    } else { // Right
-                        wall.rotation.y = Math.PI / 2;
-                        wall.position.x = exteriorHalf - wallThickness / 2;
-                    }
-                    this.meshGroup.add(wall);
-                }
-
-                // --- CYLINDRICAL INTERIOR (carved from square) ---
-                const innerWallGeo = new THREE.CylinderGeometry(
-                    interiorRadius, interiorRadius, corniceBottom, 64, 1, true
-                );
-                const innerWall = new THREE.Mesh(innerWallGeo, this.stoneMaterial);
-                innerWall.position.y = corniceBottom / 2;
-                this.meshGroup.add(innerWall);
-
-                // --- ALCOVE CUTOUTS (4 directions) ---
-                for (let i = 0; i < 4; i++) {
-                    const alcove = this.createAlcoveCutout(
-                        alcoveWidthDoor, alcoveDepth, archRadius, archCenterY, interiorRadius
+                    const alcove = this.createAlcoveTunnel(
+                        alcoveWidth, alcoveDepth, archRadius, archCenterY, intRadius
                     );
                     alcove.rotation.y = i * Math.PI / 2;
                     this.meshGroup.add(alcove);
                 }
 
-                // --- CORNICE (protrudes INWARD) ---
-                const corniceInnerR = interiorRadius - corniceProtrusion;
+                // === CORNICE (inward protrusion) ===
+                const corniceInnerR = intRadius - corniceProtrusion;
+                // Cornice walls (tapered cylinder)
                 const corniceGeo = new THREE.CylinderGeometry(
-                    interiorRadius,      // Top = wall surface
-                    corniceInnerR,       // Bottom = protrudes inward
-                    corniceHeight,
-                    64, 1, true
+                    corniceInnerR, intRadius, corniceHeight, 64, 1, true
                 );
                 const cornice = new THREE.Mesh(corniceGeo, this.stoneMaterial);
-                cornice.position.y = corniceBottom + corniceHeight / 2;
+                cornice.position.y = corniceY + corniceHeight / 2;
                 this.meshGroup.add(cornice);
 
-                // Cornice ledge (flat ring on top protruding in)
-                const ledgeGeo = new THREE.RingGeometry(corniceInnerR, interiorRadius, 64);
-                const ledge = new THREE.Mesh(ledgeGeo, this.stoneMaterial);
-                ledge.rotation.x = -Math.PI / 2;
-                ledge.position.y = corniceTop;
-                this.meshGroup.add(ledge);
+                // Cornice bottom ledge
+                const ledgeBottomGeo = new THREE.RingGeometry(corniceInnerR, intRadius, 64);
+                const ledgeBottom = new THREE.Mesh(ledgeBottomGeo, this.stoneMaterial);
+                ledgeBottom.rotation.x = Math.PI / 2; // Face down
+                ledgeBottom.position.y = corniceY;
+                this.meshGroup.add(ledgeBottom);
 
-                // --- DOME WITH FLAT OCULUS CUT ---
-                // Calculate sphere parameters for flat slice at oculusHeight
-                const domeApex = oculusHeight;
-                const fullDomeRadius = (domeApex - domeBaseY);
+                // === DOME CAVITY (sliced hemisphere) ===
+                const domeBaseY = corniceY + corniceHeight;
+                const domeRadius = corniceInnerR;
+                // Calculate how much of hemisphere to show based on oculus height
+                const domeHeight = oculusHeight - domeBaseY;
+                const phiMax = Math.asin(domeHeight / domeRadius);
 
-                // Create hemisphere and position so it's sliced flat at oculusHeight
                 const domeGeo = new THREE.SphereGeometry(
-                    fullDomeRadius,
-                    64, 32,
+                    domeRadius, 64, 32,
                     0, Math.PI * 2,
-                    0, Math.PI / 2  // Full hemisphere
+                    0, Math.min(phiMax, Math.PI / 2)
                 );
                 const dome = new THREE.Mesh(domeGeo, this.stoneMaterial);
                 dome.position.y = domeBaseY;
                 this.meshGroup.add(dome);
 
-                // Oculus rim (flat ring at top of dome)
-                const oculusRadius = 0.5;
-                const oculusRimGeo = new THREE.RingGeometry(0, oculusRadius, 32);
-                const oculusRim = new THREE.Mesh(oculusRimGeo, this.stoneMaterial);
-                oculusRim.rotation.x = -Math.PI / 2;
-                oculusRim.position.y = domeApex - 0.01;
-                this.meshGroup.add(oculusRim);
+                // Oculus opening (flat disc at slice)
+                const sliceY = domeBaseY + domeHeight;
+                const sliceRadius = Math.sqrt(domeRadius * domeRadius - domeHeight * domeHeight);
+                const oculusGeo = new THREE.RingGeometry(0, Math.max(sliceRadius, oculusRadius), 32);
+                const oculusDisc = new THREE.Mesh(oculusGeo, this.stoneMaterial);
+                oculusDisc.rotation.x = -Math.PI / 2;
+                oculusDisc.position.y = sliceY;
+                this.meshGroup.add(oculusDisc);
 
-                // --- FLOOR ---
-                const floorGeo = new THREE.BoxGeometry(exteriorHalf * 2, 0.05, exteriorHalf * 2);
+                // === FLOOR ===
+                const floorGeo = new THREE.PlaneGeometry(extSize, extSize);
                 const floor = new THREE.Mesh(floorGeo, this.stoneMaterial);
-                floor.position.y = -0.025;
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = 0.001;
                 this.meshGroup.add(floor);
             }
 
-            createAlcoveCutout(widthDoor, depth, archR, archCY, wallRadius) {
+            createAlcoveTunnel(width, depth, archR, archCY, wallRadius) {
                 const group = new THREE.Group();
-                const halfW = widthDoor / 2;
-                const archApex = archCY + archR;
+                const halfW = width / 2;
 
-                // Create arch-shaped opening extruded outward
+                // Alcove shape (arch-topped rectangle)
                 const shape = new THREE.Shape();
                 shape.moveTo(-halfW, 0);
                 shape.lineTo(-halfW, archCY);
 
-                // Arc
-                const segments = 32;
+                // Arc for top
+                const segments = 24;
                 for (let i = 0; i <= segments; i++) {
                     const t = i / segments;
                     const angle = Math.PI - t * Math.PI;
-                    const x = archR * Math.cos(angle);
+                    const x = Math.min(halfW, archR) * Math.cos(angle);
                     const y = archCY + archR * Math.sin(angle);
-                    if (Math.abs(x) <= halfW) {
-                        shape.lineTo(x, y);
-                    }
+                    shape.lineTo(x, y);
                 }
 
                 shape.lineTo(halfW, archCY);
                 shape.lineTo(halfW, 0);
                 shape.closePath();
 
-                // Extrude to create alcove depth
-                const extrudeSettings = { depth: depth, bevelEnabled: false };
-                const alcoveGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                // Extrude outward from cylinder wall
+                const extrudeSettings = {
+                    depth: depth,
+                    bevelEnabled: false
+                };
+                const tunnelGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
 
-                const alcoveMesh = new THREE.Mesh(alcoveGeo, this.stoneMaterial);
-                alcoveMesh.position.z = wallRadius;
-                alcoveMesh.rotation.y = Math.PI;
+                const tunnel = new THREE.Mesh(tunnelGeo, this.stoneMaterial);
+                // Position at cylinder surface, facing outward
+                tunnel.position.z = wallRadius;
 
-                group.add(alcoveMesh);
+                group.add(tunnel);
                 return group;
             }
         }
