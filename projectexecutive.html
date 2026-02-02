@@ -288,6 +288,18 @@
                     <!-- Lift Monitor Widget -->
                     <div
                         class="glass-panel p-4 rounded-lg mt-4 flex items-center justify-between relative overflow-hidden">
+                        <!-- History Button -->
+                        <div class="absolute top-2 right-2 cursor-pointer group z-20" id="view-lift-history-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="w-4 h-4 text-white/30 hover:text-white transition-colors">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            <div
+                                class="absolute right-0 top-full mt-1 w-max px-2 py-1 bg-black/90 border border-white/10 rounded text-[9px] text-white/70 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                View Logs
+                            </div>
+                        </div>
                         <!-- Status Text -->
                         <div class="z-10">
                             <div class="text-[10px] text-bronze uppercase tracking-widest mb-1">Vertical Transport</div>
@@ -769,6 +781,45 @@
         </div>
     </div>
 
+    <!-- Lift History Modal -->
+    <div id="lift-history-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div
+            class="bg-[#1a1a1a] border border-white/10 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col m-4 shadow-2xl">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <div>
+                    <h2 class="font-serif text-2xl text-white">Lift Movement History</h2>
+                    <p class="text-xs text-white/40 font-mono mt-1">RECENT FLOOR CALLS & TRIPS</p>
+                </div>
+                <button id="close-lift-history-btn"
+                    class="p-2 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-auto p-0">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-white/5 sticky top-0 backdrop-blur-md">
+                        <tr>
+                            <th class="py-3 pl-6 font-mono text-[10px] uppercase tracking-widest text-white/40">
+                                Timestamp</th>
+                            <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">From</th>
+                            <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">To</th>
+                            <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Duration</th>
+                            <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Type</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lift-history-table-body" class="text-sm border-t border-white/5">
+                        <!-- Dynamic Content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -792,6 +843,8 @@
                         initHistory();
                         // Initialize Lift Monitor
                         initLiftMonitor();
+                        // Initialize Lift History
+                        initLiftHistory();
                     }, 500);
                 } else {
                     // Not Authenticated: Redirect
@@ -1026,6 +1079,64 @@
                                     <td class="py-3 font-mono text-bronze">${d.path}</td>
                                     <td class="py-3 text-white/50">${device} <span class="text-white/20">/</span> ${browser}</td>
                                     <td class="py-3 text-white/40 text-[10px] truncate max-w-[150px]">${orgStr}</td>
+                                `;
+                                tbody.appendChild(row);
+                            });
+                        });
+                }
+            }
+
+            // --- LIFT HISTORY LOGIC (New) ---
+            function initLiftHistory() {
+                const db = firebase.firestore();
+                const modal = document.getElementById('lift-history-modal');
+                const btn = document.getElementById('view-lift-history-btn');
+                const closeBtn = document.getElementById('close-lift-history-btn');
+                const tbody = document.getElementById('lift-history-table-body');
+                let listener = null;
+
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        modal.style.display = 'flex';
+                        loadHistory();
+                    });
+                }
+
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        modal.style.display = 'none';
+                        if (listener) listener();
+                    });
+                }
+
+                function loadHistory() {
+                    if (listener) listener();
+
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/20 animate-pulse">Fetching records...</td></tr>';
+
+                    listener = db.collection('lift_history')
+                        .orderBy('timestamp', 'desc')
+                        .limit(50)
+                        .onSnapshot((snapshot) => {
+                            if (snapshot.empty) {
+                                tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/20">No history found.</td></tr>';
+                                return;
+                            }
+                            tbody.innerHTML = '';
+                            snapshot.docs.forEach(doc => {
+                                const d = doc.data();
+                                const ts = d.timestamp ? d.timestamp.toDate() : new Date();
+                                const timeStr = ts.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                                const dur = d.duration ? `${d.duration.toFixed(1)}s` : '-';
+
+                                const row = document.createElement('tr');
+                                row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
+                                row.innerHTML = `
+                                    <td class="py-3 pl-6 font-mono text-white/50">${timeStr}</td>
+                                    <td class="py-3 text-white font-mono">L${d.from}</td>
+                                    <td class="py-3 text-white font-mono">L${d.to}</td>
+                                    <td class="py-3 font-mono text-bronze">${dur}</td>
+                                    <td class="py-3 text-white/40 text-[10px] uppercase">${d.type || 'TRIP'}</td>
                                 `;
                                 tbody.appendChild(row);
                             });
