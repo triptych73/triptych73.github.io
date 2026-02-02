@@ -355,9 +355,17 @@
                 try {
                     const snapshot = await firebase.firestore().collection('doors')
                         .where('uid', '==', user.uid)
-                        .orderBy('timestamp', 'desc')
+                        // .orderBy('timestamp', 'desc') // Removed to avoid index requirement
                         .get();
-                    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Client-side sort
+                    docs.sort((a, b) => {
+                        const tA = a.timestamp ? a.timestamp.seconds : 0;
+                        const tB = b.timestamp ? b.timestamp.seconds : 0;
+                        return tB - tA; // Descending
+                    });
+                    return docs;
                 } catch (e) {
                     console.error("Error fetching doors:", e);
                     return [];
