@@ -1496,11 +1496,12 @@
                 this.meshGroup.visible = false;
                 this.scene.add(this.meshGroup);
 
+                // Use DoubleSide so geometry is visible from both inside and outside
                 this.stoneMaterial = new THREE.MeshStandardMaterial({
                     color: 0xD4C4A8,
                     transparent: true,
                     opacity: 0.3,
-                    side: THREE.BackSide, // Render inside faces for hollow look
+                    side: THREE.DoubleSide,
                     roughness: 0.8
                 });
 
@@ -1545,7 +1546,6 @@
                 const corniceY = archApex + 0.250;         // Cornice starts here
                 const corniceHeight = 0.250;
                 const corniceProtrusion = 0.250;
-                const oculusHeight = 6.116;
                 const oculusRadius = 0.5;
 
                 // === OUTER SOLID BLOCK ===
@@ -1563,7 +1563,7 @@
                 this.meshGroup.add(cylinder);
 
                 // === ALCOVE TUNNELS (4 directions) ===
-                // Each alcove extends INWARD from cylinder wall toward center
+                // Each alcove extends OUTWARD from cylinder wall INTO the stone mass
                 for (let i = 0; i < 4; i++) {
                     const alcove = this.createAlcoveTunnel(
                         alcoveWidth, alcoveDepth, archRadius, archCenterY, intRadius
@@ -1574,7 +1574,6 @@
 
                 // === CORNICE (inward protrusion) ===
                 const corniceInnerR = intRadius - corniceProtrusion;
-                // Cornice walls (tapered cylinder)
                 const corniceGeo = new THREE.CylinderGeometry(
                     corniceInnerR, intRadius, corniceHeight, 64, 1, true
                 );
@@ -1583,32 +1582,31 @@
                 this.meshGroup.add(cornice);
 
                 // Cornice bottom ledge
-                const ledgeBottomGeo = new THREE.RingGeometry(corniceInnerR, intRadius, 64);
-                const ledgeBottom = new THREE.Mesh(ledgeBottomGeo, this.stoneMaterial);
-                ledgeBottom.rotation.x = Math.PI / 2; // Face down
-                ledgeBottom.position.y = corniceY;
-                this.meshGroup.add(ledgeBottom);
+                const ledgeGeo = new THREE.RingGeometry(corniceInnerR, intRadius, 64);
+                const ledge = new THREE.Mesh(ledgeGeo, this.stoneMaterial);
+                ledge.rotation.x = Math.PI / 2;
+                ledge.position.y = corniceY;
+                this.meshGroup.add(ledge);
 
-                // === DOME (hemisphere with flat oculus slice) ===
+                // === HEMISPHERE DOME ===
                 const domeBaseY = corniceY + corniceHeight;
                 const domeRadius = corniceInnerR;
 
-                // Full hemisphere (phi from 0 to PI/2)
                 const domeGeo = new THREE.SphereGeometry(
                     domeRadius, 64, 32,
                     0, Math.PI * 2,
-                    0, Math.PI / 2  // Full hemisphere
+                    0, Math.PI / 2
                 );
                 const dome = new THREE.Mesh(domeGeo, this.stoneMaterial);
                 dome.position.y = domeBaseY;
                 this.meshGroup.add(dome);
 
-                // Oculus opening (flat disc at top of dome)
+                // Oculus opening at dome top
                 const oculusGeo = new THREE.CircleGeometry(oculusRadius, 32);
-                const oculusDisc = new THREE.Mesh(oculusGeo, this.stoneMaterial);
-                oculusDisc.rotation.x = -Math.PI / 2;
-                oculusDisc.position.y = domeBaseY + domeRadius; // Top of hemisphere
-                this.meshGroup.add(oculusDisc);
+                const oculus = new THREE.Mesh(oculusGeo, this.stoneMaterial);
+                oculus.rotation.x = -Math.PI / 2;
+                oculus.position.y = domeBaseY + domeRadius;
+                this.meshGroup.add(oculus);
 
                 // === FLOOR ===
                 const floorGeo = new THREE.PlaneGeometry(extSize, extSize);
@@ -1627,7 +1625,7 @@
                 shape.moveTo(-halfW, 0);
                 shape.lineTo(-halfW, archCY);
 
-                // Arc for top
+                // Arc for arch top
                 const segments = 24;
                 for (let i = 0; i <= segments; i++) {
                     const t = i / segments;
@@ -1641,7 +1639,7 @@
                 shape.lineTo(halfW, 0);
                 shape.closePath();
 
-                // Extrude INWARD toward center (negative z after rotation)
+                // Extrude OUTWARD from cylinder wall into the stone mass
                 const extrudeSettings = {
                     depth: depth,
                     bevelEnabled: false
@@ -1649,9 +1647,9 @@
                 const tunnelGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
 
                 const tunnel = new THREE.Mesh(tunnelGeo, this.stoneMaterial);
-                // Position at cylinder surface, extrude goes in +z, so place at wallRadius
-                // Shape sits at z=0, extrudes to z=depth, so we position at wallRadius-depth
-                tunnel.position.z = wallRadius - depth;
+                // Shape at z=0, extrudes toward +z
+                // Position so shape starts at cylinder surface and goes outward
+                tunnel.position.z = wallRadius;
 
                 group.add(tunnel);
                 return group;
