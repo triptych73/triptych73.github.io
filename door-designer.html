@@ -1486,6 +1486,159 @@
             }
         }
 
+        // ------------------------------------------------------------------
+        // VESTIBULE CONTEXT VISUALIZATION
+        // ------------------------------------------------------------------
+        class Vestibule {
+            constructor(scene) {
+                this.scene = scene;
+                this.meshGroup = new THREE.Group();
+                this.meshGroup.visible = false; // Hidden by default
+                this.scene.add(this.meshGroup);
+
+                // Materials
+                this.stoneMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xD4C4A8,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide,
+                    roughness: 0.8
+                });
+
+                this.generate();
+            }
+
+            setVisible(visible) {
+                this.meshGroup.visible = visible;
+            }
+
+            setOpacity(opacity) {
+                this.stoneMaterial.opacity = opacity;
+            }
+
+            generate() {
+                // Clear existing
+                while (this.meshGroup.children.length > 0) {
+                    const child = this.meshGroup.children[0];
+                    if (child.geometry) child.geometry.dispose();
+                    this.meshGroup.remove(child);
+                }
+
+                // Dimensions (in meters)
+                const interiorRadius = 2.143;
+                const alcoveWidthWide = 2.116;
+                const alcoveWidthDoor = 1.937;
+                const archRadius = 1.200;
+                const archCenterY = 2.900;
+                const archApex = archCenterY + archRadius; // 4.1m
+                const corniceOffset = 0.250;
+                const corniceHeight = 0.250;
+                const corniceProtrusion = 0.250;
+                const oculusHeight = 6.116;
+
+                // Cornice bottom starts at archApex + corniceOffset
+                const corniceBottom = archApex + corniceOffset;
+                const corniceTop = corniceBottom + corniceHeight;
+
+                // Dome starts at corniceTop, apex at oculusHeight
+                const domeBaseY = corniceTop;
+                const domeRadius = interiorRadius + corniceProtrusion;
+
+                // --- CYLINDRICAL INTERIOR WALL ---
+                const wallGeo = new THREE.CylinderGeometry(
+                    interiorRadius, interiorRadius, corniceBottom, 64, 1, true
+                );
+                const wall = new THREE.Mesh(wallGeo, this.stoneMaterial);
+                wall.position.y = corniceBottom / 2;
+                this.meshGroup.add(wall);
+
+                // --- CORNICE (Ring) ---
+                const corniceGeo = new THREE.CylinderGeometry(
+                    interiorRadius + corniceProtrusion,
+                    interiorRadius,
+                    corniceHeight,
+                    64, 1, true
+                );
+                const cornice = new THREE.Mesh(corniceGeo, this.stoneMaterial);
+                cornice.position.y = corniceBottom + corniceHeight / 2;
+                this.meshGroup.add(cornice);
+
+                // --- DOME WITH OCULUS ---
+                const oculusRadius = 0.4;
+                const domeGeo = new THREE.SphereGeometry(
+                    domeRadius,
+                    64, 32,
+                    0, Math.PI * 2,
+                    0, Math.PI / 2 * 0.85
+                );
+                const dome = new THREE.Mesh(domeGeo, this.stoneMaterial);
+                dome.position.y = domeBaseY;
+                this.meshGroup.add(dome);
+
+                // Oculus ring
+                const oculusRingGeo = new THREE.TorusGeometry(oculusRadius, 0.05, 8, 32);
+                const oculusRing = new THREE.Mesh(oculusRingGeo, this.stoneMaterial);
+                oculusRing.rotation.x = Math.PI / 2;
+                oculusRing.position.y = oculusHeight;
+                this.meshGroup.add(oculusRing);
+
+                // --- ALCOVE ARCHES (4 cardinal directions) ---
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i * Math.PI / 2);
+                    const alcoveGroup = this.createAlcoveArch(
+                        alcoveWidthDoor, archRadius, archCenterY, interiorRadius
+                    );
+                    alcoveGroup.rotation.y = angle;
+                    this.meshGroup.add(alcoveGroup);
+                }
+
+                // --- FLOOR ---
+                const floorGeo = new THREE.CircleGeometry(interiorRadius, 64);
+                const floor = new THREE.Mesh(floorGeo, this.stoneMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = 0.001;
+                this.meshGroup.add(floor);
+            }
+
+            createAlcoveArch(widthDoor, archR, archCY, wallRadius) {
+                const group = new THREE.Group();
+                const halfW = widthDoor / 2;
+
+                // Create arch shape
+                const shape = new THREE.Shape();
+                shape.moveTo(-halfW, 0);
+                shape.lineTo(-halfW, archCY);
+
+                // Arc from left to right
+                const segments = 32;
+                for (let i = 0; i <= segments; i++) {
+                    const t = i / segments;
+                    const angle = Math.PI - t * Math.PI;
+                    const x = archR * Math.cos(angle);
+                    const y = archCY + archR * Math.sin(angle);
+                    if (Math.abs(x) <= halfW) {
+                        shape.lineTo(x, y);
+                    }
+                }
+
+                shape.lineTo(halfW, archCY);
+                shape.lineTo(halfW, 0);
+                shape.closePath();
+
+                // Extrude as thin frame
+                const frameThickness = 0.08;
+                const extrudeSettings = { depth: frameThickness, bevelEnabled: false };
+                const archGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+                const archMesh = new THREE.Mesh(archGeo, this.stoneMaterial);
+                archMesh.position.z = wallRadius - frameThickness / 2;
+                archMesh.rotation.y = Math.PI;
+
+                group.add(archMesh);
+                return group;
+            }
+        }
+
         // --- APP INIT ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
@@ -1519,6 +1672,7 @@
         scene.add(gridHelper);
 
         const door = new Door(scene);
+        const vestibule = new Vestibule(scene);
 
         // --- INTERACTION ---
         const raycaster = new THREE.Raycaster();
@@ -1686,6 +1840,19 @@
         hardFolder.add(door.config, 'openAngle', 0, 90).name('Open Angle').onChange(() => door.generate());
         hardFolder.add(door.config, 'hingeType', ['None', 'Butt', 'Strap']).name('Hinge Type').onChange(() => door.generate());
         hardFolder.add(door.config, 'hingeSide', ['Front', 'Back']).name('Hinge Face').onChange(() => door.generate());
+
+        // --- CONTEXT VISUALIZATION ---
+        const contextFolder = gui.addFolder('Context');
+        const contextState = {
+            showVestibule: false,
+            opacity: 0.3
+        };
+        contextFolder.add(contextState, 'showVestibule').name('Show Vestibule').onChange((v) => {
+            vestibule.setVisible(v);
+        });
+        contextFolder.add(contextState, 'opacity', 0.1, 0.6).name('Opacity').onChange((v) => {
+            vestibule.setOpacity(v);
+        });
 
         const panelFolder = gui.addFolder('Panel Heights (mm)');
         const rowHeightControllers = [];
