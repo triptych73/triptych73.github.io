@@ -331,16 +331,33 @@
                 if (!user) { alert('Please log in using the link in Project Executive.'); return; }
 
                 try {
-                    // Check if we are updating an existing door (by name check or implicit ID?)
-                    // For now, simpler to just add new versions or allow overwrite if ID known.
-                    // Let's just Add new.
-                    await firebase.firestore().collection('doors').add({
-                        uid: user.uid,
-                        name: name || 'Untitled Door',
-                        config: config,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    alert('Configuration Saved!');
+                    const designName = name || 'Untitled Door';
+
+                    // Check if a design with this name already exists for this user
+                    const existingQuery = await firebase.firestore().collection('doors')
+                        .where('uid', '==', user.uid)
+                        .where('name', '==', designName)
+                        .limit(1)
+                        .get();
+
+                    if (!existingQuery.empty) {
+                        // Update existing document
+                        const existingDoc = existingQuery.docs[0];
+                        await existingDoc.ref.update({
+                            config: config,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        alert('Design Updated!');
+                    } else {
+                        // Create new document
+                        await firebase.firestore().collection('doors').add({
+                            uid: user.uid,
+                            name: designName,
+                            config: config,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        alert('Design Saved!');
+                    }
                     return true;
                 } catch (e) {
                     console.error(e);
