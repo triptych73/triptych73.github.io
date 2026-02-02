@@ -1487,7 +1487,7 @@
         }
 
         // ------------------------------------------------------------------
-        // VESTIBULE CONTEXT VISUALIZATION (Subtractive Approach)
+        // VESTIBULE CONTEXT VISUALIZATION (Surface-based, no CSG)
         // ------------------------------------------------------------------
         class Vestibule {
             constructor(scene) {
@@ -1496,7 +1496,6 @@
                 this.meshGroup.visible = false;
                 this.scene.add(this.meshGroup);
 
-                // Use DoubleSide so geometry is visible from both inside and outside
                 this.stoneMaterial = new THREE.MeshStandardMaterial({
                     color: 0xD4C4A8,
                     transparent: true,
@@ -1534,19 +1533,22 @@
                 }
 
                 // === DIMENSIONS (meters) ===
-                const extSize = 6.120;          // Square exterior
-                const extHalf = extSize / 2;    // 3.06m
-                const height = 10.0;            // Total height
-                const intRadius = 2.143;        // Interior cylinder radius
-                const alcoveWidth = 1.937;      // Door opening width
-                const alcoveDepth = 0.95;       // Alcove depth into wall
+                const extSize = 6.120;
+                const extHalf = extSize / 2;
+                const height = 10.0;
+                const intRadius = 2.143;
+                const alcoveWidth = 1.937;
+                const alcoveDepth = 0.95;
                 const archRadius = 1.200;
                 const archCenterY = 2.900;
-                const archApex = archCenterY + archRadius; // ~4.1m
-                const corniceY = archApex + 0.250;         // Cornice starts here
+                const archApex = archCenterY + archRadius;
+                const corniceY = archApex + 0.250;
                 const corniceHeight = 0.250;
                 const corniceProtrusion = 0.250;
                 const oculusRadius = 0.5;
+
+                // Calculate angular width of alcove opening on cylinder
+                const alcoveHalfAngle = Math.asin((alcoveWidth / 2) / intRadius);
 
                 // === OUTER SOLID BLOCK ===
                 const outerGeo = new THREE.BoxGeometry(extSize, height, extSize);
@@ -1554,19 +1556,27 @@
                 outer.position.y = height / 2;
                 this.meshGroup.add(outer);
 
-                // === CYLINDRICAL INTERIOR CAVITY ===
-                // Cylinder from floor to cornice (carved out space)
-                const cylHeight = corniceY;
-                const cylGeo = new THREE.CylinderGeometry(intRadius, intRadius, cylHeight, 64, 1, true);
-                const cylinder = new THREE.Mesh(cylGeo, this.stoneMaterial);
-                cylinder.position.y = cylHeight / 2;
-                this.meshGroup.add(cylinder);
+                // === CYLINDER WALL SEGMENTS (4 arcs between alcoves) ===
+                // Each segment spans from one alcove edge to the next
+                const segmentAngle = (Math.PI / 2) - (2 * alcoveHalfAngle);
+
+                for (let i = 0; i < 4; i++) {
+                    const baseAngle = i * Math.PI / 2;
+                    const startAngle = baseAngle + alcoveHalfAngle;
+
+                    const segGeo = new THREE.CylinderGeometry(
+                        intRadius, intRadius, corniceY, 32, 1, true,
+                        startAngle, segmentAngle
+                    );
+                    const seg = new THREE.Mesh(segGeo, this.stoneMaterial);
+                    seg.position.y = corniceY / 2;
+                    this.meshGroup.add(seg);
+                }
 
                 // === ALCOVE TUNNELS (4 directions) ===
-                // Each alcove extends OUTWARD from cylinder wall INTO the stone mass
                 for (let i = 0; i < 4; i++) {
-                    const alcove = this.createAlcoveTunnel(
-                        alcoveWidth, alcoveDepth, archRadius, archCenterY, intRadius
+                    const alcove = this.createAlcoveWalls(
+                        alcoveWidth, alcoveDepth, archRadius, archCenterY, intRadius, extHalf
                     );
                     alcove.rotation.y = i * Math.PI / 2;
                     this.meshGroup.add(alcove);
@@ -1616,42 +1626,75 @@
                 this.meshGroup.add(floor);
             }
 
-            createAlcoveTunnel(width, depth, archR, archCY, wallRadius) {
+            createAlcoveWalls(width, depth, archR, archCY, wallRadius, extHalf) {
                 const group = new THREE.Group();
                 const halfW = width / 2;
+                const archApex = archCY + archR;
 
-                // Alcove shape (arch-topped rectangle)
-                const shape = new THREE.Shape();
-                shape.moveTo(-halfW, 0);
-                shape.lineTo(-halfW, archCY);
+                // Alcove extends from cylinder wall (at wallRadius) outward
+                // to exterior wall (at extHalf)
+                const actualDepth = extHalf - wallRadius;
 
-                // Arc for arch top
+                // === LEFT SIDE WALL ===
+                const leftShape = new THREE.Shape();
+                leftShape.moveTo(0, 0);
+                leftShape.lineTo(0, archApex);
+                leftShape.lineTo(actualDepth, archApex);
+                leftShape.lineTo(actualDepth, 0);
+                leftShape.closePath();
+
+                const leftGeo = new THREE.ShapeGeometry(leftShape);
+                const leftWall = new THREE.Mesh(leftGeo, this.stoneMaterial);
+                leftWall.rotation.y = Math.PI / 2;
+                leftWall.position.set(-halfW, 0, wallRadius);
+                group.add(leftWall);
+
+                // === RIGHT SIDE WALL ===
+                const rightGeo = new THREE.ShapeGeometry(leftShape);
+                const rightWall = new THREE.Mesh(rightGeo, this.stoneMaterial);
+                rightWall.rotation.y = -Math.PI / 2;
+                rightWall.position.set(halfW, 0, wallRadius + actualDepth);
+                group.add(rightWall);
+
+                // === BACK WALL (at exterior) ===
+                const backShape = new THREE.Shape();
+                backShape.moveTo(-halfW, 0);
+                backShape.lineTo(-halfW, archCY);
+
+                // Arch
                 const segments = 24;
                 for (let i = 0; i <= segments; i++) {
                     const t = i / segments;
                     const angle = Math.PI - t * Math.PI;
                     const x = Math.min(halfW, archR) * Math.cos(angle);
                     const y = archCY + archR * Math.sin(angle);
-                    shape.lineTo(x, y);
+                    backShape.lineTo(x, y);
                 }
 
-                shape.lineTo(halfW, archCY);
-                shape.lineTo(halfW, 0);
-                shape.closePath();
+                backShape.lineTo(halfW, archCY);
+                backShape.lineTo(halfW, 0);
+                backShape.closePath();
 
-                // Extrude OUTWARD from cylinder wall into the stone mass
-                const extrudeSettings = {
-                    depth: depth,
-                    bevelEnabled: false
-                };
-                const tunnelGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                const backGeo = new THREE.ShapeGeometry(backShape);
+                const backWall = new THREE.Mesh(backGeo, this.stoneMaterial);
+                backWall.position.z = extHalf;
+                group.add(backWall);
 
-                const tunnel = new THREE.Mesh(tunnelGeo, this.stoneMaterial);
-                // Shape at z=0, extrudes toward +z
-                // Position so shape starts at cylinder surface and goes outward
-                tunnel.position.z = wallRadius;
+                // === CEILING (arch-shaped top) ===
+                // Create arch ceiling as extruded path
+                const archPath = new THREE.Shape();
+                archPath.moveTo(-halfW, wallRadius);
+                archPath.lineTo(-halfW, extHalf);
+                archPath.lineTo(halfW, extHalf);
+                archPath.lineTo(halfW, wallRadius);
+                archPath.closePath();
 
-                group.add(tunnel);
+                const ceilGeo = new THREE.ShapeGeometry(archPath);
+                const ceil = new THREE.Mesh(ceilGeo, this.stoneMaterial);
+                ceil.rotation.x = -Math.PI / 2;
+                ceil.position.y = archApex;
+                group.add(ceil);
+
                 return group;
             }
         }
