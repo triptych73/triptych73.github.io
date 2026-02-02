@@ -1547,8 +1547,13 @@
                 const corniceProtrusion = 0.250;
                 const oculusRadius = 0.5;
 
+
                 // Calculate angular width of alcove opening on cylinder
+                // Chord length w = 2*R*sin(theta/2) => theta/2 = asin(w/2R)
                 const alcoveHalfAngle = Math.asin((alcoveWidth / 2) / intRadius);
+
+                // Calculate z-depth where the alcove walls should start (at the chord line)
+                const zStart = Math.sqrt(intRadius * intRadius - (alcoveWidth / 2) * (alcoveWidth / 2));
 
                 // === OUTER SOLID BLOCK ===
                 const outerGeo = new THREE.BoxGeometry(extSize, height, extSize);
@@ -1576,7 +1581,7 @@
                 // === ALCOVE TUNNELS (4 directions) ===
                 for (let i = 0; i < 4; i++) {
                     const alcove = this.createAlcoveWalls(
-                        alcoveWidth, alcoveDepth, archRadius, archCenterY, intRadius, extHalf
+                        alcoveWidth, archRadius, archCenterY, zStart, extHalf
                     );
                     alcove.rotation.y = i * Math.PI / 2;
                     this.meshGroup.add(alcove);
@@ -1626,34 +1631,35 @@
                 this.meshGroup.add(floor);
             }
 
-            createAlcoveWalls(width, depth, archR, archCY, wallRadius, extHalf) {
+            createAlcoveWalls(width, archR, archCY, zStart, extHalf) {
                 const group = new THREE.Group();
                 const halfW = width / 2;
-                const archApex = archCY + archR;
 
-                // Alcove extends from cylinder wall (at wallRadius) outward
-                // to exterior wall (at extHalf)
-                const actualDepth = extHalf - wallRadius;
+                // Actual depth from cylinder chord to exterior
+                const actualDepth = extHalf - zStart;
 
-                // === LEFT SIDE WALL ===
-                const leftShape = new THREE.Shape();
-                leftShape.moveTo(0, 0);
-                leftShape.lineTo(0, archApex);
-                leftShape.lineTo(actualDepth, archApex);
-                leftShape.lineTo(actualDepth, 0);
-                leftShape.closePath();
+                // === SIDE WALLS SHAPE ===
+                // Rectangular up to the spring line (archCY)
+                const sideShape = new THREE.Shape();
+                sideShape.moveTo(0, 0);
+                sideShape.lineTo(0, archCY);
+                sideShape.lineTo(actualDepth, archCY);
+                sideShape.lineTo(actualDepth, 0);
+                sideShape.closePath();
+                const sideGeo = new THREE.ShapeGeometry(sideShape);
 
-                const leftGeo = new THREE.ShapeGeometry(leftShape);
-                const leftWall = new THREE.Mesh(leftGeo, this.stoneMaterial);
+                // Left Wall (-halfW)
+                const leftWall = new THREE.Mesh(sideGeo, this.stoneMaterial);
                 leftWall.rotation.y = Math.PI / 2;
-                leftWall.position.set(-halfW, 0, wallRadius);
+                leftWall.position.set(-halfW, 0, zStart);
                 group.add(leftWall);
 
-                // === RIGHT SIDE WALL ===
-                const rightGeo = new THREE.ShapeGeometry(leftShape);
-                const rightWall = new THREE.Mesh(rightGeo, this.stoneMaterial);
-                rightWall.rotation.y = -Math.PI / 2;
-                rightWall.position.set(halfW, 0, wallRadius + actualDepth);
+                // Right Wall (+halfW)
+                const rightWall = new THREE.Mesh(sideGeo, this.stoneMaterial);
+                rightWall.rotation.y = -Math.PI / 2; // Face inwards
+                // Check normal direction: usually DoubleSide handles visibility, 
+                // but standard rotation makes Right Wall face -X which is "inwards" to alcove.
+                rightWall.position.set(halfW, 0, zStart + actualDepth);
                 group.add(rightWall);
 
                 // === BACK WALL (at exterior) ===
@@ -1661,12 +1667,13 @@
                 backShape.moveTo(-halfW, 0);
                 backShape.lineTo(-halfW, archCY);
 
-                // Arch
+                // Arch top
                 const segments = 24;
                 for (let i = 0; i <= segments; i++) {
                     const t = i / segments;
                     const angle = Math.PI - t * Math.PI;
-                    const x = Math.min(halfW, archR) * Math.cos(angle);
+                    // Elliptical arc matching barrel vault
+                    const x = halfW * Math.cos(angle);
                     const y = archCY + archR * Math.sin(angle);
                     backShape.lineTo(x, y);
                 }
@@ -1680,20 +1687,21 @@
                 backWall.position.z = extHalf;
                 group.add(backWall);
 
-                // === CEILING (arch-shaped top) ===
-                // Create arch ceiling as extruded path
-                const archPath = new THREE.Shape();
-                archPath.moveTo(-halfW, wallRadius);
-                archPath.lineTo(-halfW, extHalf);
-                archPath.lineTo(halfW, extHalf);
-                archPath.lineTo(halfW, wallRadius);
-                archPath.closePath();
+                // === CEILING VAULT (Elliptical Barrel Vault) ===
+                // Half-cylinder from Right to Left
+                const vaultGeo = new THREE.CylinderGeometry(1, 1, actualDepth, 32, 1, true, 0, Math.PI);
+                const vault = new THREE.Mesh(vaultGeo, this.stoneMaterial);
 
-                const ceilGeo = new THREE.ShapeGeometry(archPath);
-                const ceil = new THREE.Mesh(ceilGeo, this.stoneMaterial);
-                ceil.rotation.x = -Math.PI / 2;
-                ceil.position.y = archApex;
-                group.add(ceil);
+                // Rotate to align with Z axis
+                vault.rotation.x = -Math.PI / 2;
+
+                // Scale to elliptical shape (Width=halfW, Height=archR)
+                vault.scale.set(halfW, archR, 1);
+
+                // Position
+                vault.position.set(0, archCY, zStart + actualDepth / 2);
+
+                group.add(vault);
 
                 return group;
             }
