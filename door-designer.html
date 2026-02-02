@@ -1563,7 +1563,7 @@
                 this.meshGroup.add(cylinder);
 
                 // === ALCOVE TUNNELS (4 directions) ===
-                // Each alcove extends from cylinder wall outward
+                // Each alcove extends INWARD from cylinder wall toward center
                 for (let i = 0; i < 4; i++) {
                     const alcove = this.createAlcoveTunnel(
                         alcoveWidth, alcoveDepth, archRadius, archCenterY, intRadius
@@ -1589,29 +1589,25 @@
                 ledgeBottom.position.y = corniceY;
                 this.meshGroup.add(ledgeBottom);
 
-                // === DOME CAVITY (sliced hemisphere) ===
+                // === DOME (hemisphere with flat oculus slice) ===
                 const domeBaseY = corniceY + corniceHeight;
                 const domeRadius = corniceInnerR;
-                // Calculate how much of hemisphere to show based on oculus height
-                const domeHeight = oculusHeight - domeBaseY;
-                const phiMax = Math.asin(domeHeight / domeRadius);
 
+                // Full hemisphere (phi from 0 to PI/2)
                 const domeGeo = new THREE.SphereGeometry(
                     domeRadius, 64, 32,
                     0, Math.PI * 2,
-                    0, Math.min(phiMax, Math.PI / 2)
+                    0, Math.PI / 2  // Full hemisphere
                 );
                 const dome = new THREE.Mesh(domeGeo, this.stoneMaterial);
                 dome.position.y = domeBaseY;
                 this.meshGroup.add(dome);
 
-                // Oculus opening (flat disc at slice)
-                const sliceY = domeBaseY + domeHeight;
-                const sliceRadius = Math.sqrt(domeRadius * domeRadius - domeHeight * domeHeight);
-                const oculusGeo = new THREE.RingGeometry(0, Math.max(sliceRadius, oculusRadius), 32);
+                // Oculus opening (flat disc at top of dome)
+                const oculusGeo = new THREE.CircleGeometry(oculusRadius, 32);
                 const oculusDisc = new THREE.Mesh(oculusGeo, this.stoneMaterial);
                 oculusDisc.rotation.x = -Math.PI / 2;
-                oculusDisc.position.y = sliceY;
+                oculusDisc.position.y = domeBaseY + domeRadius; // Top of hemisphere
                 this.meshGroup.add(oculusDisc);
 
                 // === FLOOR ===
@@ -1645,7 +1641,7 @@
                 shape.lineTo(halfW, 0);
                 shape.closePath();
 
-                // Extrude outward from cylinder wall
+                // Extrude INWARD toward center (negative z after rotation)
                 const extrudeSettings = {
                     depth: depth,
                     bevelEnabled: false
@@ -1653,8 +1649,9 @@
                 const tunnelGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
 
                 const tunnel = new THREE.Mesh(tunnelGeo, this.stoneMaterial);
-                // Position at cylinder surface, facing outward
-                tunnel.position.z = wallRadius;
+                // Position at cylinder surface, extrude goes in +z, so place at wallRadius
+                // Shape sits at z=0, extrudes to z=depth, so we position at wallRadius-depth
+                tunnel.position.z = wallRadius - depth;
 
                 group.add(tunnel);
                 return group;
