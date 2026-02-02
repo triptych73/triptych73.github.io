@@ -1553,6 +1553,9 @@
                     door.generate();
                     // Update all GUI controllers to reflect new config
                     gui.folders.forEach(f => f.controllers.forEach(c => c.updateDisplay()));
+                    // Rebuild panel height GUI because array reference changed
+                    if (typeof rebuildPanelGUI === 'function') rebuildPanelGUI();
+
                     // Dimensions and Style are main ones
                     // Special handling for panels if needed
                     console.log("Loaded Config:", newConfig);
