@@ -2603,7 +2603,45 @@
                                 </div>
                             </div>
 
-                            <Card title="Detailed Breakdown (By Assignment)">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6" id="breakdown-print-area">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-lg font-semibold text-gray-800">Detailed Breakdown (By Assignment)</h3>
+                                    <button
+                                        onClick={() => {
+                                            const printArea = document.getElementById('breakdown-print-area');
+                                            const printWindow = window.open('', '_blank');
+                                            printWindow.document.write(`
+                                                <html><head><title>Deed Assignment Breakdown</title>
+                                                <style>
+                                                    body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; }
+                                                    .border { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+                                                    .bg-blue-50 { background: #eff6ff; padding: 12px 16px; border-bottom: 1px solid #bfdbfe; }
+                                                    .bg-red-50 { background: #fef2f2; padding: 12px 16px; border-bottom: 1px solid #fecaca; }
+                                                    .bg-gray-50 { background: #f9fafb; padding: 8px 16px; }
+                                                    .font-bold { font-weight: 600; }
+                                                    .text-blue-800 { color: #1e40af; }
+                                                    .text-red-800 { color: #991b1b; }
+                                                    .text-xs { font-size: 12px; }
+                                                    .text-sm { font-size: 14px; }
+                                                    .flex { display: flex; justify-content: space-between; align-items: center; }
+                                                    .px-4 { padding-left: 16px; padding-right: 16px; }
+                                                    .py-2 { padding-top: 8px; padding-bottom: 8px; }
+                                                    .font-mono { font-family: monospace; }
+                                                    .text-red-600 { color: #dc2626; }
+                                                    h3 { display: none; }
+                                                    button { display: none; }
+                                                </style>
+                                                </head><body>${printArea.innerHTML}</body></html>
+                                            `);
+                                            printWindow.document.close();
+                                            printWindow.print();
+                                        }}
+                                        className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded border border-gray-200 hover:border-gray-400 transition-colors print:hidden"
+                                        title="Print breakdown"
+                                    >
+                                        🖨️ Print
+                                    </button>
+                                </div>
                                 <div className="space-y-8">
                                     {/* DEED GROUPS */}
                                     {allocation.deedBuckets.map(bucket => {
@@ -2729,7 +2767,7 @@
                                         </div>
                                     </div>
                                 </div>
-                            </Card>
+                            </div>
 
                             {showMath && <MathWalkthrough calc={calculations} inputs={{ salePrice, devCosts, saleYear, deathYear, loans: activeLoans, insurance, allocation, areSharesOwnedByHeirs }} getTaper={getTaperRate} />}
 
