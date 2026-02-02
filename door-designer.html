@@ -1636,7 +1636,7 @@
         const archFolder = gui.addFolder('Arch');
         archFolder.add(door.config, 'hasArch').name('Enable Arch').onChange(() => door.generate());
         archFolder.add(door.config, 'archRadius', 500, 3000).name('Radius (mm)').onChange(() => door.generate());
-        archFolder.add(door.config, 'archCenterY', 500, 2500).name('Center Y (mm)').onChange(() => door.generate());
+        archFolder.add(door.config, 'archCenterY', 500, 3000).name('Center Y (mm)').onChange(() => door.generate());
 
         const styleFolder = gui.addFolder('Style');
         styleFolder.add(door.config, 'isDoubleLeaf').name('Double Leaf').onChange(() => door.generate());
@@ -1663,7 +1663,7 @@
             rowHeightControllers.forEach(c => c.destroy());
             rowHeightControllers.length = 0;
             door.config.panelRowHeights.forEach((h, i) => {
-                const ctrl = panelFolder.add(door.config.panelRowHeights, i, 100, 800, 10).name(`Row ${i + 1}`).onChange(() => door.generate());
+                const ctrl = panelFolder.add(door.config.panelRowHeights, i, 100, 1000, 10).name(`Row ${i + 1}`).onChange(() => door.generate());
                 rowHeightControllers.push(ctrl);
             });
         }
