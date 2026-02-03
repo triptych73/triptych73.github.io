@@ -1436,18 +1436,18 @@
             });
 
             // --- ROOM CLICK HANDLERS FOR TOGGLE CONTROL ---
-            // Room to device address mapping for control
+            // Room to device address mapping for control (must match helvar_bridge.py DEVICE_MAP)
             const roomDeviceMap = {
-                'R11': { subnet: 1, addrs: [11] },
-                'R12': { subnet: 1, addrs: [18] },
-                'R13': { subnet: 1, addrs: [28] },
-                'R21': { subnet: 1, addrs: [12] },
-                'R41': { subnet: 1, addrs: [13] },
-                'R42': { subnet: 1, addrs: [14] },
-                'R51': { subnet: 1, addrs: [19] },
-                'R52': { subnet: 1, addrs: [20] },
-                'R61': { subnet: 1, addrs: [21] },
-                'R62': { subnet: 1, addrs: [22] }
+                'R11': { subnet: 1, addrs: [11] },     // R11 Relay
+                'R12': { subnet: 1, addrs: [18] },     // R12 Dimmer
+                'R13': { subnet: 1, addrs: [28] },     // R13 Dimmer
+                'R21': { subnet: 1, addrs: [22] },     // R21 Relay
+                'R41': { subnet: 1, addrs: [21] },     // R41 Relay
+                'R42': { subnet: 1, addrs: [14] },     // R42 Relay
+                'R51': { subnet: 1, addrs: [20] },     // R51 Relay
+                'R52': { subnet: 1, addrs: [12] },     // R52 Relay
+                'R61': { subnet: 1, addrs: [19] },     // R61 Relay
+                'R62': { subnet: 1, addrs: [] }        // No device assigned yet
             };
 
             roomIds.forEach(roomId => {
