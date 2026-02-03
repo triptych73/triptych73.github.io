@@ -367,49 +367,46 @@
                             </div>
 
                             <!-- Building Section Grid -->
-                            <div class="flex-1 grid grid-cols-2 grid-rows-6 gap-0.5 p-0.5">
+                            <div class="flex-1 grid grid-cols-2 grid-rows-5 gap-0.5 p-0.5">
                                 <!-- Level 6 -->
-                                <div id="room-r62"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
+                                <div id="room-r62" data-room="R62"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R62</div>
-                                <div id="room-r61"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
+                                <div id="room-r61" data-room="R61"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R61</div>
 
                                 <!-- Level 5 -->
-                                <div id="room-r52"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
+                                <div id="room-r52" data-room="R52"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R52</div>
-                                <div id="room-r51"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
+                                <div id="room-r51" data-room="R51"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R51</div>
 
                                 <!-- Level 4 -->
-                                <div id="room-r42"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
+                                <div id="room-r42" data-room="R42"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R42</div>
-                                <div id="room-r41"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
+                                <div id="room-r41" data-room="R41"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R41</div>
 
-                                <!-- Level 3 -->
-                                <!-- R13 Spans 3 Rows (Lev 3, 2, 1) on Left -->
-                                <div id="room-r13"
-                                    class="row-span-3 bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
+                                <!-- Level 3 / 2 -->
+                                <div id="room-r13" data-room="R13"
+                                    class="row-span-2 bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R13</div>
-                                <div id="room-r31"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
-                                    R31</div>
-
-                                <!-- Level 2 -->
-                                <div id="room-r21"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
+                                <div id="room-r21" data-room="R21"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R21</div>
 
                                 <!-- Level 1 -->
-                                <div id="room-r11-12"
-                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
-                                    R11,R12</div>
+                                <div id="room-r12" data-room="R12"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
+                                    R12</div>
+                                <div id="room-r11" data-room="R11"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
+                                    R11</div>
                             </div>
                         </div>
 
@@ -1330,13 +1327,13 @@
             }
             if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
 
-            // Room Mapping Logic
+            // Room Mapping Logic (Updated: R11/R12 separate, R31 removed)
             const roomIds = [
                 'room-r62', 'room-r61',
                 'room-r52', 'room-r51',
                 'room-r42', 'room-r41',
-                'room-r31', 'room-r21',
-                'room-r13', 'room-r11-12'
+                'room-r13', 'room-r21',
+                'room-r12', 'room-r11'
             ];
 
             db.collection('helvar_devices').orderBy('addr').onSnapshot(snapshot => {
@@ -1383,7 +1380,7 @@
                         const addr = d.addr;
 
                         // Address-based mapping (mini switch interfaces)
-                        if (addr === 60) { activeRooms.add('room-r11-12'); activeRooms.add('room-r21'); }
+                        if (addr === 60) { activeRooms.add('room-r11'); activeRooms.add('room-r21'); }
                         if (addr === 61) { activeRooms.add('room-r51'); activeRooms.add('room-r52'); }
                         if (addr === 62) { activeRooms.add('room-r61'); activeRooms.add('room-r62'); }
                         if (addr === 63) { activeRooms.add('room-r41'); activeRooms.add('room-r42'); }
@@ -1395,10 +1392,10 @@
                         if (name.includes("R51")) activeRooms.add('room-r51');
                         if (name.includes("R42") || name.includes("R43")) activeRooms.add('room-r42');
                         if (name.includes("R41")) activeRooms.add('room-r41');
-                        if (name.includes("R31")) activeRooms.add('room-r31');
                         if (name.includes("R21")) activeRooms.add('room-r21');
                         if (name.includes("R13")) activeRooms.add('room-r13');
-                        if (name.includes("R11") || name.includes("R12")) activeRooms.add('room-r11-12');
+                        if (name.includes("R12")) activeRooms.add('room-r12');
+                        if (name.includes("R11")) activeRooms.add('room-r11');
                     }
                 });
 
@@ -1413,8 +1410,8 @@
                             // Active State
                             el.className = el.className.replace('bg-white/5', 'bg-bronze').replace('text-white/20', 'text-white shadow-lg shadow-bronze/20 scale-[1.02]');
                             if (id === 'room-r13') {
-                                // Keep row-span class (NOW 3)
-                                if (!el.classList.contains('row-span-3')) el.classList.add('row-span-3');
+                                // Keep row-span class (now 2)
+                                if (!el.classList.contains('row-span-2')) el.classList.add('row-span-2');
                             }
                         } else {
                             // Inactive State
@@ -1432,6 +1429,62 @@
                     activeCountDisp.innerText = "AUTH ERR";
                     activeCountDisp.classList.add('text-alert');
                 }
+            });
+
+            // --- ROOM CLICK HANDLERS FOR TOGGLE CONTROL ---
+            // Room to device address mapping for control
+            const roomDeviceMap = {
+                'R11': { subnet: 1, addrs: [9, 11] },    // R11 Light + Relay
+                'R12': { subnet: 1, addrs: [1, 12] },    // R12 Dimmer + Relay
+                'R13': { subnet: 1, addrs: [28, 13] },   // R13 Dimmer + Relay
+                'R21': { subnet: 1, addrs: [6, 14] },    // R21 Light + Relay
+                'R41': { subnet: 1, addrs: [16] },
+                'R42': { subnet: 1, addrs: [17] },
+                'R51': { subnet: 1, addrs: [18] },
+                'R52': { subnet: 1, addrs: [19] },
+                'R61': { subnet: 1, addrs: [20] },
+                'R62': { subnet: 1, addrs: [21, 22] }
+            };
+
+            roomIds.forEach(roomId => {
+                const el = document.getElementById(roomId);
+                if (!el) return;
+
+                el.addEventListener('click', async () => {
+                    const roomCode = el.dataset.room;
+                    if (!roomCode || !roomDeviceMap[roomCode]) {
+                        console.log('No control mapping for', roomCode);
+                        return;
+                    }
+
+                    // Determine current state from visual
+                    const isCurrentlyOn = el.classList.contains('bg-bronze');
+                    const newState = isCurrentlyOn ? 'OFF' : 'ON';
+
+                    // Visual feedback
+                    el.classList.add('animate-pulse');
+
+                    // Write command to Firestore (bridge will pick it up)
+                    const mapping = roomDeviceMap[roomCode];
+                    for (const addr of mapping.addrs) {
+                        try {
+                            await db.collection('helvar_commands').add({
+                                subnet: mapping.subnet,
+                                addr: addr,
+                                state: newState,
+                                level: newState === 'ON' ? 100 : 0,
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                                room: roomCode
+                            });
+                            console.log(`📤 Sent ${newState} command to ${mapping.subnet}.${addr}`);
+                        } catch (e) {
+                            console.error('Command write failed:', e);
+                        }
+                    }
+
+                    // Remove pulse after short delay
+                    setTimeout(() => el.classList.remove('animate-pulse'), 500);
+                });
             });
 
         }
