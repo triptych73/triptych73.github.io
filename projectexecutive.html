@@ -322,7 +322,7 @@
 
                             <!-- Visual Shaft -->
                             <div
-                                class="w-16 h-32 bg-white/5 rounded relative border border-white/10 ml-4 flex flex-col-reverse justify-between pt-2 pb-2 items-center">
+                                class="w-16 h-36 bg-white/5 rounded relative border border-white/10 ml-4 flex flex-col-reverse justify-between pt-4 pb-2 items-center">
                                 <!-- Floors Indicators -->
                                 <div class="w-full h-px bg-white/10 relative group"><span
                                         class="absolute right-full mr-1 text-[8px] text-white/20 hidden group-hover:block">L0</span>
@@ -1355,7 +1355,8 @@
                 snapshot.docs.forEach(doc => {
                     const d = doc.data();
                     const level = d.level || 0;
-                    const isOn = level > 0;  // Simplified: just check level, state field may be missing on initial sync
+                    const state = level > 0 ? 'ON' : 'OFF';  // Derive state from level
+                    const isOn = level > 0;
 
                     if (isOn) activeDevCount++;
 
