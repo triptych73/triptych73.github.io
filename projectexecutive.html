@@ -410,7 +410,7 @@
                                 <!-- Level 1 -->
                                 <div id="room-r11-12"
                                     class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-colors duration-500">
-                                    R11/12</div>
+                                    R11,R12</div>
                             </div>
                         </div>
 
@@ -1354,9 +1354,8 @@
 
                 snapshot.docs.forEach(doc => {
                     const d = doc.data();
-                    const state = d.state || 'OFF';
                     const level = d.level || 0;
-                    const isOn = (state === 'ON' && level > 0);
+                    const isOn = level > 0;  // Simplified: just check level, state field may be missing on initial sync
 
                     if (isOn) activeDevCount++;
 
