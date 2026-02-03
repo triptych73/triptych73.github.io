@@ -244,8 +244,8 @@
                 </div>
             </div>
 
-            <!-- COL 2 & 3: Active Tools & Docs -->
-            <div class="lg:col-span-2 xl:col-span-2 space-y-6">
+            <!-- COL 2: Active Tools & Widgets -->
+            <div class="lg:col-span-1 xl:col-span-2 space-y-6">
 
                 <!-- Visitor Stats Widget (New) -->
                 <div>
@@ -296,8 +296,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
 
                         <!-- Lift Monitor Widget -->
-                        <div
-                            class="glass-panel p-4 rounded-lg flex items-center justify-between relative overflow-hidden h-40">
+                        <div class="glass-panel p-4 rounded-lg flex items-center justify-between relative h-40">
                             <!-- History Button -->
                             <div class="absolute top-2 left-2 cursor-pointer group z-20" id="view-lift-history-btn">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -322,7 +321,7 @@
 
                             <!-- Visual Shaft -->
                             <div
-                                class="w-16 h-36 bg-white/5 rounded relative border border-white/10 ml-4 flex flex-col-reverse justify-between pt-4 pb-2 items-center">
+                                class="w-14 h-full bg-white/5 rounded relative border border-white/10 ml-4 flex flex-col-reverse justify-between pt-1 pb-1 items-center">
                                 <!-- Floors Indicators -->
                                 <div class="w-full h-px bg-white/10 relative group"><span
                                         class="absolute right-full mr-1 text-[8px] text-white/20 hidden group-hover:block">L0</span>
@@ -1381,7 +1380,15 @@
                     // 2. Map to Rooms for Visualizer
                     if (isOn) {
                         const name = (d.name || "").toUpperCase();
-                        // Naive string matching based on standard naming
+                        const addr = d.addr;
+
+                        // Address-based mapping (mini switch interfaces)
+                        if (addr === 60) { activeRooms.add('room-r11-12'); activeRooms.add('room-r21'); }
+                        if (addr === 61) { activeRooms.add('room-r51'); activeRooms.add('room-r52'); }
+                        if (addr === 62) { activeRooms.add('room-r61'); activeRooms.add('room-r62'); }
+                        if (addr === 63) { activeRooms.add('room-r41'); activeRooms.add('room-r42'); }
+
+                        // Name-based matching (standard devices)
                         if (name.includes("R62") || name.includes("R63")) activeRooms.add('room-r62');
                         if (name.includes("R61")) activeRooms.add('room-r61');
                         if (name.includes("R52") || name.includes("R53")) activeRooms.add('room-r52');
