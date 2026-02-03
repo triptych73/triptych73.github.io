@@ -349,30 +349,71 @@
                         </div>
                     </div>
 
-                    <!-- Lighting Control Widget -->
+                    <!-- Lighting Control Widget (Visual) -->
                     <div class="glass-panel p-4 rounded-lg mt-4 relative overflow-hidden h-64 flex flex-col">
-                        <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center justify-between mb-3">
                             <h3 class="font-mono text-[10px] uppercase tracking-widest text-bronze">Lighting Control
                             </h3>
-                            <div class="text-[9px] text-white/30 font-mono" id="helvar-device-count">0 DEVICES</div>
+
+                            <!-- Header Controls -->
+                            <div class="flex items-center gap-2">
+                                <div class="text-[9px] text-white/30 font-mono" id="helvar-active-count">0 ACTIVE</div>
+                                <button id="view-helvar-list-btn"
+                                    class="p-1 hover:bg-white/10 rounded text-white/40 hover:text-white transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M4 6h16M4 12h16M4 18h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
-                            <table class="w-full text-left border-collapse">
-                                <thead class="sticky top-0 bg-[#1a1a1a] z-10">
-                                    <tr class="text-[9px] text-white/30 uppercase font-mono border-b border-white/10">
-                                        <th class="pb-2 w-10">Addr</th>
-                                        <th class="pb-2">Name</th>
-                                        <th class="pb-2 text-right">Lvl</th>
-                                        <th class="pb-2 text-right w-8">St</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="helvar-table-body" class="text-xs font-mono text-white/70">
-                                    <tr>
-                                        <td colspan="4" class="py-4 text-center text-white/20">Loading...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <!-- Building Section Grid -->
+                        <div class="flex-1 grid grid-cols-2 grid-rows-6 gap-1 p-1">
+                            <!-- Level 6 -->
+                            <div id="room-r62"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R62</div>
+                            <div id="room-r61"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R61</div>
+
+                            <!-- Level 5 -->
+                            <div id="room-r52"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R52</div>
+                            <div id="room-r51"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R51</div>
+
+                            <!-- Level 4 -->
+                            <div id="room-r42"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R42</div>
+                            <div id="room-r41"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R41</div>
+
+                            <!-- Level 3 -->
+                            <!-- R13 Spans 2 Rows (Lev 3 & 2) on Left -->
+                            <div id="room-r13"
+                                class="row-span-2 bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R13</div>
+                            <div id="room-r31"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R31</div>
+
+                            <!-- Level 2 -->
+                            <!-- Left occupied by R13 span -->
+                            <div id="room-r21"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R21</div>
+
+                            <!-- Level 1 -->
+                            <div class="opacity-0"></div> <!-- Void on left -->
+                            <div id="room-r11-12"
+                                class="bg-white/5 rounded flex items-center justify-center text-[10px] text-white/20 font-mono transition-colors duration-500">
+                                R11/12</div>
                         </div>
                     </div>
                 </div>
@@ -1220,48 +1261,107 @@
             };
         }
 
-        // --- HELVAR CONTROL LOGIC (New) ---
+        // --- HELVAR CONTROL LOGIC (Updated) ---
         function initHelvarControl() {
             const db = firebase.firestore();
             const tbody = document.getElementById('helvar-table-body');
-            const countDisp = document.getElementById('helvar-device-count');
+            const activeCountDisp = document.getElementById('helvar-active-count');
+
+            // Modal Controls
+            const modal = document.getElementById('helvar-modal');
+            const openBtn = document.getElementById('view-helvar-list-btn');
+            const closeBtn = document.getElementById('close-helvar-btn');
+
+            if (openBtn) openBtn.addEventListener('click', () => modal.style.display = 'flex');
+            if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
+
+            // Room Mapping Logic
+            const roomIds = [
+                'room-r62', 'room-r61',
+                'room-r52', 'room-r51',
+                'room-r42', 'room-r41',
+                'room-r31', 'room-r21',
+                'room-r13', 'room-r11-12'
+            ];
 
             db.collection('helvar_devices').orderBy('addr').onSnapshot(snapshot => {
                 if (snapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-white/20">No devices found.</td></tr>';
-                    if (countDisp) countDisp.innerText = "0 DEVICES";
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-white/20">No devices found.</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = '';
-                if (countDisp) countDisp.innerText = `${snapshot.size} DEVICES`;
+                if (tbody) tbody.innerHTML = '';
+
+                // Track Active Rooms
+                const activeRooms = new Set();
+                let activeDevCount = 0;
 
                 snapshot.docs.forEach(doc => {
                     const d = doc.data();
-                    const addr = `${d.subnet}.${d.addr}`;
-                    const lvl = d.level >= 0 ? `${d.level}%` : '--';
                     const state = d.state || 'OFF';
+                    const level = d.level || 0;
+                    const isOn = (state === 'ON' && level > 0);
 
-                    // Color logic
-                    let stateClass = "text-white/30";
-                    if (state === 'ON') stateClass = "text-success";
+                    if (isOn) activeDevCount++;
 
-                    const row = document.createElement('tr');
-                    row.className = "border-b border-white/5 hover:bg-white/5 transition-colors group cursor-pointer";
-                    row.innerHTML = `
-                                <td class="py-2 text-white/30">${addr}</td>
-                                <td class="py-2 text-white group-hover:text-bronze transition-colors truncate max-w-[120px]" title="${d.name}">${d.name}</td>
-                                <td class="py-2 text-right">${lvl}</td>
-                                <td class="py-2 text-right ${stateClass}">${state}</td>
-                            `;
+                    // 1. Populate Table
+                    if (tbody) {
+                        const addr = `${d.subnet}.${d.addr}`;
+                        const lvlStr = level >= 0 ? `${level}%` : '--';
+                        let stateClass = "text-white/30";
+                        if (isOn) stateClass = "text-success";
 
-                    // Simple toggle click handler (Optional, maybe for future)
-                    row.addEventListener('click', () => {
-                        // Future: Open detail modal or toggle
-                        console.log("Clicked", d.name);
-                    });
+                        const row = document.createElement('tr');
+                        row.className = "border-b border-white/5 hover:bg-white/5 transition-colors group cursor-pointer";
+                        row.innerHTML = `
+                                    <td class="py-3 pl-6 text-white/30 font-mono">${addr}</td>
+                                    <td class="py-3 text-white group-hover:text-bronze transition-colors font-medium">${d.name}</td>
+                                    <td class="py-3 text-right font-mono">${lvlStr}</td>
+                                    <td class="py-3 text-right pr-6 font-mono ${stateClass}">${state}</td>
+                                `;
+                        tbody.appendChild(row);
+                    }
 
-                    tbody.appendChild(row);
+                    // 2. Map to Rooms for Visualizer
+                    if (isOn) {
+                        const name = (d.name || "").toUpperCase();
+                        // Naive string matching based on standard naming
+                        if (name.includes("R62") || name.includes("R63")) activeRooms.add('room-r62');
+                        if (name.includes("R61")) activeRooms.add('room-r61');
+                        if (name.includes("R52") || name.includes("R53")) activeRooms.add('room-r52');
+                        if (name.includes("R51")) activeRooms.add('room-r51');
+                        if (name.includes("R42") || name.includes("R43")) activeRooms.add('room-r42');
+                        if (name.includes("R41")) activeRooms.add('room-r41');
+                        if (name.includes("R31")) activeRooms.add('room-r31');
+                        if (name.includes("R21")) activeRooms.add('room-r21');
+                        if (name.includes("R13")) activeRooms.add('room-r13');
+                        if (name.includes("R11") || name.includes("R12")) activeRooms.add('room-r11-12');
+                    }
+                });
+
+                // Update Header
+                if (activeCountDisp) activeCountDisp.innerText = `${activeDevCount} ACTIVE`;
+
+                // Update Grid Visuals
+                roomIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        if (activeRooms.has(id)) {
+                            // Active State
+                            el.className = el.className.replace('bg-white/5', 'bg-bronze').replace('text-white/20', 'text-white shadow-lg shadow-bronze/20 scale-[1.02]');
+                            if (id === 'room-r13') {
+                                // Keep row-span class
+                                if (!el.classList.contains('row-span-2')) el.classList.add('row-span-2');
+                            }
+                        } else {
+                            // Inactive State
+                            el.className = el.className.replace('bg-bronze', 'bg-white/5').replace('text-white shadow-lg shadow-bronze/20 scale-[1.02]', 'text-white/20');
+                            // Ensure basic classes are safe
+                            if (!el.classList.contains('bg-white/5')) el.classList.add('bg-white/5');
+                            if (!el.classList.contains('text-white/20')) el.classList.add('text-white/20');
+                            el.classList.remove('scale-[1.02]', 'shadow-lg');
+                        }
+                    }
                 });
             });
         }
