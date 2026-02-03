@@ -348,6 +348,33 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Lighting Control Widget -->
+                    <div class="glass-panel p-4 rounded-lg mt-4 relative overflow-hidden h-64 flex flex-col">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-mono text-[10px] uppercase tracking-widest text-bronze">Lighting Control
+                            </h3>
+                            <div class="text-[9px] text-white/30 font-mono" id="helvar-device-count">0 DEVICES</div>
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="sticky top-0 bg-[#1a1a1a] z-10">
+                                    <tr class="text-[9px] text-white/30 uppercase font-mono border-b border-white/10">
+                                        <th class="pb-2 w-10">Addr</th>
+                                        <th class="pb-2">Name</th>
+                                        <th class="pb-2 text-right">Lvl</th>
+                                        <th class="pb-2 text-right w-8">St</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="helvar-table-body" class="text-xs font-mono text-white/70">
+                                    <tr>
+                                        <td colspan="4" class="py-4 text-center text-white/20">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Active Tools Grid -->
@@ -854,7 +881,10 @@
                         // Initialize Lift Monitor
                         initLiftMonitor();
                         // Initialize Lift History
+                        // Initialize Lift History
                         initLiftHistory();
+                        // Initialize Helvar Control
+                        initHelvarControl();
                     }, 500);
                 } else {
                     // Not Authenticated: Redirect
@@ -1188,6 +1218,52 @@
                 a.click();
                 document.body.removeChild(a);
             };
+        }
+
+        // --- HELVAR CONTROL LOGIC (New) ---
+        function initHelvarControl() {
+            const db = firebase.firestore();
+            const tbody = document.getElementById('helvar-table-body');
+            const countDisp = document.getElementById('helvar-device-count');
+
+            db.collection('helvar_devices').orderBy('addr').onSnapshot(snapshot => {
+                if (snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-white/20">No devices found.</td></tr>';
+                    if (countDisp) countDisp.innerText = "0 DEVICES";
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                if (countDisp) countDisp.innerText = `${snapshot.size} DEVICES`;
+
+                snapshot.docs.forEach(doc => {
+                    const d = doc.data();
+                    const addr = `${d.subnet}.${d.addr}`;
+                    const lvl = d.level >= 0 ? `${d.level}%` : '--';
+                    const state = d.state || 'OFF';
+
+                    // Color logic
+                    let stateClass = "text-white/30";
+                    if (state === 'ON') stateClass = "text-success";
+
+                    const row = document.createElement('tr');
+                    row.className = "border-b border-white/5 hover:bg-white/5 transition-colors group cursor-pointer";
+                    row.innerHTML = `
+                                <td class="py-2 text-white/30">${addr}</td>
+                                <td class="py-2 text-white group-hover:text-bronze transition-colors truncate max-w-[120px]" title="${d.name}">${d.name}</td>
+                                <td class="py-2 text-right">${lvl}</td>
+                                <td class="py-2 text-right ${stateClass}">${state}</td>
+                            `;
+
+                    // Simple toggle click handler (Optional, maybe for future)
+                    row.addEventListener('click', () => {
+                        // Future: Open detail modal or toggle
+                        console.log("Clicked", d.name);
+                    });
+
+                    tbody.appendChild(row);
+                });
+            });
         }
     </script>
 
