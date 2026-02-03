@@ -363,10 +363,18 @@
                                                 d="M4 6h16M4 12h16M4 18h16"></path>
                                         </svg>
                                     </button>
+                                    <!-- All Lights Power Toggle -->
+                                    <button id="helvar-power-btn" title="Toggle All Lights"
+                                        class="p-1.5 rounded bg-white/5 hover:bg-bronze/20 text-white/40 hover:text-bronze transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M12 3v6m0 0a3 3 0 100 6 3 3 0 000-6z" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Building Section Grid -->
+                            <!-- Building Section Grid - Simple 5x2 -->
                             <div class="flex-1 grid grid-cols-2 grid-rows-5 gap-0.5 p-0.5">
                                 <!-- Level 6 -->
                                 <div id="room-r62" data-room="R62"
@@ -392,18 +400,18 @@
                                     class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R41</div>
 
-                                <!-- Level 3 / 2 -->
-                                <div id="room-r13" data-room="R13"
-                                    class="row-span-2 bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
-                                    R13</div>
+                                <!-- Level 2 -->
                                 <div id="room-r21" data-room="R21"
                                     class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R21</div>
-
-                                <!-- Level 1 -->
                                 <div id="room-r12" data-room="R12"
                                     class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R12</div>
+
+                                <!-- Level 1 -->
+                                <div id="room-r13" data-room="R13"
+                                    class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
+                                    R13</div>
                                 <div id="room-r11" data-room="R11"
                                     class="bg-white/5 rounded-[1px] flex items-center justify-center text-[8px] text-white/20 font-mono transition-all duration-300 cursor-pointer hover:ring-1 hover:ring-bronze/50">
                                     R11</div>
@@ -1332,8 +1340,8 @@
                 'room-r62', 'room-r61',
                 'room-r52', 'room-r51',
                 'room-r42', 'room-r41',
-                'room-r13', 'room-r21',
-                'room-r12', 'room-r11'
+                'room-r21', 'room-r12',
+                'room-r13', 'room-r11'
             ];
 
             db.collection('helvar_devices').orderBy('addr').onSnapshot(snapshot => {
@@ -1409,10 +1417,6 @@
                         if (activeRooms.has(id)) {
                             // Active State
                             el.className = el.className.replace('bg-white/5', 'bg-bronze').replace('text-white/20', 'text-white shadow-lg shadow-bronze/20 scale-[1.02]');
-                            if (id === 'room-r13') {
-                                // Keep row-span class (now 2)
-                                if (!el.classList.contains('row-span-2')) el.classList.add('row-span-2');
-                            }
                         } else {
                             // Inactive State
                             el.className = el.className.replace('bg-bronze', 'bg-white/5').replace('text-white shadow-lg shadow-bronze/20 scale-[1.02]', 'text-white/20');
@@ -1486,6 +1490,43 @@
                     setTimeout(() => el.classList.remove('animate-pulse'), 500);
                 });
             });
+
+            // --- POWER BUTTON: ALL ON / ALL OFF ---
+            const powerBtn = document.getElementById('helvar-power-btn');
+            if (powerBtn) {
+                powerBtn.addEventListener('click', async () => {
+                    // Check if any room is ON (has bg-bronze class)
+                    const anyRoomOn = roomIds.some(id => {
+                        const el = document.getElementById(id);
+                        return el && el.classList.contains('bg-bronze');
+                    });
+                    const newState = anyRoomOn ? 'OFF' : 'ON';
+                    const newLevel = anyRoomOn ? 0 : 100;
+
+                    powerBtn.classList.add('animate-pulse');
+                    console.log(`🔌 Power Button: Turning ALL ${newState}`);
+
+                    // Send commands for ALL rooms
+                    for (const [roomCode, mapping] of Object.entries(roomDeviceMap)) {
+                        for (const addr of mapping.addrs) {
+                            try {
+                                await db.collection('helvar_commands').add({
+                                    subnet: mapping.subnet,
+                                    addr: addr,
+                                    state: newState,
+                                    level: newLevel,
+                                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                                    room: roomCode
+                                });
+                            } catch (e) {
+                                console.error('Power command failed:', e);
+                            }
+                        }
+                    }
+
+                    setTimeout(() => powerBtn.classList.remove('animate-pulse'), 500);
+                });
+            }
 
         }
     </script>
