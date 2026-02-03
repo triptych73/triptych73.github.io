@@ -336,7 +336,7 @@
 
                             <!-- Car (Absolute positioning on top of flex grid) -->
                             <div id="lift-car"
-                                class="absolute left-1 right-1 h-8 bg-[#0a0a0a] rounded transition-all duration-700 ease-in-out shadow-lg shadow-black/50 overflow-hidden flex items-center justify-between z-10"
+                                class="absolute left-1 right-1 h-8 bg-transparent rounded transition-all duration-700 ease-in-out shadow-lg shadow-black/50 overflow-hidden flex items-center justify-between z-10"
                                 style="bottom: 0.5rem;">
                                 <!-- Doors (Bronze Panels that slide open) -->
                                 <div id="lift-door-l"
@@ -817,6 +817,9 @@
                             <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">To</th>
                             <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Duration</th>
                             <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Type</th>
+                            <th
+                                class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40 text-right pr-6">
+                                Data</th>
                         </tr>
                     </thead>
                     <tbody id="lift-history-table-body" class="text-sm border-t border-white/5">
@@ -1145,6 +1148,17 @@
                                 const ts = d.timestamp ? d.timestamp.toDate() : new Date();
                                 const timeStr = ts.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
                                 const dur = d.duration ? `${d.duration.toFixed(1)}s` : '-';
+                                const type = d.type || 'TRIP';
+                                let typeClass = "text-white/40";
+                                if (type === 'RELEVEL') typeClass = "text-warning";
+
+                                let dataBtn = '<span class="text-white/10">-</span>';
+                                if (d.raw_data) {
+                                    // Base64 encode safe string for attribute or use onclick method
+                                    // Simple approach: Onclick calls global download function
+                                    const safeData = encodeURIComponent(d.raw_data);
+                                    dataBtn = `<button onclick="downloadLiftData('${safeData}', '${d.timestamp.toMillis()}')" class="text-[10px] text-bronze hover:text-white border border-bronze/30 hover:border-white/50 rounded px-2 py-0.5 transition-colors">DL</button>`;
+                                }
 
                                 const row = document.createElement('tr');
                                 row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
@@ -1153,13 +1167,27 @@
                                     <td class="py-3 text-white font-mono">L${d.from}</td>
                                     <td class="py-3 text-white font-mono">L${d.to}</td>
                                     <td class="py-3 font-mono text-bronze">${dur}</td>
-                                    <td class="py-3 text-white/40 text-[10px] uppercase">${d.type || 'TRIP'}</td>
+                                    <td class="py-3 font-mono text-[10px] uppercase ${typeClass}">${type}</td>
+                                    <td class="py-3 text-right pr-6">${dataBtn}</td>
                                 `;
                                 tbody.appendChild(row);
                             });
                         });
                 }
             }
+
+            // Global Helper for Download
+            window.downloadLiftData = (encodedData, ts) => {
+                const data = decodeURIComponent(encodedData);
+                const blob = new Blob([data], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `lift_data_${ts}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
         }
     </script>
 
