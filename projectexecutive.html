@@ -140,15 +140,18 @@
                     class="hidden md:flex items-center gap-2 border-l border-white/10 pl-6 border-r pr-6 border-white/10 cursor-pointer hover:bg-white/5 transition-colors group">
                     <div class="w-1.5 h-1.5 bg-white/20 rounded-full transition-colors duration-500" id="nav-lift-dot">
                     </div>
-                    <span class="text-white/40">LIFT <span class="text-bronze font-bold"
-                            id="nav-lift-floor-mini">--</span></span>
-                    <!-- Direction Arrow (Nav) -->
-                    <span id="nav-lift-arrow-container" class="hidden ml-1">
-                        <svg id="nav-lift-arrow-up" class="w-3 h-3 text-success prediction-arrow hidden"
+                    <span class="text-white/40">LIFT</span>
+                    <!-- Alternating Floor / Arrow Display -->
+                    <span class="relative w-5 h-5 flex items-center justify-center">
+                        <span id="nav-lift-floor-mini"
+                            class="text-bronze font-bold absolute inset-0 flex items-center justify-center transition-opacity duration-300">--</span>
+                        <svg id="nav-lift-arrow-up"
+                            class="w-4 h-4 text-success absolute inset-0 hidden transition-opacity duration-300"
                             fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 4l-8 8h5v8h6v-8h5z" />
                         </svg>
-                        <svg id="nav-lift-arrow-down" class="w-3 h-3 text-bronze prediction-arrow hidden"
+                        <svg id="nav-lift-arrow-down"
+                            class="w-4 h-4 text-bronze absolute inset-0 hidden transition-opacity duration-300"
                             fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 20l8-8h-5V4H9v8H4z" />
                         </svg>
@@ -340,7 +343,7 @@
                             </div>
                             <!-- Status Text -->
                             <div class="z-10 flex-shrink-0">
-                                <div class="text-[10px] text-bronze uppercase tracking-widest mb-1">Vertical Transport
+                                <div class="text-[10px] text-bronze uppercase tracking-widest mb-1">Lift
                                 </div>
                                 <div class="text-xl font-serif text-white mb-1">Level <span
                                         id="lift-floor-display">--</span></div>
@@ -348,8 +351,22 @@
                                     OFFLINE</div>
                             </div>
 
-                            <!-- Visual Shaft + Control Buttons Container -->
+                            <!-- Visual Controls Container: Arrow + Buttons + Shaft -->
                             <div class="flex items-stretch h-full ml-4 gap-2">
+
+                                <!-- Prediction Arrow (Left side - Hidden by default) -->
+                                <div id="lift-prediction-arrow"
+                                    class="hidden flex flex-col items-center justify-center w-5">
+                                    <svg id="lift-arrow-up" class="w-4 h-4 text-success prediction-arrow hidden"
+                                        fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 4l-8 8h5v8h6v-8h5z" />
+                                    </svg>
+                                    <svg id="lift-arrow-down" class="w-4 h-4 text-bronze prediction-arrow hidden"
+                                        fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 20l8-8h-5V4H9v8H4z" />
+                                    </svg>
+                                </div>
+
                                 <!-- Floor Control Buttons (stacked 3-2-1-0 bottom to top) -->
                                 <div class="flex flex-col justify-between h-full py-1">
                                     <button onclick="sendLiftCommand(3)"
@@ -396,19 +413,6 @@
                                             class="h-full w-1/2 bg-bronze border-l border-black/20 transition-all duration-500">
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Prediction Arrow (Hidden by default) -->
-                                <div id="lift-prediction-arrow"
-                                    class="hidden flex flex-col items-center justify-center w-5">
-                                    <svg id="lift-arrow-up" class="w-4 h-4 text-success prediction-arrow hidden"
-                                        fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 4l-8 8h5v8h6v-8h5z" />
-                                    </svg>
-                                    <svg id="lift-arrow-down" class="w-4 h-4 text-bronze prediction-arrow hidden"
-                                        fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 20l8-8h-5V4H9v8H4z" />
-                                    </svg>
                                 </div>
                             </div>
                         </div>
@@ -1238,6 +1242,13 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="pb-4 pt-8 text-center">
+        <p class="text-[9px] font-mono text-white/20 tracking-wide">
+            Project Executive Dashboard · v2.4.0 · 2026-02-04
+        </p>
+    </footer>
+
     <script>
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -1353,10 +1364,53 @@
                 const arrowUp = document.getElementById('lift-arrow-up');
                 const arrowDown = document.getElementById('lift-arrow-down');
 
-                // Navbar arrows
-                const navArrowContainer = document.getElementById('nav-lift-arrow-container');
+                // Navbar alternating floor/arrow display
+                const navFloorMini = document.getElementById('nav-lift-floor-mini');
                 const navArrowUp = document.getElementById('nav-lift-arrow-up');
                 const navArrowDown = document.getElementById('nav-lift-arrow-down');
+                let navAlternateInterval = null;
+                let currentNavDirection = null;
+
+                function startNavAlternation(direction) {
+                    // Stop any existing interval
+                    if (navAlternateInterval) {
+                        clearInterval(navAlternateInterval);
+                        navAlternateInterval = null;
+                    }
+
+                    let showFloor = true;
+                    navAlternateInterval = setInterval(() => {
+                        showFloor = !showFloor;
+
+                        if (showFloor) {
+                            // Show floor number
+                            if (navFloorMini) navFloorMini.style.opacity = '1';
+                            if (navArrowUp) navArrowUp.classList.add('hidden');
+                            if (navArrowDown) navArrowDown.classList.add('hidden');
+                        } else {
+                            // Show direction arrow
+                            if (navFloorMini) navFloorMini.style.opacity = '0';
+                            if (direction === 'UP') {
+                                if (navArrowUp) navArrowUp.classList.remove('hidden');
+                                if (navArrowDown) navArrowDown.classList.add('hidden');
+                            } else {
+                                if (navArrowUp) navArrowUp.classList.add('hidden');
+                                if (navArrowDown) navArrowDown.classList.remove('hidden');
+                            }
+                        }
+                    }, 1000); // Toggle every 1 second
+                }
+
+                function stopNavAlternation() {
+                    if (navAlternateInterval) {
+                        clearInterval(navAlternateInterval);
+                        navAlternateInterval = null;
+                    }
+                    // Reset to show floor only
+                    if (navFloorMini) navFloorMini.style.opacity = '1';
+                    if (navArrowUp) navArrowUp.classList.add('hidden');
+                    if (navArrowDown) navArrowDown.classList.add('hidden');
+                }
 
                 db.collection('lift_prediction').doc('current').onSnapshot((doc) => {
                     if (doc.exists) {
@@ -1380,21 +1434,16 @@
                             }
                         }
 
-                        // Navbar Arrows (Sync)
-                        if (navArrowContainer && navArrowUp && navArrowDown) {
-                            if (direction === 'UP') {
-                                navArrowContainer.classList.remove('hidden');
-                                navArrowUp.classList.remove('hidden');
-                                navArrowDown.classList.add('hidden');
-                            } else if (direction === 'DOWN') {
-                                navArrowContainer.classList.remove('hidden');
-                                navArrowUp.classList.add('hidden');
-                                navArrowDown.classList.remove('hidden');
-                            } else {
-                                navArrowContainer.classList.add('hidden');
-                                navArrowUp.classList.add('hidden');
-                                navArrowDown.classList.add('hidden');
+                        // Navbar Alternating Display
+                        if (direction === 'UP' || direction === 'DOWN') {
+                            if (currentNavDirection !== direction) {
+                                currentNavDirection = direction;
+                                startNavAlternation(direction);
                             }
+                        } else {
+                            // STOPPED - stop alternation, show floor only
+                            currentNavDirection = null;
+                            stopNavAlternation();
                         }
                     }
                 }, (error) => {
@@ -2008,12 +2057,16 @@
                 const latestEvent = events[events.length - 1];
                 const latestEventId = latestEvent.id;
                 const latestEventTime = parseEufyTime(latestEvent);
+                const now = Date.now();
+                const eventAge = latestEventTime ? (now - latestEventTime.getTime()) / 1000 : 999;
 
-                // Check if this is a new event we haven't seen
-                if (eufyState.lastSeenEventId && latestEventId !== eufyState.lastSeenEventId) {
-                    const now = Date.now();
-                    const eventAge = latestEventTime ? (now - latestEventTime.getTime()) / 1000 : 999;
+                // Trigger glow if:
+                // 1. This is a NEW event (different from last seen) OR
+                // 2. This is initial load and event is within 30 seconds
+                const isNewEvent = eufyState.lastSeenEventId && latestEventId !== eufyState.lastSeenEventId;
+                const isInitialLoadAndRecent = !eufyState.lastSeenEventId && eventAge <= 30;
 
+                if (isNewEvent || isInitialLoadAndRecent) {
                     // Only trigger glow if event is within last 30 seconds
                     if (eventAge <= 30) {
                         const isRing = (latestEvent.title || '').toLowerCase().includes('ring');
@@ -2174,10 +2227,10 @@
                     observer.observe(slide);
                 });
 
-                // Auto-scroll to latest if live and no filters
-                if (eufyState.isLive && eufyState.filter === 'ALL' && !eufyState.filterRing) {
-                    setTimeout(() => eufyEls.carousel.scrollLeft = eufyEls.carousel.scrollWidth, 150);
-                }
+                // Always scroll to latest (most recent) image on render
+                setTimeout(() => {
+                    eufyEls.carousel.scrollLeft = eufyEls.carousel.scrollWidth;
+                }, 150);
             }
 
             function formatDateDisplay(date) {
