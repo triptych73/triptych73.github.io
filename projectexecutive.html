@@ -472,6 +472,89 @@
 
                     </div>
 
+                    <!-- Second Row: Doorbell & Home Security -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+
+                        <!-- Eufy Doorbell Viewer Widget -->
+                        <div class="glass-panel p-4 rounded-lg relative overflow-hidden h-64 flex flex-col">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-mono text-[10px] uppercase tracking-widest text-bronze">Doorbell</h3>
+                                <div class="flex items-center gap-2">
+                                    <span id="eufy-event-count" class="text-[9px] text-white/30 font-mono">0
+                                        Events</span>
+                                    <a href="eufy_viewer.html" target="_blank" title="Open Full Viewer"
+                                        class="p-1 hover:bg-white/10 rounded text-white/40 hover:text-white transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                            </path>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                            <!-- Embedded Doorbell Feed -->
+                            <div id="eufy-viewer-container" class="flex-1 bg-black rounded overflow-hidden relative">
+                                <!-- Loading State -->
+                                <div id="eufy-loading-state"
+                                    class="absolute inset-0 flex flex-col items-center justify-center text-white/40 z-0">
+                                    <svg class="w-6 h-6 animate-spin mb-2" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                        </path>
+                                    </svg>
+                                    <span class="text-[9px]">Connecting...</span>
+                                </div>
+                                <!-- Image Carousel -->
+                                <div id="eufy-carousel"
+                                    class="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory z-10 scroll-smooth"
+                                    style="-ms-overflow-style:none;scrollbar-width:none;">
+                                </div>
+                                <!-- Info Overlay -->
+                                <div id="eufy-info-overlay"
+                                    class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 z-20 pointer-events-none transition-opacity duration-300">
+                                    <div class="flex justify-between items-end">
+                                        <div>
+                                            <h4 id="eufy-event-title"
+                                                class="font-medium text-white text-sm leading-tight">--</h4>
+                                            <p id="eufy-event-time" class="text-[10px] text-bronze font-mono mt-0.5">--
+                                            </p>
+                                        </div>
+                                        <span id="eufy-slide-counter"
+                                            class="text-[9px] text-white/40 font-mono">0/0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Home Security Placeholder -->
+                        <div class="glass-panel p-4 rounded-lg relative overflow-hidden h-64 flex flex-col">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-mono text-[10px] uppercase tracking-widest text-bronze">Home Security
+                                </h3>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] text-white/30 font-mono">ARMED</span>
+                                    <div class="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></div>
+                                </div>
+                            </div>
+                            <!-- Placeholder Content -->
+                            <div class="flex-1 flex items-center justify-center">
+                                <div class="text-center">
+                                    <svg class="w-12 h-12 text-white/10 mx-auto mb-3" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                        </path>
+                                    </svg>
+                                    <p class="text-xs text-white/30 uppercase tracking-widest">System Status</p>
+                                    <p class="text-[9px] text-white/20 mt-1">Integration Coming Soon</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
                 </div>
             </div>
 
@@ -1677,6 +1760,131 @@
 
             }
         }
+
+        // ==============================================
+        // --- EUFY DOORBELL VIEWER INTEGRATION ---
+        // ==============================================
+        (async function initEufyViewer() {
+            // Firebase Realtime Database SDK import
+            const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+            const { getDatabase, ref, query, limitToLast, onValue } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+
+            const EUFY_DATABASE_URL = "https://st-mary-somerset-default-rtdb.europe-west1.firebasedatabase.app/";
+
+            const eufyEls = {
+                carousel: document.getElementById('eufy-carousel'),
+                title: document.getElementById('eufy-event-title'),
+                time: document.getElementById('eufy-event-time'),
+                counter: document.getElementById('eufy-slide-counter'),
+                overlay: document.getElementById('eufy-info-overlay'),
+                eventCount: document.getElementById('eufy-event-count'),
+                loading: document.getElementById('eufy-loading-state')
+            };
+
+            if (!eufyEls.carousel) return; // Exit if widget not in DOM
+
+            const eufyApp = initializeApp({ databaseURL: EUFY_DATABASE_URL }, 'eufy-viewer');
+            const eufyDb = getDatabase(eufyApp);
+
+            function parseEufyTime(ev) {
+                const raw = ev.timestamp || ev.time || ev.date;
+                if (raw) {
+                    if (!isNaN(raw)) {
+                        let ts = Number(raw);
+                        if (ts < 100000000000) ts *= 1000;
+                        return new Date(ts);
+                    }
+                    return new Date(raw);
+                }
+                // Try Firebase push ID fallback
+                if (ev.id && ev.id.startsWith('-')) {
+                    const PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+                    const id = ev.id.substring(0, 8);
+                    let time = 0;
+                    for (let i = 0; i < 8; i++) time = time * 64 + PUSH_CHARS.indexOf(id.charAt(i));
+                    return new Date(time);
+                }
+                return null;
+            }
+
+            function updateEufyInfo(ev, index, total) {
+                eufyEls.title.innerText = ev.title || "Event";
+                const d = parseEufyTime(ev);
+                eufyEls.time.innerText = d ? d.toLocaleTimeString('en-GB') : "--";
+                eufyEls.counter.innerText = `${index}/${total}`;
+            }
+
+            function renderEufyCarousel(list) {
+                eufyEls.carousel.innerHTML = '';
+
+                if (!list || list.length === 0) {
+                    eufyEls.loading.classList.remove('hidden');
+                    eufyEls.loading.innerHTML = `<span class='text-[9px] text-white/30'>No events today</span>`;
+                    eufyEls.overlay.classList.add('opacity-0');
+                    eufyEls.eventCount.innerText = '0 Events';
+                    return;
+                }
+
+                eufyEls.overlay.classList.remove('opacity-0');
+                eufyEls.loading.classList.add('hidden');
+                eufyEls.eventCount.innerText = `${list.length} Events`;
+
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(e => {
+                        if (e.isIntersecting) {
+                            const idx = parseInt(e.target.dataset.index);
+                            updateEufyInfo(list[idx], idx + 1, list.length);
+                        }
+                    });
+                }, { root: eufyEls.carousel, threshold: 0.6 });
+
+                list.forEach((ev, index) => {
+                    const slide = document.createElement('div');
+                    slide.className = "min-w-full h-full relative snap-center flex items-center justify-center bg-black";
+                    slide.dataset.index = index;
+
+                    const img = document.createElement('img');
+                    img.src = ev.image;
+                    img.className = "max-w-full max-h-full object-contain";
+                    img.loading = "lazy";
+
+                    slide.appendChild(img);
+                    eufyEls.carousel.appendChild(slide);
+                    observer.observe(slide);
+                });
+
+                // Auto-scroll to latest
+                setTimeout(() => eufyEls.carousel.scrollLeft = eufyEls.carousel.scrollWidth, 150);
+            }
+
+            function fetchEufyData() {
+                const notificationsRef = ref(eufyDb, 'notifications');
+                const dbQuery = query(notificationsRef, limitToLast(50));
+
+                onValue(dbQuery, (snapshot) => {
+                    const data = snapshot.val();
+                    if (!data) {
+                        renderEufyCarousel([]);
+                        return;
+                    }
+
+                    let events = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                    const today = new Date().toDateString();
+
+                    events = events.filter(ev => {
+                        const evDate = parseEufyTime(ev);
+                        return evDate && evDate.toDateString() === today;
+                    });
+
+                    renderEufyCarousel(events);
+                }, (error) => {
+                    console.error("Eufy Firebase Error:", error);
+                    eufyEls.loading.innerHTML = `<span class='text-[9px] text-alert'>Connection Error</span>`;
+                });
+            }
+
+            fetchEufyData();
+        })();
     </script>
 
 </body>
