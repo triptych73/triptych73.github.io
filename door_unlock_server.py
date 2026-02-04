@@ -4,8 +4,7 @@ Door Unlock API Server
 Simple Flask server to expose door unlock functionality via HTTP.
 Run this on the Raspberry Pi to enable remote unlock from the web dashboard.
 """
-from flask import Flask, jsonify
-from flask_cors import CORS
+from flask import Flask, jsonify, make_response
 import logging
 import os
 
@@ -17,7 +16,21 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+
+# Try to use flask-cors if available, otherwise manual CORS
+try:
+    from flask_cors import CORS
+    CORS(app)
+    logging.info("Using flask-cors for CORS")
+except ImportError:
+    logging.info("flask-cors not installed, using manual CORS headers")
+    
+    @app.after_request
+    def add_cors_headers(response):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
 
 # Import door unlock function
 try:

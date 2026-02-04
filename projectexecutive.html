@@ -2231,9 +2231,13 @@
                 });
 
                 // Always scroll to latest (most recent) image on render
-                setTimeout(() => {
+                // Use multiple attempts to ensure it scrolls after DOM settles
+                const scrollToEnd = () => {
                     eufyEls.carousel.scrollLeft = eufyEls.carousel.scrollWidth;
-                }, 150);
+                };
+                setTimeout(scrollToEnd, 100);
+                setTimeout(scrollToEnd, 300);
+                setTimeout(scrollToEnd, 600);
             }
 
             function formatDateDisplay(date) {
