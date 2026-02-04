@@ -478,13 +478,44 @@
                         <!-- Eufy Doorbell Viewer Widget -->
                         <div class="glass-panel p-4 rounded-lg relative overflow-hidden h-64 flex flex-col">
                             <div class="flex items-center justify-between mb-2">
-                                <h3 class="font-mono text-[10px] uppercase tracking-widest text-bronze">Doorbell</h3>
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-3">
+                                    <h3 class="font-mono text-[10px] uppercase tracking-widest text-bronze">Doorbell
+                                    </h3>
+                                    <!-- Filter Controls -->
+                                    <div class="flex items-center gap-1">
+                                        <button id="eufy-btn-am" title="Morning Events"
+                                            class="px-1.5 py-0.5 text-[8px] font-mono text-white/30 hover:text-white hover:bg-white/10 rounded transition-colors">AM</button>
+                                        <button id="eufy-btn-pm" title="Afternoon/Evening Events"
+                                            class="px-1.5 py-0.5 text-[8px] font-mono text-white/30 hover:text-white hover:bg-white/10 rounded transition-colors">PM</button>
+                                        <button id="eufy-btn-bell" title="Ring Events Only"
+                                            class="p-0.5 text-white/30 hover:text-white hover:bg-white/10 rounded transition-colors">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                                                </path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span id="eufy-date-display" class="text-[8px] text-white/20 font-mono">Today</span>
                                     <span id="eufy-event-count" class="text-[9px] text-white/30 font-mono">0
                                         Events</span>
+                                    <!-- Settings Cog -->
+                                    <button id="eufy-settings-btn" title="Settings"
+                                        class="p-1 hover:bg-white/10 rounded text-white/30 hover:text-white transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                                            </path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                    </button>
+                                    <!-- Open Full Viewer -->
                                     <a href="eufy_viewer.html" target="_blank" title="Open Full Viewer"
-                                        class="p-1 hover:bg-white/10 rounded text-white/40 hover:text-white transition-colors">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        class="p-1 hover:bg-white/10 rounded text-white/30 hover:text-white transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                                 d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
                                             </path>
@@ -525,6 +556,78 @@
                                             class="text-[9px] text-white/40 font-mono">0/0</span>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Eufy Settings Modal -->
+                        <div id="eufy-settings-modal"
+                            class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                            <div class="glass-panel w-full max-w-xs rounded-xl p-4 shadow-2xl border border-white/10">
+                                <div class="flex justify-between items-center mb-4 border-b border-white/10 pb-3">
+                                    <h3 class="font-serif text-sm text-bronze">Doorbell Settings</h3>
+                                    <button id="eufy-settings-close"
+                                        class="text-white/40 hover:text-white transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <!-- Date Selector -->
+                                <div class="mb-4">
+                                    <label
+                                        class="text-[9px] text-white/40 uppercase tracking-widest mb-2 block">Date</label>
+                                    <div
+                                        class="flex items-center gap-2 bg-white/5 rounded-lg p-1 border border-white/10">
+                                        <button id="eufy-date-prev"
+                                            class="p-1.5 hover:bg-white/10 rounded text-white/40 hover:text-white transition-colors">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 19l-7-7 7-7"></path>
+                                            </svg>
+                                        </button>
+                                        <div class="flex-1 relative text-center">
+                                            <input type="date" id="eufy-date-picker"
+                                                class="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10">
+                                            <span id="eufy-date-label"
+                                                class="text-[10px] text-white/70 font-mono">Today</span>
+                                        </div>
+                                        <button id="eufy-date-next"
+                                            class="p-1.5 hover:bg-white/10 rounded text-white/40 hover:text-white transition-colors">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Time Ranges -->
+                                <div class="space-y-3 mb-4">
+                                    <div>
+                                        <label class="text-[9px] text-white/40 uppercase tracking-widest mb-1 block">AM
+                                            Range</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="time" id="eufy-am-start" value="00:00"
+                                                class="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-[10px] text-white/70 font-mono focus:ring-1 focus:ring-bronze outline-none">
+                                            <span class="text-white/20 text-[10px]">-</span>
+                                            <input type="time" id="eufy-am-end" value="12:00"
+                                                class="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-[10px] text-white/70 font-mono focus:ring-1 focus:ring-bronze outline-none">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-white/40 uppercase tracking-widest mb-1 block">PM
+                                            Range</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="time" id="eufy-pm-start" value="12:00"
+                                                class="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-[10px] text-white/70 font-mono focus:ring-1 focus:ring-bronze outline-none">
+                                            <span class="text-white/20 text-[10px]">-</span>
+                                            <input type="time" id="eufy-pm-end" value="23:59"
+                                                class="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-[10px] text-white/70 font-mono focus:ring-1 focus:ring-bronze outline-none">
+                                        </div>
+                                    </div>
+                                </div>
+                                <button id="eufy-settings-apply"
+                                    class="w-full py-2 bg-bronze/20 hover:bg-bronze/30 border border-bronze/40 text-bronze text-[10px] font-mono uppercase tracking-widest rounded transition-colors">Apply</button>
                             </div>
                         </div>
 
@@ -1767,7 +1870,7 @@
         (async function initEufyViewer() {
             // Firebase Realtime Database SDK import
             const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-            const { getDatabase, ref, query, limitToLast, onValue } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+            const { getDatabase, ref, query, limitToLast, onValue, get } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
 
             const EUFY_DATABASE_URL = "https://st-mary-somerset-default-rtdb.europe-west1.firebasedatabase.app/";
 
@@ -1778,13 +1881,44 @@
                 counter: document.getElementById('eufy-slide-counter'),
                 overlay: document.getElementById('eufy-info-overlay'),
                 eventCount: document.getElementById('eufy-event-count'),
-                loading: document.getElementById('eufy-loading-state')
+                loading: document.getElementById('eufy-loading-state'),
+                dateDisplay: document.getElementById('eufy-date-display'),
+                // Filter buttons
+                btnAm: document.getElementById('eufy-btn-am'),
+                btnPm: document.getElementById('eufy-btn-pm'),
+                btnBell: document.getElementById('eufy-btn-bell'),
+                // Settings modal
+                settingsBtn: document.getElementById('eufy-settings-btn'),
+                settingsModal: document.getElementById('eufy-settings-modal'),
+                settingsClose: document.getElementById('eufy-settings-close'),
+                settingsApply: document.getElementById('eufy-settings-apply'),
+                datePrev: document.getElementById('eufy-date-prev'),
+                dateNext: document.getElementById('eufy-date-next'),
+                datePicker: document.getElementById('eufy-date-picker'),
+                dateLabel: document.getElementById('eufy-date-label'),
+                amStart: document.getElementById('eufy-am-start'),
+                amEnd: document.getElementById('eufy-am-end'),
+                pmStart: document.getElementById('eufy-pm-start'),
+                pmEnd: document.getElementById('eufy-pm-end')
             };
 
             if (!eufyEls.carousel) return; // Exit if widget not in DOM
 
             const eufyApp = initializeApp({ databaseURL: EUFY_DATABASE_URL }, 'eufy-viewer');
             const eufyDb = getDatabase(eufyApp);
+
+            // State
+            let eufyState = {
+                events: [],
+                filter: 'ALL', // 'ALL', 'AM', 'PM'
+                filterRing: false,
+                currentDate: new Date(),
+                isLive: true,
+                config: {
+                    am: { start: '00:00', end: '12:00' },
+                    pm: { start: '12:00', end: '23:59' }
+                }
+            };
 
             function parseEufyTime(ev) {
                 const raw = ev.timestamp || ev.time || ev.date;
@@ -1796,7 +1930,6 @@
                     }
                     return new Date(raw);
                 }
-                // Try Firebase push ID fallback
                 if (ev.id && ev.id.startsWith('-')) {
                     const PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
                     const id = ev.id.substring(0, 8);
@@ -1807,6 +1940,11 @@
                 return null;
             }
 
+            function timeToMins(timeStr) {
+                const [h, m] = timeStr.split(':').map(Number);
+                return h * 60 + m;
+            }
+
             function updateEufyInfo(ev, index, total) {
                 eufyEls.title.innerText = ev.title || "Event";
                 const d = parseEufyTime(ev);
@@ -1814,12 +1952,57 @@
                 eufyEls.counter.innerText = `${index}/${total}`;
             }
 
+            function updateFilterButtons() {
+                const setActive = (el, active) => {
+                    if (!el) return;
+                    if (active) {
+                        el.classList.remove('text-white/30');
+                        el.classList.add('text-bronze', 'bg-bronze/20');
+                    } else {
+                        el.classList.remove('text-bronze', 'bg-bronze/20');
+                        el.classList.add('text-white/30');
+                    }
+                };
+                setActive(eufyEls.btnAm, eufyState.filter === 'AM');
+                setActive(eufyEls.btnPm, eufyState.filter === 'PM');
+                setActive(eufyEls.btnBell, eufyState.filterRing);
+            }
+
+            function applyFilters() {
+                const { filter, filterRing, config, events } = eufyState;
+                let filtered = events;
+
+                // AM/PM filter
+                if (filter !== 'ALL') {
+                    const range = filter === 'AM' ? config.am : config.pm;
+                    const startMins = timeToMins(range.start);
+                    const endMins = timeToMins(range.end);
+                    filtered = filtered.filter(ev => {
+                        const d = parseEufyTime(ev);
+                        if (!d) return false;
+                        const mins = d.getHours() * 60 + d.getMinutes();
+                        if (startMins <= endMins) return mins >= startMins && mins <= endMins;
+                        else return mins >= startMins || mins <= endMins;
+                    });
+                }
+
+                // Ring filter
+                if (filterRing) {
+                    filtered = filtered.filter(ev => {
+                        const title = (ev.title || "").toLowerCase();
+                        return title.includes("ring");
+                    });
+                }
+
+                renderEufyCarousel(filtered);
+            }
+
             function renderEufyCarousel(list) {
                 eufyEls.carousel.innerHTML = '';
 
                 if (!list || list.length === 0) {
                     eufyEls.loading.classList.remove('hidden');
-                    eufyEls.loading.innerHTML = `<span class='text-[9px] text-white/30'>No events today</span>`;
+                    eufyEls.loading.innerHTML = `<span class='text-[9px] text-white/30'>No events</span>`;
                     eufyEls.overlay.classList.add('opacity-0');
                     eufyEls.eventCount.innerText = '0 Events';
                     return;
@@ -1853,36 +2036,149 @@
                     observer.observe(slide);
                 });
 
-                // Auto-scroll to latest
-                setTimeout(() => eufyEls.carousel.scrollLeft = eufyEls.carousel.scrollWidth, 150);
+                // Auto-scroll to latest if live and no filters
+                if (eufyState.isLive && eufyState.filter === 'ALL' && !eufyState.filterRing) {
+                    setTimeout(() => eufyEls.carousel.scrollLeft = eufyEls.carousel.scrollWidth, 150);
+                }
+            }
+
+            function formatDateDisplay(date) {
+                const today = new Date();
+                const isToday = date.toDateString() === today.toDateString();
+                const displayStr = isToday ? "Today" : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                if (eufyEls.dateDisplay) eufyEls.dateDisplay.innerText = displayStr;
+                if (eufyEls.dateLabel) eufyEls.dateLabel.innerText = displayStr;
+                if (eufyEls.datePicker) eufyEls.datePicker.value = date.toISOString().split('T')[0];
             }
 
             function fetchEufyData() {
-                const notificationsRef = ref(eufyDb, 'notifications');
-                const dbQuery = query(notificationsRef, limitToLast(50));
+                const date = eufyState.currentDate;
+                const isToday = date.toDateString() === new Date().toDateString();
 
-                onValue(dbQuery, (snapshot) => {
+                eufyEls.carousel.innerHTML = '';
+                eufyEls.loading.classList.remove('hidden');
+                eufyEls.loading.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+
+                const notificationsRef = ref(eufyDb, 'notifications');
+                const dbQuery = query(notificationsRef, limitToLast(100));
+
+                function handleSnapshot(snapshot) {
                     const data = snapshot.val();
                     if (!data) {
-                        renderEufyCarousel([]);
+                        eufyState.events = [];
+                        applyFilters();
                         return;
                     }
 
                     let events = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-                    const today = new Date().toDateString();
+                    const targetDateStr = eufyState.currentDate.toDateString();
 
                     events = events.filter(ev => {
                         const evDate = parseEufyTime(ev);
-                        return evDate && evDate.toDateString() === today;
+                        return evDate && evDate.toDateString() === targetDateStr;
                     });
 
-                    renderEufyCarousel(events);
-                }, (error) => {
-                    console.error("Eufy Firebase Error:", error);
-                    eufyEls.loading.innerHTML = `<span class='text-[9px] text-alert'>Connection Error</span>`;
+                    eufyState.events = events;
+                    applyFilters();
+                }
+
+                if (isToday) {
+                    eufyState.isLive = true;
+                    onValue(dbQuery, handleSnapshot, (error) => {
+                        console.error("Eufy Firebase Error:", error);
+                        eufyEls.loading.innerHTML = `<span class='text-[9px] text-alert'>Error</span>`;
+                    });
+                } else {
+                    eufyState.isLive = false;
+                    get(dbQuery).then(handleSnapshot).catch(err => {
+                        console.error("Eufy Firebase Error:", err);
+                        eufyEls.loading.innerHTML = `<span class='text-[9px] text-alert'>Error</span>`;
+                    });
+                }
+            }
+
+            // --- EVENT HANDLERS ---
+
+            // Filter toggles
+            if (eufyEls.btnAm) {
+                eufyEls.btnAm.addEventListener('click', () => {
+                    eufyState.filter = eufyState.filter === 'AM' ? 'ALL' : 'AM';
+                    updateFilterButtons();
+                    applyFilters();
+                });
+            }
+            if (eufyEls.btnPm) {
+                eufyEls.btnPm.addEventListener('click', () => {
+                    eufyState.filter = eufyState.filter === 'PM' ? 'ALL' : 'PM';
+                    updateFilterButtons();
+                    applyFilters();
+                });
+            }
+            if (eufyEls.btnBell) {
+                eufyEls.btnBell.addEventListener('click', () => {
+                    eufyState.filterRing = !eufyState.filterRing;
+                    updateFilterButtons();
+                    applyFilters();
                 });
             }
 
+            // Settings modal
+            if (eufyEls.settingsBtn) {
+                eufyEls.settingsBtn.addEventListener('click', () => {
+                    eufyEls.settingsModal.classList.remove('hidden');
+                });
+            }
+            if (eufyEls.settingsClose) {
+                eufyEls.settingsClose.addEventListener('click', () => {
+                    eufyEls.settingsModal.classList.add('hidden');
+                });
+            }
+            if (eufyEls.settingsApply) {
+                eufyEls.settingsApply.addEventListener('click', () => {
+                    eufyState.config.am = { start: eufyEls.amStart.value, end: eufyEls.amEnd.value };
+                    eufyState.config.pm = { start: eufyEls.pmStart.value, end: eufyEls.pmEnd.value };
+                    applyFilters();
+                    eufyEls.settingsModal.classList.add('hidden');
+                });
+            }
+
+            // Date navigation
+            if (eufyEls.datePrev) {
+                eufyEls.datePrev.addEventListener('click', () => {
+                    eufyState.currentDate.setDate(eufyState.currentDate.getDate() - 1);
+                    formatDateDisplay(eufyState.currentDate);
+                    fetchEufyData();
+                });
+            }
+            if (eufyEls.dateNext) {
+                eufyEls.dateNext.addEventListener('click', () => {
+                    eufyState.currentDate.setDate(eufyState.currentDate.getDate() + 1);
+                    formatDateDisplay(eufyState.currentDate);
+                    fetchEufyData();
+                });
+            }
+            if (eufyEls.datePicker) {
+                eufyEls.datePicker.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        eufyState.currentDate = new Date(e.target.value);
+                        formatDateDisplay(eufyState.currentDate);
+                        fetchEufyData();
+                    }
+                });
+            }
+
+            // Close modal on background click
+            if (eufyEls.settingsModal) {
+                eufyEls.settingsModal.addEventListener('click', (e) => {
+                    if (e.target === eufyEls.settingsModal) {
+                        eufyEls.settingsModal.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Initialize
+            formatDateDisplay(eufyState.currentDate);
+            updateFilterButtons();
             fetchEufyData();
         })();
     </script>
