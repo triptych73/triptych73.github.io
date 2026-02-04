@@ -85,6 +85,25 @@
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
+
+        /* Pulsing Prediction Arrow */
+        @keyframes pulse-arrow {
+
+            0%,
+            100% {
+                opacity: 0.6;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.15);
+            }
+        }
+
+        .prediction-arrow {
+            animation: pulse-arrow 1s ease-in-out infinite;
+        }
     </style>
 </head>
 
@@ -366,6 +385,19 @@
                                             class="h-full w-1/2 bg-bronze border-l border-black/20 transition-all duration-500">
                                         </div>
                                     </div>
+                                </div>
+
+                                <!-- Prediction Arrow (Hidden by default) -->
+                                <div id="lift-prediction-arrow"
+                                    class="hidden flex flex-col items-center justify-center w-5">
+                                    <svg id="lift-arrow-up" class="w-4 h-4 text-success prediction-arrow hidden"
+                                        fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 4l-8 8h5v8h6v-8h5z" />
+                                    </svg>
+                                    <svg id="lift-arrow-down" class="w-4 h-4 text-bronze prediction-arrow hidden"
+                                        fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 20l8-8h-5V4H9v8H4z" />
+                                    </svg>
                                 </div>
                             </div>
                         </div>
@@ -1113,6 +1145,35 @@
                             if (doorR) doorR.style.width = '50%';
                         }
                     }
+                });
+
+                // --- Prediction Arrow Listener ---
+                const arrowContainer = document.getElementById('lift-prediction-arrow');
+                const arrowUp = document.getElementById('lift-arrow-up');
+                const arrowDown = document.getElementById('lift-arrow-down');
+
+                db.collection('lift_prediction').doc('current').onSnapshot((doc) => {
+                    if (doc.exists && arrowContainer && arrowUp && arrowDown) {
+                        const data = doc.data();
+                        const direction = data.direction || 'STOPPED';
+
+                        if (direction === 'UP') {
+                            arrowContainer.classList.remove('hidden');
+                            arrowUp.classList.remove('hidden');
+                            arrowDown.classList.add('hidden');
+                        } else if (direction === 'DOWN') {
+                            arrowContainer.classList.remove('hidden');
+                            arrowUp.classList.add('hidden');
+                            arrowDown.classList.remove('hidden');
+                        } else {
+                            // STOPPED or unknown - hide arrow
+                            arrowContainer.classList.add('hidden');
+                            arrowUp.classList.add('hidden');
+                            arrowDown.classList.add('hidden');
+                        }
+                    }
+                }, (error) => {
+                    console.warn('Lift prediction listener error:', error.message);
                 });
             }
 
