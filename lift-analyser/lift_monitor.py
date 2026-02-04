@@ -82,6 +82,7 @@ TIMING_TABLE = [
 # Regex Patterns for stream parsing
 PATTERNS = {
     'AAA': re.compile(b'AAA'),
+    'A': re.compile(b'A'),  # Single A - always present during movement
     # Nh is REMOVED from logic, only kept if needed for raw logging debug
     'DoorClose': re.compile(b'i.@'),  # Doors Closing (Wildcard)
     'DoorOpenL0': re.compile(b' ha'), # Doors Opening L0
@@ -329,9 +330,10 @@ class LiftMonitor:
             except Exception as e:
                 logging.debug(f"Buffer decode error: {e}")
 
-            # ONLY COUNT AAA
+            # Count AAA (for direction prediction) and single A (for movement tracking)
             chunk_aaa = len(PATTERNS['AAA'].findall(full_data))
-
+            chunk_a = len(PATTERNS['A'].findall(full_data))  # Any 'A' = movement
+            
             self.trip_aaa_count += chunk_aaa
 
             # Events (Only change state if NOT currently moving)
@@ -357,6 +359,7 @@ class LiftMonitor:
             self.regex_buffer = full_data[-20:]
         else:
             chunk_aaa = 0
+            chunk_a = 0
 
         # === STATE MACHINE ===
 
@@ -379,7 +382,9 @@ class LiftMonitor:
 
         # 2. WHILE MOVING
         elif self.state == LiftState.MOVING:
-            if chunk_aaa > 0:
+            # Use EITHER AAA or single A to keep movement alive
+            # Single A is always present during movement regardless of direction
+            if chunk_aaa > 0 or chunk_a > 0:
                 self.last_signal_time = now
 
             # Store Data
