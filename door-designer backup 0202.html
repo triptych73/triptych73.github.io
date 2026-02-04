@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Door Workshop -->
+
+<head>
+    <!-- Firebase Auth Guard (Standard) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) window.location.href = 'login.html';
+            });
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panelled Door Designer</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Firebase Auth Guard -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) window.location.href = 'login.html';
+            });
+        }
+    </script>
+    <style>
+        :root {
+            --midnight: #0F1115;
+            --void: #050505;
+            --panel: #16191D;
+            --border: #2A2E35;
+            --stone: #F5F5F0;
+            --bronze: #9A8C74;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--midnight);
+            font-family: 'Inter', sans-serif;
+            color: var(--stone);
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            max-width: 320px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            pointer-events: auto;
+        }
+
+        #overlay-header {
+            padding: 12px 16px;
+            background: var(--void);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        #overlay-header:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        #overlay-content {
+            padding: 12px 16px;
+            overflow-y: auto;
+        }
+
+        .minimized #overlay-content {
+            display: none;
+        }
+
+        h1 {
+            margin: 0;
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            color: var(--stone);
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 10px;
+            color: var(--bronze);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin: 12px 0 6px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .toggle-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--gray-500);
+            font-size: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .stat-label {
+            color: var(--gray-400);
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--stone);
+            font-size: 11px;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            color: var(--bronze);
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        .lil-gui {
+            --background-color: var(--panel) !important;
+            --text-color: var(--stone) !important;
+            --title-background-color: var(--void) !important;
+            --title-text-color: var(--stone) !important;
+            --widget-color: var(--border) !important;
+            --hover-color: rgba(255, 255, 255, 0.05) !important;
+            --focus-color: var(--bronze) !important;
+            --number-color: var(--bronze) !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        .lil-gui .title {
+            font-family: 'Inter', sans-serif !important;
+            font-size: 11px !important;
+            letter-spacing: 0.05em !important;
+            text-transform: uppercase !important;
+        }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+    </script>
+</head>
+
+<body>
+    <div id="loading">Loading Workshop...</div>
+    <div id="canvas-container"></div>
+
+    <div id="overlay">
+        <div id="overlay-header" onclick="document.getElementById('overlay').classList.toggle('minimized')">
+            <h1>Door Designer</h1>
+            <span class="toggle-btn">[-]</span>
+        </div>
+        <div id="overlay-content">
+            <h2>Dimensions</h2>
+            <div class="stat-row"><span class="stat-label">Total Width:</span><span class="stat-value"
+                    id="disp-width">--</span></div>
+            <div class="stat-row"><span class="stat-label">Apex Height:</span><span class="stat-value"
+                    id="disp-height">--</span></div>
+            <div class="stat-row"><span class="stat-label">Arch Radius:</span><span class="stat-value"
+                    id="disp-radius">--</span></div>
+            <div class="stat-row"><span class="stat-label">Arch Center Y:</span><span class="stat-value"
+                    id="disp-center">--</span></div>
+            <h2>Configuration</h2>
+            <div class="stat-row"><span class="stat-label">Leaf Style:</span><span class="stat-value"
+                    id="disp-style">--</span></div>
+            <div class="stat-row"><span class="stat-label">Est. Weight:</span><span class="stat-value"
+                    id="disp-weight">-- kg</span></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+        // ------------------------------------------------------------------
+        // EXPORT UTILS
+        // ------------------------------------------------------------------
+        const ExporterUtils = {
+            saveString(text, filename) {
+                const blob = new Blob([text], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            },
+            saveArrayBuffer(buffer, filename) {
+                const blob = new Blob([buffer], { type: 'application/octet-stream' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            },
+
+            // CUSTOM OBJ EXPORTER FOR QUADS (Adapted for Door Hierarchy)
+            exportOptimizedOBJ(doorInstance) {
+                let output = "# Triptych Door Designer - Optimized OBJ\n";
+                output += "# Scale: Millimeters\n";
+                output += "# Up-Axis: Z (Rotated -90 X)\n\n";
+
+                let globalVertexOffset = 1;
+                const rootGroup = doorInstance.meshGroup;
+
+                // Traverse and find all meshes
+                const meshes = [];
+                rootGroup.traverse((child) => {
+                    if (child.isMesh) meshes.push(child);
+                });
+
+                meshes.forEach((mesh, idx) => {
+                    output += `g Mesh_${idx + 1}\n`;
+
+                    const geo = mesh.geometry;
+                    const posAttr = geo.attributes.position;
+                    // Check if geometry has positions
+                    if (!posAttr) return;
+
+                    const vertices = posAttr.array;
+
+                    // Bake World Matrix
+                    mesh.updateMatrixWorld(true);
+                    const matrix = mesh.matrixWorld;
+
+                    // 1. Write Vertices
+                    for (let i = 0; i < vertices.length; i += 3) {
+                        const localVec = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+
+                        // Apply World Transform
+                        localVec.applyMatrix4(matrix);
+
+                        // Apply Rotation for CAD (Y-Up -> Z-Up: x, z, -y)
+                        output += `v ${localVec.x.toFixed(4)} ${localVec.z.toFixed(4)} ${(-localVec.y).toFixed(4)}\n`;
+                    }
+
+                    // 2. Write Faces
+                    if (geo.index) {
+                        const indices = geo.index.array;
+                        for (let i = 0; i < indices.length; i += 3) {
+                            const a = globalVertexOffset + indices[i];
+                            const b = globalVertexOffset + indices[i + 1];
+                            const c = globalVertexOffset + indices[i + 2];
+                            output += `f ${a} ${b} ${c}\n`;
+                        }
+                    } else {
+                        // Non-indexed
+                        const triCount = vertices.length / 9;
+                        for (let i = 0; i < triCount; i++) {
+                            const v = globalVertexOffset + (i * 3);
+                            output += `f ${v} ${v + 1} ${v + 2}\n`;
+                        }
+                    }
+                    globalVertexOffset += (vertices.length / 3);
+                    output += "\n";
+                });
+
+                this.saveString(output, 'Door_Design_AutoCAD.obj');
+            },
+
+            exportGLTF(doorInstance) {
+                const exporter = new GLTFExporter();
+                // Create clean export group
+                const exportGroup = new THREE.Group();
+                const clone = doorInstance.meshGroup.clone();
+                // We might need to ensure transforms are correct, but clone should handle it
+                exportGroup.add(clone);
+
+                exporter.parse(
+                    exportGroup,
+                    (gltf) => {
+                        this.saveArrayBuffer(gltf, 'Door_Design.glb');
+                    },
+                    (error) => { console.error('GLTF Export Error:', error); },
+                    { binary: true }
+                );
+            }
+        };
+
+        // ------------------------------------------------------------------
+        // FIREBASE PERSISTENCE
+        // ------------------------------------------------------------------
+        const FirestoreService = {
+            async saveDoor(name, config) {
+                const user = firebase.auth().currentUser;
+                if (!user) { alert('Please log in using the link in Project Executive.'); return; }
+
+                try {
+                    const designName = name || 'Untitled Door';
+
+                    // Check if a design with this name already exists for this user
+                    const existingQuery = await firebase.firestore().collection('doors')
+                        .where('uid', '==', user.uid)
+                        .where('name', '==', designName)
+                        .limit(1)
+                        .get();
+
+                    if (!existingQuery.empty) {
+                        // Update existing document
+                        const existingDoc = existingQuery.docs[0];
+                        console.log('Updating existing design:', existingDoc.id);
+                        await existingDoc.ref.update({
+                            config: config,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        alert('Design Updated!');
+                    } else {
+                        // Create new document
+                        console.log('Creating new design:', designName);
+                        await firebase.firestore().collection('doors').add({
+                            uid: user.uid,
+                            name: designName,
+                            config: config,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        alert('Design Saved!');
+                    }
+                    return true;
+                } catch (e) {
+                    console.error(e);
+                    alert('Save failed: ' + e.message);
+                    return false;
+                }
+            },
+
+            async getUserDoors() {
+                const user = firebase.auth().currentUser;
+                if (!user) return [];
+                try {
+                    const snapshot = await firebase.firestore().collection('doors')
+                        .where('uid', '==', user.uid)
+                        // .orderBy('timestamp', 'desc') // Removed to avoid index requirement
+                        .get();
+
+                    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Client-side sort
+                    docs.sort((a, b) => {
+                        const tA = a.timestamp ? a.timestamp.seconds : 0;
+                        const tB = b.timestamp ? b.timestamp.seconds : 0;
+                        return tB - tA; // Descending
+                    });
+                    return docs;
+                } catch (e) {
+                    console.error("Error fetching doors:", e);
+                    return [];
+                }
+            },
+
+            async loadDoor(id) {
+                try {
+                    const doc = await firebase.firestore().collection('doors').doc(id).get();
+                    if (doc.exists) return doc.data().config;
+                } catch (e) {
+                    console.error("Error loading door:", e);
+                }
+                return null;
+            }
+        };
+
+        class Door {
+            constructor(scene, config = {}) {
+                this.scene = scene;
+
+                this.meshGroup = new THREE.Group();
+                this.scene.add(this.meshGroup);
+
+                this.config = Object.assign({
+                    width: 1800,
+                    thickness: 55,
+                    isDoubleLeaf: true,
+
+                    hasArch: true,
+                    archRadius: 1200,
+                    archCenterY: 1600,
+
+                    stileWidth: 120,
+                    railWidth: 120,
+                    bottomRailWidth: 200,   // Taller bottom rail
+                    muntinWidth: 60,
+
+                    panelRowHeights: [500, 450, 400],
+                    panelCols: 2,
+
+                    panelProfile: 'Raised', // Flat, Raised
+                    panelEdgeThickness: 15, // Thickness at the edge (min 10mm)
+                    bevelWidth: 55,         // mm
+                    bevelSides: 'Both',     // Front, Back, Both
+                    hasBead: false,         // Add bead moulding
+
+                    woodType: 'Oak',
+                    hingeType: 'Butt', // None, Butt, Strap
+                    hingeSide: 'Front', // Front, Back
+                    openAngle: 0
+                }, config);
+
+                this.panelOverrides = {};
+                this.selectedPanelId = null;
+
+                this.materials = this.initMaterials();
+                this.generate();
+            }
+
+            initMaterials() {
+                return {
+                    oak: new THREE.MeshStandardMaterial({ color: 0x8B5A2B, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide }),
+                    oakDark: new THREE.MeshStandardMaterial({ color: 0x6B4420, roughness: 0.75, metalness: 0.1, side: THREE.DoubleSide }),
+                    glass: new THREE.MeshPhysicalMaterial({
+                        color: 0x88ccff, transmission: 0.9, opacity: 1, metalness: 0, roughness: 0, ior: 1.5, thickness: 0.005, side: THREE.DoubleSide
+                    }),
+                    lead: new THREE.MeshStandardMaterial({ color: 0xAAAAAA, roughness: 0.3, metalness: 0.9, side: THREE.DoubleSide })
+                };
+            }
+
+            createHinges(type, direction, positions) {
+                if (!type || type === 'None') return null;
+
+                const { thickness } = this.config;
+                const t = thickness / 1000;
+
+                const group = new THREE.Group();
+                const hingeMat = this.materials.lead;
+
+                positions.forEach(y => {
+                    const hinge = new THREE.Group();
+                    hinge.position.y = y;
+
+                    // Knuckle (Axis)
+                    const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.15, 16), hingeMat);
+                    knuckle.position.x = -direction * 0.015;
+                    hinge.add(knuckle);
+
+                    if (type === 'Butt') {
+                        const plate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.1, 0.004), hingeMat);
+                        plate.position.set(direction * 0.02, 0, 0);
+                        hinge.add(plate);
+                    } else if (type === 'Strap') {
+                        // Heavily scaled up by ~30%
+                        const strapL = 0.60;
+                        const strapW = 0.060;
+                        const zSide = (this.config.hingeSide === 'Back') ? -1 : 1;
+                        const zOffset = (t / 2 + 0.005) * zSide;
+
+                        const strap = new THREE.Mesh(new THREE.BoxGeometry(strapL, strapW, 0.008), hingeMat);
+                        strap.position.set(direction * (strapL / 2 + 0.005), 0, zOffset);
+
+                        // Studs
+                        const studGeo = new THREE.SphereGeometry(0.012, 16, 16);
+                        for (let k = 1; k <= 3; k++) {
+                            const stud = new THREE.Mesh(studGeo, hingeMat);
+                            // Stud always protrudes outward from the strap face
+                            const studZ = zOffset + (0.004 + 0.008) * zSide; // Strap center Z + half thickness + radius?
+                            // Simpler: Just offset from strap center in direction of Normal (zSide)
+                            stud.position.set(direction * (k * 0.16), 0, zOffset + 0.006 * zSide);
+                            stud.scale.set(1, 1, 0.5);
+                            stud.rotation.x = (zSide === -1) ? Math.PI : 0; // Flip if back
+                            hinge.add(stud);
+                        }
+
+                        hinge.add(strap);
+
+                        // Tip (Flat Triangle)
+                        const tipLen = 0.08;
+                        const tipShape = new THREE.Shape();
+                        tipShape.moveTo(0, -strapW / 2);
+                        tipShape.lineTo(tipLen, 0);
+                        tipShape.lineTo(0, strapW / 2);
+                        tipShape.lineTo(0, -strapW / 2);
+
+                        const tipGeo = new THREE.ExtrudeGeometry(tipShape, { depth: 0.008, bevelEnabled: false });
+                        const tip = new THREE.Mesh(tipGeo, hingeMat);
+
+                        // Center Z relative to zOffset (Extrude goes 0 to depth)
+                        tip.position.z = zOffset - 0.004;
+
+                        if (direction === 1) {
+                            tip.position.x = strapL + 0.005;
+                        } else {
+                            tip.position.x = -(strapL + 0.005);
+                            tip.rotation.z = Math.PI;
+                        }
+
+                        hinge.add(tip);
+                    }
+
+                    group.add(hinge);
+                });
+
+                return group;
+            }
+
+            generate() {
+                while (this.meshGroup.children.length > 0) {
+                    const child = this.meshGroup.children[0];
+                    if (child.geometry) child.geometry.dispose();
+                    this.meshGroup.remove(child);
+                }
+
+                const { width, thickness, isDoubleLeaf, openAngle } = this.config;
+                const angleRad = (openAngle || 0) * Math.PI / 180;
+
+                const gap = isDoubleLeaf ? 3 : 0;
+                const leafWidth = isDoubleLeaf ? (width - gap) / 2 : width;
+
+                const leftPos = isDoubleLeaf ? -width / 4 - gap / 4 : 0;
+                const rightPos = isDoubleLeaf ? width / 4 + gap / 4 : 0;
+
+                // Calculate Shoulder Height based on stacking logic
+                const { bottomRailWidth, railWidth, muntinWidth, panelRowHeights } = this.config;
+                const brw = (bottomRailWidth || railWidth) / 1000;
+                const rw = railWidth / 1000;
+                const mw = muntinWidth / 1000;
+
+                let totalH = brw;
+                panelRowHeights.forEach((h, i) => {
+                    totalH += h / 1000;
+                    if (i < panelRowHeights.length - 1) totalH += mw;
+                });
+                totalH += rw;
+
+                const shoulderHeight = totalH;
+
+                // Hinge Positions
+                const strapYBottom = brw / 2;
+                const strapYTop = shoulderHeight - rw / 2;
+                const buttYBottom = 0.25;
+                const buttYTop = shoulderHeight - 0.20;
+
+                const hingeY = (this.config.hingeType === 'Strap') ? [strapYBottom, strapYTop] : [buttYBottom, buttYTop];
+
+                // Left (or Single) Leaf
+                const leftLeaf = this.createLeaf(leafWidth, thickness, leftPos, 0);
+
+                if (isDoubleLeaf) {
+                    // Double Doors
+                    const leftHingeX = (-width / 2) / 1000;
+                    const rightHingeX = (width / 2) / 1000;
+
+                    // Left Pivot
+                    const leftPivot = new THREE.Group();
+                    leftPivot.position.set(leftHingeX, 0, 0);
+                    leftLeaf.position.x -= leftHingeX;
+                    leftPivot.add(leftLeaf);
+
+                    const lHinges = this.createHinges(this.config.hingeType, 1, hingeY);
+                    if (lHinges) leftPivot.add(lHinges);
+
+                    leftPivot.rotation.y = angleRad;
+                    this.meshGroup.add(leftPivot);
+
+                    // Right Pivot
+                    const rightLeaf = this.createLeaf(leafWidth, thickness, rightPos, 1);
+                    const rightPivot = new THREE.Group();
+                    rightPivot.position.set(rightHingeX, 0, 0);
+                    rightLeaf.position.x -= rightHingeX;
+                    rightPivot.add(rightLeaf);
+
+                    const rHinges = this.createHinges(this.config.hingeType, -1, hingeY);
+                    if (rHinges) rightPivot.add(rHinges);
+
+                    rightPivot.rotation.y = -angleRad;
+                    this.meshGroup.add(rightPivot);
+
+                } else {
+                    // Single Door
+                    const hingeX = (-width / 2) / 1000;
+                    const pivot = new THREE.Group();
+                    pivot.position.set(hingeX, 0, 0);
+                    leftLeaf.position.x -= hingeX;
+                    pivot.add(leftLeaf);
+
+                    const hinges = this.createHinges(this.config.hingeType, 1, hingeY);
+                    if (hinges) pivot.add(hinges);
+
+                    pivot.rotation.y = angleRad;
+                    this.meshGroup.add(pivot);
+                }
+
+                this.updateUI();
+            }
+
+            // Get Y on circle at global X. Circle: x² + (y - cy)² = r²
+            getArchY(xGlobal) {
+                const { archRadius, archCenterY } = this.config;
+                const r = archRadius / 1000;
+                const cy = archCenterY / 1000;
+                if (Math.abs(xGlobal) > r) return cy;
+                return cy + Math.sqrt(r * r - xGlobal * xGlobal);
+            }
+
+            createLeaf(leafWidth, thickness, leafCenterX, leafIndex) {
+                const group = new THREE.Group();
+                group.position.set(leafCenterX / 1000, 0, 0);
+
+                const { stileWidth, railWidth, muntinWidth, panelRowHeights, panelCols, hasArch, archRadius, archCenterY } = this.config;
+
+                const w = leafWidth / 1000;
+                const t = thickness / 1000;
+                const sw = stileWidth / 1000;
+                const rw = railWidth / 1000;
+                const mw = muntinWidth / 1000;
+                const r = archRadius / 1000;
+                const cy = archCenterY / 1000;
+
+                const innerLeftX = -w / 2 + sw;
+                const innerRightX = w / 2 - sw;
+                const innerWidth = innerRightX - innerLeftX;
+
+                // Global X coordinates for arch calculations
+                const gLeftOuter = leafCenterX / 1000 - w / 2;
+                const gLeftInner = leafCenterX / 1000 - w / 2 + sw;
+                const gRightOuter = leafCenterX / 1000 + w / 2;
+                const gRightInner = leafCenterX / 1000 + w / 2 - sw;
+
+                // Helper for boxes
+                const createBox = (bw, bh, bd, x, y, mat, name) => {
+                    const geo = new THREE.BoxGeometry(bw, bh, bd);
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.set(x, y, 0);
+                    mesh.name = name;
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    return mesh;
+                };
+
+                // --- STILES with curved top ---
+                if (hasArch) {
+                    // Left stile: rectangle from y=0 to arch curve
+                    const leftStile = this.createCurvedStile(
+                        -w / 2, -w / 2 + sw,  // local x range
+                        gLeftOuter, gLeftInner,  // global x range (for arch)
+                        t, 'Stile_Left'
+                    );
+                    group.add(leftStile);
+
+                    // Right stile
+                    const rightStile = this.createCurvedStile(
+                        w / 2 - sw, w / 2,  // local x range
+                        gRightInner, gRightOuter,  // global x range
+                        t, 'Stile_Right'
+                    );
+                    group.add(rightStile);
+                } else {
+                    // Simple box stiles for non-arch
+                    const stileH = 2.5; // Fixed height if no arch
+                    group.add(createBox(sw, stileH, t, -w / 2 + sw / 2, stileH / 2, this.materials.oak, 'Stile_Left'));
+                    group.add(createBox(sw, stileH, t, w / 2 - sw / 2, stileH / 2, this.materials.oak, 'Stile_Right'));
+                }
+
+                // --- BOTTOM RAIL ---
+                const brw = (this.config.bottomRailWidth || rw) / 1000;
+                group.add(createBox(innerWidth, brw, t, 0, brw / 2, this.materials.oak, 'Rail_Bottom'));
+
+                // --- PANELS & HORIZONTAL MUNTINS ---
+                let currentY = brw;
+                const numRows = panelRowHeights.length;
+
+                for (let row = 0; row < numRows; row++) {
+                    const rowH = panelRowHeights[row] / 1000;
+                    const rowCenterY = currentY + rowH / 2;
+
+                    const colW = (innerWidth - (panelCols - 1) * mw) / panelCols;
+                    for (let c = 0; c < panelCols; c++) {
+                        const panelX = innerLeftX + c * (colW + mw) + colW / 2;
+
+                        const panelId = `${leafIndex}_${row}_${c}`;
+                        // Check override provided by implementation of selection tool
+                        const override = this.panelOverrides ? this.panelOverrides[panelId] : null;
+
+                        let panelMesh;
+                        if (override && (override.type === 'Leaded' || override.type === 'Glass')) {
+                            panelMesh = this.createLeadedPanel(colW, rowH, t, panelX, rowCenterY, override);
+                        } else {
+                            panelMesh = this.createProfiledPanel(colW, rowH, t, panelX, rowCenterY);
+                        }
+
+                        // Tag for interactivity
+                        panelMesh.userData = { isPanel: true, id: panelId };
+                        panelMesh.traverse(child => { child.userData = { isPanel: true, id: panelId }; });
+
+                        group.add(panelMesh);
+
+                        if (c < panelCols - 1) {
+                            const mx = innerLeftX + (c + 1) * colW + c * mw + mw / 2;
+                            group.add(createBox(mw, rowH, t, mx, rowCenterY, this.materials.oak, 'Muntin_V'));
+                        }
+                    }
+
+                    if (row < numRows - 1) {
+                        const hmy = currentY + rowH + mw / 2;
+                        group.add(createBox(innerWidth, mw, t, 0, hmy, this.materials.oak, 'Muntin_H'));
+                    }
+
+                    currentY += rowH + (row < numRows - 1 ? mw : 0);
+                }
+
+                // --- TOP RAIL ---
+                const topRailY = currentY + rw / 2;
+                group.add(createBox(innerWidth, rw, t, 0, topRailY, this.materials.oak, 'Rail_Top'));
+
+                // --- ARCHED TOP PANEL ---
+                if (hasArch) {
+                    const archStartY = currentY + rw;
+                    const panelId = `${leafIndex}_top_0`;
+                    const override = this.panelOverrides ? this.panelOverrides[panelId] : null;
+
+                    // Note: createLeafArchPanel currently doesn't support Leaded param, but we should pass it.
+                    // We'll update createLeafArchPanel to handle it later if needed, but for now passing it is safe.
+                    const curvedPanel = this.createLeafArchPanel(leafWidth, thickness, leafCenterX, archStartY, override);
+
+                    if (curvedPanel) {
+                        curvedPanel.userData = { isPanel: true, id: panelId };
+                        curvedPanel.traverse(c => { c.userData = { isPanel: true, id: panelId }; });
+                        group.add(curvedPanel);
+                    }
+
+                    // --- ARCHED TOP RAIL (frame around the curved panel) ---
+                    const archedRail = this.createArchedTopRail(leafWidth, thickness, leafCenterX, archStartY);
+                    if (archedRail) group.add(archedRail);
+                }
+
+                return group;
+            }
+
+            createProfiledPanel(width, height, thickness, x, y) {
+                const { panelProfile, bevelAngle, bevelWidth, bevelSides, hasBead } = this.config;
+                const grp = new THREE.Group();
+                grp.position.set(x, y, 0);
+
+                const w = width; // meters
+                const h = height; // meters
+                // thickness passed in is the FULL door thickness (in meters) from createLeaf
+                const fullT = thickness;
+
+                // Edge Thickness (Tongue)
+                // User wants control of "half thickness... minimum 10mm".  
+                // We'll use panelEdgeThickness from config (total thickness).
+                // panelEdgeThickness is in mm.
+                const userEdgeT = (this.config.panelEdgeThickness || 12) / 1000;
+
+                // Bevel Width (Run)
+                const bWidth = Math.min(bevelWidth / 1000, w / 2 - 0.002, h / 2 - 0.002);
+
+                // Calculate Bevel Depth (Rise)
+                // Rise = (FullThickness - EdgeThickness) / 2 (per side)
+                // If "Front" only, Rise = (FullThickness - EdgeThickness).
+                // If "Both", Rise = ...
+
+                // Wait, if panel is flush (FullT), and edge is userEdgeT.
+                // If Both: rise = (fullT - userEdgeT) / 2.
+                // If Front: rise = (fullT - userEdgeT). (Back is flush? Or back is userEdgeT?)
+                // Usually Single Raised Panel has flat back. So Back is flush with Edge? 
+                // Or Back is recessed?
+                // If "Front" only, let's assume Back is Flat/Recessed.
+                // Constraint: Edge must be centered?
+                // Let's stick to simple logic:
+                // Raise Amount = (fullT - userEdgeT) / (sides==Both ? 2 : 1).
+
+                const rise = (fullT - userEdgeT) / (bevelSides === 'Both' ? 2 : 1);
+
+                // Effective Depth (for geometry)
+                const effDepth = Math.max(0, rise);
+
+                // Bevel Angle (Derived) - informational, or used for normals
+                const bAngleRad = Math.atan2(effDepth, bWidth);
+
+                let geometry;
+
+                if (panelProfile === 'Raised') {
+                    // Custom BufferGeometry for Raised Panel
+                    const pGeom = new THREE.BufferGeometry();
+                    const vertices = [];
+                    const normals = [];
+                    const uvs = [];
+
+                    const addQuad = (v1, v2, v3, v4, n) => {
+                        vertices.push(...v1, ...v2, ...v4);
+                        vertices.push(...v2, ...v3, ...v4);
+                        for (let i = 0; i < 6; i++) normals.push(...n);
+                        uvs.push((v1[0] + w / 2) / w, (v1[1] + h / 2) / h);
+                        uvs.push((v2[0] + w / 2) / w, (v2[1] + h / 2) / h);
+                        uvs.push((v4[0] + w / 2) / w, (v4[1] + h / 2) / h);
+                        uvs.push((v2[0] + w / 2) / w, (v2[1] + h / 2) / h);
+                        uvs.push((v3[0] + w / 2) / w, (v3[1] + h / 2) / h);
+                        uvs.push((v4[0] + w / 2) / w, (v4[1] + h / 2) / h);
+                    };
+
+                    const outerW = w / 2;
+                    const outerH = h / 2;
+                    const innerW = w / 2 - bWidth;
+                    const innerH = h / 2 - bWidth;
+
+                    // FLUSH geometry: Center Field is at +/- fullT/2
+                    const zFront = fullT / 2;
+                    const zBack = -fullT / 2;
+
+                    const zFrontCenter = zFront;
+                    const zFrontEdge = (bevelSides === 'Front' || bevelSides === 'Both') ? zFront - effDepth : zFront;
+
+                    const zBackCenter = zBack;
+                    const zBackEdge = (bevelSides === 'Back' || bevelSides === 'Both') ? zBack + effDepth : zBack;
+
+                    // -- FRONT SIDE --
+                    if (bevelSides === 'Front' || bevelSides === 'Both') {
+                        // Center Field (Flush)
+                        addQuad(
+                            [-innerW, -innerH, zFrontCenter], [innerW, -innerH, zFrontCenter],
+                            [innerW, innerH, zFrontCenter], [-innerW, innerH, zFrontCenter],
+                            [0, 0, 1]
+                        );
+
+                        // Bevels
+                        // Needs correct normals for lighting
+                        // Vector on bevel plane: (0, bWidth, effDepth) -> Normal approx (0, effDepth, -bWidth) normalized?
+                        // Actually let's just use simple face normals or approx.
+                        // Bottom Bevel: Normal tilts down (y-) and forward (z+)
+                        // Slope is dy/dz = bWidth / effDepth. Angle alpha.
+                        // Normal.y = -sin(alpha), Normal.z = cos(alpha)
+                        const hyp = Math.sqrt(bWidth * bWidth + effDepth * effDepth);
+                        const ny = effDepth / hyp; // depth is Z difference, width is Y difference
+                        const nz = bWidth / hyp;
+
+                        // Bottom (Normal points ~ South-East?) No, South and Up(Front)
+                        addQuad(
+                            [-innerW, -innerH, zFrontCenter], [-outerW, -outerH, zFrontEdge],
+                            [outerW, -outerH, zFrontEdge], [innerW, -innerH, zFrontCenter],
+                            [0, -ny, nz]
+                        );
+                        // Top
+                        addQuad(
+                            [innerW, innerH, zFrontCenter], [outerW, outerH, zFrontEdge],
+                            [-outerW, outerH, zFrontEdge], [-innerW, innerH, zFrontCenter],
+                            [0, ny, nz]
+                        );
+                        // Right
+                        addQuad(
+                            [innerW, -innerH, zFrontCenter], [outerW, -outerH, zFrontEdge],
+                            [outerW, outerH, zFrontEdge], [innerW, innerH, zFrontCenter],
+                            [ny, 0, nz]
+                        );
+                        // Left
+                        addQuad(
+                            [-outerW, -outerH, zFrontEdge], [-innerW, -innerH, zFrontCenter],
+                            [-innerW, innerH, zFrontCenter], [-outerW, outerH, zFrontEdge],
+                            [-ny, 0, nz]
+                        );
+                    } else {
+                        // Flat Front (Recessed or Flush? Flat usually recessed)
+                        // If "Raised" profile but 'Back' only, front is flat. 
+                        // Should it be flush? Or recessed?
+                        // Let's make it flush same as center for consistency, essentially a thick block.
+                        addQuad(
+                            [-outerW, -outerH, zFront], [outerW, -outerH, zFront],
+                            [outerW, outerH, zFront], [-outerW, outerH, zFront],
+                            [0, 0, 1]
+                        );
+                    }
+
+                    // -- BACK SIDE --
+                    if (bevelSides === 'Back' || bevelSides === 'Both') {
+                        // Center Field
+                        addQuad(
+                            [-innerW, innerH, zBackCenter], [innerW, innerH, zBackCenter],
+                            [innerW, -innerH, zBackCenter], [-innerW, -innerH, zBackCenter],
+                            [0, 0, -1]
+                        );
+
+                        // Bevels
+                        const hyp = Math.sqrt(bWidth * bWidth + effDepth * effDepth);
+                        const ny = effDepth / hyp;
+                        const nz = -bWidth / hyp; // Points back (Z-)
+
+                        // Bottom
+                        addQuad(
+                            [outerW, -outerH, zBackEdge], [-outerW, -outerH, zBackEdge],
+                            [-innerW, -innerH, zBackCenter], [innerW, -innerH, zBackCenter],
+                            [0, -ny, nz]
+                        );
+                        // Top
+                        addQuad(
+                            [-outerW, outerH, zBackEdge], [outerW, outerH, zBackEdge],
+                            [innerW, innerH, zBackCenter], [-innerW, innerH, zBackCenter],
+                            [0, ny, nz]
+                        );
+                        // Right
+                        addQuad(
+                            [outerW, -outerH, zBackEdge], [innerW, -innerH, zBackCenter],
+                            [innerW, innerH, zBackCenter], [outerW, outerH, zBackEdge],
+                            [ny, 0, nz]
+                        );
+                        // Left
+                        addQuad(
+                            [-innerW, -innerH, zBackCenter], [-outerW, -outerH, zBackEdge],
+                            [-outerW, outerH, zBackEdge], [-innerW, innerH, zBackCenter],
+                            [-ny, 0, nz]
+                        );
+                    } else {
+                        // Flat Back
+                        addQuad(
+                            [outerW, -outerH, zBack], [-outerW, -outerH, zBack],
+                            [-outerW, outerH, zBack], [outerW, outerH, zBack],
+                            [0, 0, -1]
+                        );
+                    }
+
+                    // -- EDGES --
+                    addQuad(
+                        [-outerW, -outerH, zBackEdge], [outerW, -outerH, zBackEdge],
+                        [outerW, -outerH, zFrontEdge], [-outerW, -outerH, zFrontEdge],
+                        [0, -1, 0]
+                    );
+                    addQuad(
+                        [-outerW, outerH, zFrontEdge], [outerW, outerH, zFrontEdge],
+                        [outerW, outerH, zBackEdge], [-outerW, outerH, zBackEdge],
+                        [0, 1, 0]
+                    );
+                    addQuad(
+                        [outerW, -outerH, zBackEdge], [outerW, outerH, zBackEdge],
+                        [outerW, outerH, zFrontEdge], [outerW, -outerH, zFrontEdge],
+                        [1, 0, 0]
+                    );
+                    addQuad(
+                        [-outerW, -outerH, zFrontEdge], [-outerW, outerH, zFrontEdge],
+                        [-outerW, outerH, zBackEdge], [-outerW, -outerH, zBackEdge],
+                        [-1, 0, 0]
+                    );
+
+                    pGeom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                    pGeom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                    pGeom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+                    // REMOVED computeVertexNormals to keep sharp creases
+
+                    geometry = pGeom;
+
+                } else {
+                    // Flat Panel - Standard recessed panel
+                    // Should this be flush or recessed? Usually flat panels are recessed.
+                    // Let's keep flat panels recessed (thinner).
+                    const tFlat = 0.018; // 18mm standard layout panel
+                    geometry = new THREE.BoxGeometry(w, h, tFlat);
+                }
+
+                const mesh = new THREE.Mesh(geometry, this.materials.oakDark);
+                mesh.name = 'Panel';
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                grp.add(mesh);
+
+                // --- BEAD ---
+                if (hasBead) {
+                    const beadW = 0.006;
+                    const beadProtrusion = 0.002;
+                    // Position relative to whichever face is frontmost at the edge
+                    // For raised panel, edge is at zFrontEdge.
+                    // For flat panel, edge is at tFlat/2.
+
+                    let zRef = 0;
+                    if (panelProfile === 'Raised') {
+                        zRef = (bevelSides === 'Front' || bevelSides === 'Both')
+                            ? (fullT / 2 - effDepth)
+                            : fullT / 2;
+                    } else {
+                        zRef = 0.018 / 2;
+                    }
+
+                    const zBead = zRef + beadW / 2;
+
+
+                    const beadH = new THREE.BoxGeometry(w, beadW, beadW / 2);
+                    const beadV = new THREE.BoxGeometry(beadW, h, beadW / 2);
+                    const mat = this.materials.oak;
+
+                    const topB = new THREE.Mesh(beadH, mat);
+                    topB.position.set(0, h / 2 - beadW / 2, zBead);
+                    grp.add(topB);
+
+                    const botB = new THREE.Mesh(beadH, mat);
+                    botB.position.set(0, -h / 2 + beadW / 2, zBead);
+                    grp.add(botB);
+
+                    const leftB = new THREE.Mesh(beadV, mat);
+                    leftB.position.set(-w / 2 + beadW / 2, 0, zBead);
+                    grp.add(leftB);
+
+                    const rightB = new THREE.Mesh(beadV, mat);
+                    rightB.position.set(w / 2 - beadW / 2, 0, zBead);
+                    grp.add(rightB);
+
+                    // If both sides, add to back too?
+                    // User: "option for each of the 2 remaining panel types". Usually applied to front.
+                }
+
+                return grp;
+            }
+
+            createLeadedPanel(width, height, thickness, x, y, config) {
+                const grp = new THREE.Group();
+                grp.position.set(x, y, 0);
+
+                const w = width;
+                const h = height;
+                const type = config.type || 'Glass'; // Glass, Leaded
+                // Retrieve pattern from config. Default to Diamond if not set.
+                // If the user selects Leaded, we check 'pattern'.
+                const pattern = config.pattern || 'Diamond';
+
+                // 1. Glass Pane
+                const glassGeo = new THREE.BoxGeometry(w, h, 0.005);
+                const glass = new THREE.Mesh(glassGeo, this.materials.glass);
+                grp.add(glass);
+
+                if (type === 'Glass') return grp;
+
+                // 2. Lead Grid
+                const leadW = 0.004;
+                const leadMat = this.materials.lead;
+                const leadGrp = new THREE.Group();
+
+                if (pattern === 'Rectangular') {
+                    // Rectangular Grid
+                    const rectW = (Number(config.rectWidth) || 30) / 1000;
+                    const rectH = (Number(config.rectHeight) || 30) / 1000;
+
+                    const halfW = w / 2;
+                    const halfH = h / 2;
+
+                    // Verticals
+                    const numV = Math.floor(halfW / rectW);
+                    for (let i = -numV; i <= numV; i++) {
+                        const px = i * rectW;
+                        if (Math.abs(px) >= halfW - 0.002) continue;
+                        const bar = new THREE.Mesh(new THREE.BoxGeometry(leadW, h, leadW), leadMat);
+                        bar.position.set(px, 0, 0.0025);
+                        leadGrp.add(bar);
+                    }
+
+                    // Horizontals
+                    const numH = Math.floor(halfH / rectH);
+                    for (let i = -numH; i <= numH; i++) {
+                        const py = i * rectH;
+                        if (Math.abs(py) >= halfH - 0.002) continue;
+                        const bar = new THREE.Mesh(new THREE.BoxGeometry(w, leadW, leadW), leadMat);
+                        bar.position.set(0, py, 0.0025);
+                        leadGrp.add(bar);
+                    }
+
+                } else {
+                    // Diamond (Default)
+                    const diamondW = (Number(config.diamondSize) || 30) / 1000;
+                    const diamondH = diamondW * 1.5;
+
+                    const angle = Math.atan2(diamondH, diamondW);
+                    const diagLength = Math.sqrt(w * w + h * h) * 1.5;
+                    const spacing = diamondW * Math.sin(angle);
+                    const maxDist = Math.sqrt(w * w + h * h);
+                    const count = Math.ceil((maxDist / 2) / spacing);
+
+                    for (let i = -count; i <= count; i++) {
+                        const off = i * spacing;
+                        // Line A (Rotated +angle)
+                        const barA = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
+                        barA.rotation.z = angle;
+                        barA.position.set(off * Math.cos(angle), off * Math.sin(angle), 0.0025);
+                        leadGrp.add(barA);
+
+                        // Line B (Rotated -angle)
+                        const barB = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
+                        barB.rotation.z = -angle;
+                        barB.position.set(off * Math.cos(angle), -off * Math.sin(angle), 0.0025);
+                        leadGrp.add(barB);
+                    }
+                }
+
+                grp.add(leadGrp);
+                return grp;
+            }
+
+
+
+
+
+
+            createArchedTopRail(leafWidth, thickness, leafCenterX, archStartY) {
+                // Creates the curved rail that frames the top arch panel
+                const { archRadius, archCenterY, stileWidth, railWidth } = this.config;
+
+                const w = leafWidth / 1000;
+                const t = thickness / 1000;
+                const sw = stileWidth / 1000;
+                const rw = railWidth / 1000;
+                const rOuter = archRadius / 1000;
+                const rInner = rOuter - rw; // Inner radius (smaller)
+                const cy = archCenterY / 1000;
+                const startY = archStartY;
+
+                // Edges of the panel area (inside the stiles)
+                const localLeftX = -w / 2 + sw;
+                const localRightX = w / 2 - sw;
+
+                // Global X coordinates
+                const globalLeftX = leafCenterX / 1000 + localLeftX;
+                const globalRightX = leafCenterX / 1000 + localRightX;
+
+                // Check outer bounds
+                if (Math.abs(globalLeftX) > rOuter || Math.abs(globalRightX) > rOuter) return null;
+
+                // Y positions on outer arc
+                const yOuterLeft = cy + Math.sqrt(rOuter * rOuter - globalLeftX * globalLeftX);
+                const yOuterRight = cy + Math.sqrt(rOuter * rOuter - globalRightX * globalRightX);
+
+                if (startY >= Math.min(yOuterLeft, yOuterRight)) return null;
+
+                const shape = new THREE.Shape();
+                const numSegments = 32;
+
+                // Bottom edge: trace inner arc from left to right
+                // We sample points and use either inner arc or startY
+                shape.moveTo(localLeftX, startY);
+
+                // If inner radius is valid, draw inner arc from left to right
+                if (rInner > 0) {
+                    for (let i = 0; i <= numSegments; i++) {
+                        const t_param = i / numSegments;
+                        const localX = localLeftX + t_param * (localRightX - localLeftX);
+                        const globalX = leafCenterX / 1000 + localX;
+
+                        let py;
+                        if (Math.abs(globalX) <= rInner) {
+                            py = cy + Math.sqrt(rInner * rInner - globalX * globalX);
+                            py = Math.max(startY, py); // Clamp to startY if below
+                        } else {
+                            py = startY; // Outside inner radius, use straight edge
+                        }
+                        shape.lineTo(localX, py);
+                    }
+                } else {
+                    shape.lineTo(localRightX, startY);
+                }
+
+                // Top edge: trace outer arc from right to left
+                const angleOuterRight = Math.atan2(yOuterRight - cy, globalRightX);
+                const angleOuterLeft = Math.atan2(yOuterLeft - cy, globalLeftX);
+
+                for (let i = 0; i <= numSegments; i++) {
+                    const t_param = i / numSegments;
+                    const angle = angleOuterRight + t_param * (angleOuterLeft - angleOuterRight);
+                    const px = rOuter * Math.cos(angle) - leafCenterX / 1000;
+                    const py = cy + rOuter * Math.sin(angle);
+                    shape.lineTo(px, py);
+                }
+
+                shape.closePath();
+
+                const extrudeSettings = { steps: 1, depth: t, bevelEnabled: false };
+                const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                geo.translate(0, 0, -t / 2);
+
+                const mesh = new THREE.Mesh(geo, this.materials.oak);
+                mesh.name = 'Rail_Arch';
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                return mesh;
+            }
+
+            createCurvedStile(localXLeft, localXRight, globalXLeft, globalXRight, depth, name) {
+                // Creates a stile that follows the arch curve at the top
+                const { archRadius, archCenterY } = this.config;
+                const r = archRadius / 1000;
+                const cy = archCenterY / 1000;
+
+                // Get arch Y at both edges
+                const yAtLeft = Math.abs(globalXLeft) <= r ? cy + Math.sqrt(r * r - globalXLeft * globalXLeft) : cy;
+                const yAtRight = Math.abs(globalXRight) <= r ? cy + Math.sqrt(r * r - globalXRight * globalXRight) : cy;
+
+                // Create shape: rectangle with curved top
+                const shape = new THREE.Shape();
+
+                // Start at bottom-left
+                shape.moveTo(localXLeft, 0);
+                // Bottom-right
+                shape.lineTo(localXRight, 0);
+                // Up to arch at right edge
+                shape.lineTo(localXRight, yAtRight);
+
+                // Arc from right to left (following the outer edge of the overall arch)
+                // We need to draw a small arc segment between these two points
+                // Both points are on the circle, so we use absarc
+                const angleRight = Math.atan2(yAtRight - cy, globalXRight);
+                const angleLeft = Math.atan2(yAtLeft - cy, globalXLeft);
+
+                // Arc center in local coordinates: global center is (0, cy), so local center is (-leafCenterX, cy)
+                // But stile shape is already in leaf-local coords. The arc center relative to stile is complex.
+                // Simpler: just do a straight line for now if the arc segment is small.
+                // OR: we can arc it properly.
+
+                // For a stile, the arc segment is small. Let's just line it.
+                shape.lineTo(localXLeft, yAtLeft);
+
+                shape.closePath();
+
+                const extrudeSettings = { steps: 1, depth: depth, bevelEnabled: false };
+                const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                geo.translate(0, 0, -depth / 2);
+
+                const mesh = new THREE.Mesh(geo, this.materials.oak);
+                mesh.name = name;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                return mesh;
+            }
+
+            createLeafArchPanel(leafWidth, thickness, leafCenterX, archStartY, override) {
+                const { archRadius, archCenterY, stileWidth, railWidth } = this.config;
+
+                const w = leafWidth / 1000;
+                // t is not used here properly? We re-define it inside the if block for Raised/Flat.
+                // But we need thickness for validation? No.
+                const sw = stileWidth / 1000;
+                const rw = railWidth / 1000;
+                // Panel goes up to the Inner edge of the top rail
+                const r = (archRadius / 1000) - rw;
+                const cy = archCenterY / 1000;
+                const startY = archStartY;
+
+                const innerLeftX = -w / 2 + sw;
+                const innerRightX = w / 2 - sw;
+
+                const globalInnerLeft = leafCenterX / 1000 + innerLeftX;
+                const globalInnerRight = leafCenterX / 1000 + innerRightX;
+
+                // Check geometry validity
+                // If the panel top corners are outside the inner radius, we clip them?
+                // Or if it's completely outside?
+                // Actually, if radius is small, yAtLeft might be imaginary.
+                // Math.sqrt check needed.
+
+                const getY = (gx) => {
+                    if (Math.abs(gx) > r) return startY; // Should technically never happen if design is valid? Or just clamp to startY?
+                    return Math.max(startY, cy + Math.sqrt(r * r - gx * gx));
+                };
+
+                const yAtLeft = getY(globalInnerLeft);
+                const yAtRight = getY(globalInnerRight);
+
+                if (startY >= Math.min(yAtLeft, yAtRight)) {
+                    // Panel is effectively rectangular or effectively 0 height at top?
+                    // Return null if height is 0? 
+                    // If yAtLeft < startY, implies error or geometry impossible.
+                    // But Math.max handles it.
+                    // This check is optimization.
+                    // If panel is flat top?
+                }
+
+                const shape = new THREE.Shape();
+
+                shape.moveTo(innerLeftX, startY);
+                shape.lineTo(innerRightX, startY);
+
+                // Top edge: trace from Right to Left using Cartesian steps to match Rail logic exactly
+                const numSegments = 32;
+                for (let i = 0; i <= numSegments; i++) {
+                    const t_param = i / numSegments;
+                    // Interpolate X from Right to Left
+                    const localX = innerRightX + t_param * (innerLeftX - innerRightX);
+                    const globalX = leafCenterX / 1000 + localX;
+
+                    const py = getY(globalX);
+
+                    shape.lineTo(localX, py);
+                }
+
+                shape.closePath();
+
+                if (override && (override.type === 'Leaded' || override.type === 'Glass')) {
+                    const grp = new THREE.Group();
+
+                    // 1. Glass
+                    const extrudeSettings = { steps: 1, depth: 0.005, bevelEnabled: false };
+                    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    geometry.translate(0, 0, -0.0025);
+
+                    const glass = new THREE.Mesh(geometry, this.materials.glass);
+                    glass.name = 'Panel_Arch_Glass';
+                    grp.add(glass);
+
+                    if (override.type === 'Leaded') {
+                        const pattern = override.pattern || 'Diamond';
+                        const leadW = 0.004;
+                        const leadMat = this.materials.lead;
+                        const leadGrp = new THREE.Group();
+
+                        // Bounds
+                        const boundW = innerRightX - innerLeftX;
+                        const apex = cy + r;
+                        const boundH = apex - startY;
+                        const midY = startY + boundH / 2;
+
+                        if (pattern === 'Rectangular') {
+                            const rectW = (Number(override.rectWidth) || 30) / 1000;
+                            const rectH = (Number(override.rectHeight) || 30) / 1000;
+
+                            const numV = Math.floor((boundW / 2) / rectW);
+                            for (let i = -numV; i <= numV; i++) {
+                                const px = i * rectW;
+                                const bar = new THREE.Mesh(new THREE.BoxGeometry(leadW, boundH + 0.2, leadW), leadMat); // Extra length
+                                bar.position.set(px, midY, 0.0025);
+                                leadGrp.add(bar);
+                            }
+
+                            const numH = Math.floor((boundH / 2) / rectH) + 1;
+                            for (let i = -numH; i <= numH; i++) {
+                                const py = midY + i * rectH;
+                                const bar = new THREE.Mesh(new THREE.BoxGeometry(boundW + 0.2, leadW, leadW), leadMat);
+                                bar.position.set(0, py, 0.0025);
+                                leadGrp.add(bar);
+                            }
+                        } else {
+                            const diamondW = (Number(override.diamondSize) || 30) / 1000;
+                            const diamondH = diamondW * 1.5;
+                            const angle = Math.atan2(diamondH, diamondW);
+                            const diagLength = (boundW + boundH) * 2;
+                            const spacing = diamondW * Math.sin(angle);
+                            const maxDist = Math.max(boundW, boundH) + 0.5;
+                            const count = Math.ceil(maxDist / spacing);
+
+                            for (let i = -count; i <= count; i++) {
+                                const off = i * spacing;
+                                // A
+                                const barA = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
+                                barA.rotation.z = angle;
+                                const dx = off * Math.cos(angle);
+                                const dy = off * Math.sin(angle);
+                                barA.position.set(dx, midY + dy, 0.0025);
+                                leadGrp.add(barA);
+
+                                // B
+                                const barB = new THREE.Mesh(new THREE.CylinderGeometry(leadW / 3, leadW / 3, diagLength, 4), leadMat);
+                                barB.rotation.z = -angle;
+                                const dx2 = off * Math.cos(angle);
+                                const dy2 = -off * Math.sin(angle);
+                                barB.position.set(dx2, midY + dy2, 0.0025);
+                                leadGrp.add(barB);
+                            }
+                        }
+                        grp.add(leadGrp);
+                    }
+
+                    return grp;
+                }
+
+                const { panelProfile, bevelWidth, panelEdgeThickness } = this.config;
+                const fullT = thickness / 1000;
+
+                let geometry;
+
+                if (panelProfile === 'Raised') {
+                    const userEdgeT = (panelEdgeThickness || 12) / 1000;
+
+                    // Clamp bevel width to fit within the panel dimensions
+                    // Height available is the minimum height (at the edges)
+                    const minHeight = Math.min(yAtLeft, yAtRight) - startY;
+                    const maxBWidth = Math.min(w / 2, minHeight / 2) - 0.002; // Safety margin
+
+                    const bWidth = Math.max(0.001, Math.min(bevelWidth / 1000, maxBWidth));
+
+                    const rise = (fullT - userEdgeT) / 2;
+                    const safeRise = Math.max(0, rise);
+
+                    const extrudeSettings = {
+                        steps: 1,
+                        depth: userEdgeT,
+                        bevelEnabled: true,
+                        bevelThickness: safeRise,
+                        bevelSize: bWidth,
+                        bevelOffset: -bWidth,
+                        bevelSegments: 2
+                    };
+                    geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    geometry.translate(0, 0, -userEdgeT / 2);
+                } else {
+                    const extrudeSettings = { steps: 1, depth: t, bevelEnabled: false };
+                    geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    geometry.translate(0, 0, -t / 2);
+                }
+
+                const mesh = new THREE.Mesh(geometry, this.materials.oakDark);
+                mesh.name = 'Panel_Arch';
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                return mesh;
+            }
+
+            selectPanel(panelId, mesh) {
+                this.selectedPanelId = panelId;
+
+                // Revert previous glow
+                if (this.currentSelection) {
+                    this.currentSelection.forEach(item => {
+                        if (item.mesh) item.mesh.material = item.original;
+                    });
+                }
+                this.currentSelection = [];
+
+                // Apply new glow
+                if (mesh) {
+                    mesh.traverse((obj) => {
+                        if (obj.isMesh && obj.material) {
+                            this.currentSelection.push({ mesh: obj, original: obj.material });
+                            const mat = obj.material.clone();
+                            if (mat.emissive) {
+                                mat.emissive.set(0x665500);
+                                mat.emissiveIntensity = 0.5;
+                            }
+                            obj.material = mat;
+                        }
+                    });
+                }
+
+                // Update GUI
+                if (window.updatePanelGUI) {
+                    const currentConfig = this.panelOverrides[panelId] || { type: 'Default' };
+                    window.updatePanelGUI(panelId, currentConfig);
+                }
+            }
+
+            updateUI() {
+                const { width, archRadius, archCenterY, isDoubleLeaf, thickness, hasArch } = this.config;
+                const apexHeight = hasArch ? archCenterY + archRadius : 'N/A';
+
+                document.getElementById('disp-width').textContent = `${width} mm`;
+                document.getElementById('disp-height').textContent = hasArch ? `${apexHeight} mm` : 'N/A';
+                document.getElementById('disp-radius').textContent = hasArch ? `${archRadius} mm` : 'N/A';
+                document.getElementById('disp-center').textContent = hasArch ? `${archCenterY} mm` : 'N/A';
+                document.getElementById('disp-style').textContent = isDoubleLeaf ? 'Double Leaf' : 'Single Leaf';
+
+                const vol = (width / 1000) * ((archCenterY + archRadius) / 1000) * (thickness / 1000);
+                const weight = Math.round(vol * 750 * 0.65);
+                document.getElementById('disp-weight').textContent = weight + ' kg';
+            }
+        }
+
+        // --- APP INIT ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0F1115);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 1.5, 4.5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 1.2, 0);
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        const gridHelper = new THREE.GridHelper(10, 10, 0x2A2E35, 0x16191D);
+        scene.add(gridHelper);
+
+        const door = new Door(scene);
+
+        // --- INTERACTION ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('mousedown', (event) => {
+            // Calculate mouse position in normalized device coordinates
+            // Note: renderer is full screen.
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // Intersect objects
+            const intersects = raycaster.intersectObjects(door.meshGroup.children, true);
+
+            if (intersects.length > 0) {
+                // Find first object that is part of a panel
+                let target = intersects[0].object;
+                while (target && (!target.userData || !target.userData.isPanel)) {
+                    target = target.parent;
+                    if (target === door.meshGroup) { target = null; break; }
+                }
+
+                if (target && target.userData && target.userData.id) {
+                    console.log("Selected Panel:", target.userData.id);
+                    door.selectPanel(target.userData.id, target);
+                }
+            }
+        });
+
+        // --- GUI ---
+        const gui = new GUI({ title: 'Workshop Controls' });
+
+        // --- PROJECT CONTROLS ---
+        const projFolder = gui.addFolder('Project Files');
+
+        const projState = {
+            saveName: 'My Door Design',
+            save: async () => {
+                const success = await FirestoreService.saveDoor(projState.saveName, door.config);
+                if (success) refreshLoadList();
+            },
+            loadId: '',
+            load: async () => {
+                if (!projState.loadId) return;
+                const newConfig = await FirestoreService.loadDoor(projState.loadId);
+                if (newConfig) {
+                    // Update door config and regenerate
+                    Object.assign(door.config, newConfig);
+                    door.generate();
+                    // Update all GUI controllers to reflect new config
+                    gui.folders.forEach(f => f.controllers.forEach(c => c.updateDisplay()));
+                    // Rebuild panel height GUI because array reference changed
+                    if (typeof rebuildPanelGUI === 'function') rebuildPanelGUI();
+
+                    // Dimensions and Style are main ones
+                    // Special handling for panels if needed
+                    console.log("Loaded Config:", newConfig);
+                }
+            },
+            exportOBJ: () => ExporterUtils.exportOptimizedOBJ(door),
+            exportGLTF: () => ExporterUtils.exportGLTF(door)
+        };
+
+        projFolder.add(projState, 'saveName').name('Design Name');
+        projFolder.add(projState, 'save').name('💾 Save to Cloud');
+
+        let loadCtrl = projFolder.add(projState, 'loadId', { 'Loading...': '' }).name('📂 Load Design');
+        projFolder.add(projState, 'load').name('Load Selected');
+
+        const expFolder = gui.addFolder('Export / Download');
+        expFolder.add(projState, 'exportOBJ').name('Download OBJ (CAD)');
+        expFolder.add(projState, 'exportGLTF').name('Download GLB');
+
+        // (Moved refreshLoadList and Auth Listener to end)
+
+        // --- SELECTED PANEL GUI ---
+        const selFolder = gui.addFolder('Selected Panel');
+        // selFolder.close();
+
+        let selControllers = [];
+
+        window.updatePanelGUI = (panelId, config) => {
+            selFolder.title(`Panel: ${panelId}`);
+            selFolder.open();
+
+            // Clear old controllers
+            while (selControllers.length > 0) {
+                selControllers.pop().destroy();
+            }
+
+            // Proxy object to handle GUI changes
+            const proxy = {
+                type: config.type || 'Default',
+                pattern: config.pattern || 'Diamond',
+                diamondSize: config.diamondSize || 30,
+                rectWidth: config.rectWidth || 30,
+                rectHeight: config.rectHeight || 30
+            };
+
+            const updateDoor = () => {
+                if (proxy.type === 'Default') {
+                    delete door.panelOverrides[panelId];
+                } else {
+                    door.panelOverrides[panelId] = {
+                        type: proxy.type,
+                        pattern: proxy.pattern,
+                        diamondSize: proxy.diamondSize,
+                        rectWidth: proxy.rectWidth,
+                        rectHeight: proxy.rectHeight
+                    };
+                }
+                door.generate();
+            };
+
+            // Type Selector
+            const typeCtrl = selFolder.add(proxy, 'type', ['Default', 'Leaded', 'Glass']).name('Type').onChange((v) => {
+                updateDoor();
+                // Refresh to show/hide sub-params
+                window.updatePanelGUI(panelId, door.panelOverrides[panelId] || {});
+            });
+            selControllers.push(typeCtrl);
+
+            if (proxy.type === 'Leaded') {
+                const patCtrl = selFolder.add(proxy, 'pattern', ['Diamond', 'Rectangular']).name('Pattern').onChange((v) => {
+                    updateDoor();
+                    window.updatePanelGUI(panelId, door.panelOverrides[panelId] || {});
+                });
+                selControllers.push(patCtrl);
+
+                if (proxy.pattern === 'Rectangular') {
+                    selControllers.push(selFolder.add(proxy, 'rectWidth', 10, 150).name('Grid Width').onChange(updateDoor));
+                    selControllers.push(selFolder.add(proxy, 'rectHeight', 10, 150).name('Grid Height').onChange(updateDoor));
+                } else {
+                    selControllers.push(selFolder.add(proxy, 'diamondSize', 10, 150).name('Diamond Size').onChange(updateDoor));
+                }
+            }
+        };
+
+        const dimFolder = gui.addFolder('Dimensions');
+        dimFolder.add(door.config, 'width', 800, 4000).name('Width (mm)').onChange(() => door.generate());
+        dimFolder.add(door.config, 'thickness', 35, 80).name('Thickness (mm)').onChange(() => door.generate());
+
+        const archFolder = gui.addFolder('Arch');
+        archFolder.add(door.config, 'hasArch').name('Enable Arch').onChange(() => door.generate());
+        archFolder.add(door.config, 'archRadius', 500, 3000).name('Radius (mm)').onChange(() => door.generate());
+        archFolder.add(door.config, 'archCenterY', 500, 3000).name('Center Y (mm)').onChange(() => door.generate());
+
+        const styleFolder = gui.addFolder('Style');
+        styleFolder.add(door.config, 'isDoubleLeaf').name('Double Leaf').onChange(() => door.generate());
+        styleFolder.add(door.config, 'panelProfile', ['Flat', 'Raised']).name('Panel Profile').onChange(() => door.generate());
+        styleFolder.add(door.config, 'panelEdgeThickness', 10, 30).name('Edge Thick (mm)').onChange(() => door.generate());
+        styleFolder.add(door.config, 'bevelWidth', 0, 150).name('Bevel Width (mm)').onChange(() => door.generate());
+        styleFolder.add(door.config, 'bevelSides', ['Front', 'Back', 'Both']).name('Bevel Sides').onChange(() => door.generate());
+        styleFolder.add(door.config, 'hasBead').name('Add Bead').onChange(() => door.generate());
+
+        const frameFolder = gui.addFolder('Frame');
+        frameFolder.add(door.config, 'stileWidth', 60, 300, 5).name('Stile W').onChange(() => door.generate());
+        frameFolder.add(door.config, 'railWidth', 60, 300, 5).name('Rail W').onChange(() => door.generate());
+        frameFolder.add(door.config, 'bottomRailWidth', 60, 400, 5).name('Bot Rail W').onChange(() => door.generate());
+        frameFolder.add(door.config, 'muntinWidth', 30, 150, 5).name('Muntin W').onChange(() => door.generate());
+
+        const hardFolder = gui.addFolder('Hardware');
+        hardFolder.add(door.config, 'openAngle', 0, 90).name('Open Angle').onChange(() => door.generate());
+        hardFolder.add(door.config, 'hingeType', ['None', 'Butt', 'Strap']).name('Hinge Type').onChange(() => door.generate());
+        hardFolder.add(door.config, 'hingeSide', ['Front', 'Back']).name('Hinge Face').onChange(() => door.generate());
+
+        const panelFolder = gui.addFolder('Panel Heights (mm)');
+        const rowHeightControllers = [];
+        function rebuildPanelGUI() {
+            rowHeightControllers.forEach(c => c.destroy());
+            rowHeightControllers.length = 0;
+            door.config.panelRowHeights.forEach((h, i) => {
+                const ctrl = panelFolder.add(door.config.panelRowHeights, i, 100, 1000, 10).name(`Row ${i + 1}`).onChange(() => door.generate());
+                rowHeightControllers.push(ctrl);
+            });
+        }
+        rebuildPanelGUI();
+
+        const panelOps = {
+            addRow: () => { door.config.panelRowHeights.push(400); rebuildPanelGUI(); door.generate(); },
+            removeRow: () => { if (door.config.panelRowHeights.length > 1) { door.config.panelRowHeights.pop(); rebuildPanelGUI(); door.generate(); } }
+        };
+        panelFolder.add(panelOps, 'addRow').name('+ Add Row');
+        panelFolder.add(panelOps, 'removeRow').name('- Remove Row');
+        panelFolder.add(door.config, 'panelCols', 1, 4, 1).name('Columns').onChange(() => door.generate());
+
+        document.getElementById('loading').style.display = 'none';
+
+
+        // --- PERSISTENCE INIT ---
+        // Refresh Load List (Moved here to prevent blocking standard GUI)
+        async function refreshLoadList() {
+            try {
+                const doors = await FirestoreService.getUserDoors();
+                const options = {};
+                if (!doors || doors.length === 0) options['(No Saved Designs)'] = '';
+                else options['Select a Design...'] = '';
+
+                if (doors) {
+                    doors.forEach(d => {
+                        const date = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleString() : '';
+                        const label = `${d.name} [${date}]`;
+                        options[label] = d.id;
+                    });
+                }
+
+                if (loadCtrl) {
+                    const parent = loadCtrl.parent;
+                    if (parent) {
+                        loadCtrl.destroy();
+                        loadCtrl = parent.add(projState, 'loadId', options).name('📂 Load Design');
+                    }
+                }
+            } catch (e) {
+                console.error("Error refreshing load list:", e);
+            }
+        }
+
+        // Listen for Auth with Error Handling
+        if (typeof firebase !== 'undefined') {
+            try {
+                firebase.auth().onAuthStateChanged(user => {
+                    if (user) refreshLoadList();
+                });
+            } catch (e) { console.error("Auth Listener Error:", e); }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+
+</html>

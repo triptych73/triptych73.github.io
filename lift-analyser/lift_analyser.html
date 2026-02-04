@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lift Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111827;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = React;
+
+        // --- ICONS (Inlined) ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Play = (props) => <IconBase {...props}><polygon points="5 3 19 12 5 21 5 3"></polygon></IconBase>;
+        const Pause = (props) => <IconBase {...props}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></IconBase>;
+        const Upload = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></IconBase>;
+        const Activity = (props) => <IconBase {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></IconBase>;
+        const ArrowUp = (props) => <IconBase {...props}><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></IconBase>;
+        const ArrowDown = (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></IconBase>;
+        const FileText = (props) => <IconBase {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></IconBase>;
+        const X = (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase>;
+        const Settings = (props) => <IconBase {...props}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></IconBase>;
+        const Sparkles = (props) => <IconBase {...props}><path d="m12 3-1.9 5.8a1 1 0 0 1-.95.68H3.3l4.64 3.73a1 1 0 0 1 .36 1.1l-1.6 5.8 4.67-3.66a1 1 0 0 1 1.25 0l4.67 3.66-1.6-5.8a1 1 0 0 1 .36-1.1l4.64-3.73H14.85a1 1 0 0 1-.95-.68L12 3Z"></path></IconBase>;
+        const Eye = (props) => <IconBase {...props}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></IconBase>;
+        const LinkIcon = (props) => <IconBase {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></IconBase>;
+        const Unlink = (props) => <IconBase {...props}><path d="M18.84 12.25l1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-5.54-.38l.96.96 1.13-1.13a3 3 0 0 1 4.24 4.24l-3 3a3 3 0 0 1-3.68.51l-1.07-1.07"></path><path d="M5.16 11.75l-1.71 1.71A5 5 0 0 0 10.5 20.5a5.006 5.006 0 0 0 5.48-1.57l-.96-.96-1.13 1.13a3 3 0 0 1-4.24-4.24l3-3a3 3 0 0 1 3.75-.48l1.07 1.07"></path><line x1="2" y1="2" x2="22" y2="22"></line></IconBase>;
+        const XCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></IconBase>;
+        const PlayCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></IconBase>;
+        const AlignJustify = (props) => <IconBase {...props}><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></IconBase>;
+
+        // --- DATA STRUCTURES (Structure of Arrays) ---
+        const TYPE_DATA = 0;
+        const TYPE_EVENT = 1;
+        const TYPE_NOISE = 2;
+        const TYPE_SEPARATOR = 3;
+        const TYPE_SPACER = 4;
+
+        class LogDataset {
+            constructor(file, index, events, noise, duration, preParsedLines = null) {
+                this.file = file;           // The File/Blob object
+                this.index = index;         // Array of { time, offset } for sparse navigation
+                this.events = events || [];       // Array of { time, type, floor, reason }
+                this.noise = noise || [];         // Array of { time, val } (downsampled)
+                this.duration = duration || 0;
+
+                // Compatibility for LiftAnalyzer checks
+                this.preParsedLines = preParsedLines;
+                this.lines = preParsedLines || []; // Restoration of critical property
+                this.length = preParsedLines ? preParsedLines.length : 0;
+                // Optimized: Populate SoA arrays for fast lookups if in-memory
+                if (preParsedLines) {
+                    this.timestamps = preParsedLines.map(l => l.timestamp);
+                    this.types = preParsedLines.map(l => l.isData ? 0 : 1); // Simplified types
+                } else {
+                    this.timestamps = [];
+                    this.types = [];
+                }
+            }
+
+            // Helper method to check if dataset has data
+            isEmpty() {
+                return !this.file && (!this.preParsedLines || this.preParsedLines.length === 0);
+            }
+
+            hasData() {
+                return !this.isEmpty();
+            }
+
+            // fetchWindow: Returns a Promise resolving to parsed lines for a time window CENTERED around centerTime
+            async fetchWindow(centerTime, windowDuration = 2.0) {
+                const halfWindow = windowDuration / 2;
+                const startTime = Math.max(0, centerTime - halfWindow);
+                const endTime = centerTime + halfWindow;
+                console.log("DEBUG fetchWindow: Called with centerTime:", centerTime, "window:", startTime, "-", endTime);
+
+                if (this.preParsedLines) {
+                    // Fast Path: In-memory filter - get lines AROUND the center time
+                    const result = this.preParsedLines.filter(l => l.timestamp >= startTime && l.timestamp <= endTime);
+                    console.log("DEBUG fetchWindow: Fast path returned", result.length, "lines");
+                    return result;
+                }
+
+                if (!this.file || !this.index || this.index.length === 0) return [];
+
+                // 1. Find byte range via Index
+                // Binary search for startTime in Index
+                // Index entries are { time, offset }
+                let l = 0, r = this.index.length - 1;
+                let idx = 0;
+                while (l <= r) {
+                    const m = (l + r) >> 1;
+                    if (this.index[m].time < startTime) { idx = m; l = m + 1; }
+                    else r = m - 1;
+                }
+
+                // Define Byte Range
+                const startOffset = this.index[idx].offset;
+
+                // Find end offset using endTime (not startTime + windowDuration)
+                let l2 = idx, r2 = this.index.length - 1;
+                let idx2 = this.index.length - 1;
+                while (l2 <= r2) {
+                    const m = (l2 + r2) >> 1;
+                    if (this.index[m].time < endTime) { idx2 = m; l2 = m + 1; }
+                    else r2 = m - 1;
+                }
+                // Read a bit beyond to ensure we cover lines
+                idx2 = Math.min(this.index.length - 1, idx2 + 1);
+
+                let endOffset = this.index[idx2].offset;
+                // Minimum read size 64KB
+                if (endOffset - startOffset < 65536) endOffset = startOffset + 65536;
+                endOffset = Math.min(endOffset, this.file.size);
+
+                // READ
+                const blob = this.file.slice(startOffset, endOffset);
+                const text = await blob.text();
+
+                // PARSE
+                const lines = text.split(/\r?\n/);
+                const parsed = [];
+
+                // We assume startOffset aligns with a line start because our Indexer ensures it.
+                // However, the first line might be partial if we are arbitrary.
+                // But scanLogFile pushes offsets of valid lines.
+
+                for (let raw of lines) {
+                    const clean = raw.trim();
+                    if (!clean) continue;
+                    // Parse T=
+                    const tMatch = clean.match(/T\s*=\s*([0-9.]+)\s*s/i);
+                    let t = tMatch ? parseFloat(tMatch[1]) : null;
+
+                    // Simple logic
+                    parsed.push({
+                        raw: clean,
+                        timestamp: t,
+                        isData: clean.length > 3 && !clean.startsWith('EVENT') && !clean.startsWith('NOISE')
+                    });
+                }
+
+                return parsed;
+            }
+        }
+
+        // --- SCANNERS ---
+        const scanLogFile = (file, onProgress) => {
+            return new Promise((resolve, reject) => {
+                const CHUNK_SIZE = 512 * 1024; // 512KB chunks
+                const size = file.size;
+                let offset = 0;
+
+                const index = [{ time: 0, offset: 0 }];
+                const events = [];
+                const noise = [];
+                let linesCount = 0;
+
+                let lastTime = 0;
+                let buffer = "";
+
+                // We use FileReader to read as text to keep it simple.
+                // V8 FileReader is very fast.
+                const reader = new FileReader();
+
+                // Iterative Reader
+                const readNext = () => {
+                    if (offset >= size) {
+                        resolve({ index, events, duration: lastTime, noise, linesCount });
+                        return;
+                    }
+
+                    const end = Math.min(offset + CHUNK_SIZE, size);
+                    const blob = file.slice(offset, end);
+                    reader.readAsText(blob);
+                };
+
+                reader.onload = (e) => {
+                    const chunk = e.target.result;
+                    const fullText = buffer + chunk;
+
+                    // Handle buffer boundaries
+                    const lastNewline = fullText.lastIndexOf('\n');
+                    let processText = "";
+
+                    if (lastNewline !== -1) {
+                        processText = fullText.substring(0, lastNewline);
+                        buffer = fullText.substring(lastNewline + 1);
+                    } else {
+                        buffer = fullText;
+                        if (offset + CHUNK_SIZE >= size) { // EOF
+                            processText = buffer;
+                            buffer = "";
+                        }
+                    }
+
+                    if (processText) {
+                        // Count lines in this chunk
+                        let count = 0;
+                        for (let i = 0; i < processText.length; i++) {
+                            if (processText[i] === '\n') count++;
+                        }
+                        linesCount += count;
+                    }
+
+                    // Extract Info
+                    const chunkLines = processText.split(/\r?\n/);
+                    let foundTimeInChunk = false;
+
+                    chunkLines.forEach(l => {
+                        const tMatch = l.match(/T\s*=\s*([0-9.]+)\s*s/i);
+                        if (tMatch) {
+                            const t = parseFloat(tMatch[1]);
+                            if (t > lastTime + 1.0) { // Index every 1.0s or so
+                                // Store the CHUNK offset, not exact line offset
+                                index.push({ time: t, offset: offset }); // Map to start of this chunk
+                                lastTime = t;
+                            }
+                            // Keep max time
+                            if (t > lastTime) lastTime = t;
+                        }
+
+                        if (l.includes('EVENT:')) {
+                            const m = l.match(/EVENT: (.*?) \|/);
+                            if (m) events.push({ time: lastTime, type: 'EVENT', reason: m[1] });
+                        }
+                    });
+
+                    offset += CHUNK_SIZE;
+                    if (onProgress) onProgress(Math.min(100, (offset / size) * 100));
+
+                    // Next
+                    readNext();
+                };
+
+                reader.onerror = reject;
+                readNext();
+            });
+        };
+
+        const renderHighlightedText = (text, isCurrent, config) => {
+            if (!isCurrent || !text) return text;
+            const patterns = [
+                { key: 'L0', regex: config.L0, color: 'text-blue-400 bg-blue-900/60 rounded px-1' },
+                { key: 'L1', regex: config.L1, color: 'text-green-400 bg-green-900/60 rounded px-1' },
+                { key: 'L2', regex: config.L2, color: 'text-yellow-400 bg-yellow-900/60 rounded px-1' },
+                { key: 'L3', regex: config.L3, color: 'text-red-400 bg-red-900/60 rounded px-1' },
+                { key: 'Moving', regex: config.Moving, color: 'text-pink-400 bg-pink-900/60 rounded px-1 font-bold' }
+            ];
+
+            const matches = [];
+            patterns.forEach(p => {
+                if (!p.regex) return; // Skip undefined patterns
+                try {
+                    const re = new RegExp(p.regex, 'g');
+                    let match;
+                    while ((match = re.exec(text)) !== null) {
+                        matches.push({ start: match.index, end: match.index + match[0].length, color: p.color });
+                    }
+                } catch (e) { }
+            });
+
+            if (matches.length === 0) return text;
+
+            const charClasses = new Array(text.length).fill(null);
+            matches.sort((a, b) => (b.end - b.start) - (a.end - a.start));
+
+            matches.forEach(m => {
+                for (let i = m.start; i < m.end; i++) {
+                    if (!charClasses[i]) charClasses[i] = m.color;
+                }
+            });
+
+            const nodes = [];
+            let currentClass = null;
+            let currentBuffer = "";
+
+            for (let i = 0; i < text.length; i++) {
+                const cls = charClasses[i];
+                if (cls !== currentClass) {
+                    if (currentBuffer) {
+                        nodes.push(currentClass ? <span key={i} className={currentClass}>{currentBuffer}</span> : currentBuffer);
+                    }
+                    currentClass = cls;
+                    currentBuffer = text[i];
+                } else {
+                    currentBuffer += text[i];
+                }
+            }
+            if (currentBuffer) {
+                nodes.push(currentClass ? <span key="end" className={currentClass}>{currentBuffer}</span> : currentBuffer);
+            }
+
+            return nodes;
+        };
+
+        const parseLogFileSynchronous = (rawText) => {
+            console.log("DEBUG: Starting Sync Parse. Text Length:", rawText.length);
+            const lines = rawText.split(/\r?\n/);
+            console.log("DEBUG: Split into", lines.length, "lines");
+            const parsed = [];
+            const index = [{ time: 0, offset: 0 }];
+            const events = [];
+
+            let firstTime = null;
+            let lastTime = 0;
+            const noise = []; // Store noise readings
+
+            lines.forEach((line, i) => {
+                const clean = line.trim();
+                if (!clean) return;
+
+                const tMatch = clean.match(/T\s*=\s*([0-9.]+)\s*s/i);
+                let rawT = lastTime; // Use a distinct var for raw time
+
+                if (tMatch) {
+                    rawT = parseFloat(tMatch[1]);
+                    // Initialize firstTime on first valid timestamp
+                    if (firstTime === null) firstTime = rawT;
+
+                    if (rawT > lastTime + 1.0) {
+                        // Store character offset for this time
+                        // Approximate offset: previous lines length. 
+                        // Since we split by newline, we can track offset manually or just ignore index for sync path.
+                        // Better: Let's actually track offset if we want parity.
+                        // BUT: For now, let's just ensure index has at least start/end to avoid fetchWindow crash.
+                        index.push({ time: rawT, offset: 0 }); // Fixed: was 't' (undefined), now 'rawT'
+                    }
+                    // Update raw tracker for fallback
+                    if (rawT > lastTime) lastTime = rawT;
+                }
+
+                // Fallback: If we processed >100 lines and still no timestamp, assume 0 base?
+                if (firstTime === null && i > 100) firstTime = 0;
+
+                // Normalize
+                let t = rawT;
+                if (firstTime !== null) {
+                    t = Math.max(0, rawT - firstTime);
+                }
+
+                // Check for EVENT (format: [[ EVENT: type | T=time ]])
+                if (clean.includes('EVENT:')) {
+                    const m = clean.match(/EVENT:\s*(.*?)\s*\|/);
+                    if (m) events.push({ time: t, type: 'EVENT', reason: m[1] });
+                }
+
+                // Check for NOISE (format: [NOISE: value | T=time])
+                if (clean.startsWith('[NOISE:') || clean.includes('[NOISE:')) {
+                    const noiseMatch = clean.match(/\[NOISE:\s*(\d+)/);
+                    if (noiseMatch) {
+                        noise.push({ time: t, val: parseInt(noiseMatch[1]) });
+                    }
+                }
+
+                // Determine if this is a DATA line (not NOISE, EVENT, header, or separator)
+                const isNoiseOrEvent = clean.startsWith('[NOISE:') || clean.startsWith('[[') || clean.includes('[NOISE:') || clean.includes('EVENT:');
+                const isHeader = clean.startsWith('START:') || clean.startsWith('----') || clean === '@@';
+                const isData = clean.length > 3 && !isNoiseOrEvent && !isHeader;
+
+                parsed.push({
+                    raw: clean,
+                    timestamp: t,
+                    isData: isData
+                });
+            });
+
+            // POST-PROCESS: Interpolate timestamps for data lines between NOISE markers
+            // This spreads data lines evenly between NOISE timestamps
+            let prevNoiseIdx = -1;
+            let prevNoiseTime = 0;
+            for (let i = 0; i < parsed.length; i++) {
+                const line = parsed[i];
+                if (line.raw.includes('[NOISE:') || line.raw.includes('EVENT:')) {
+                    // Found a marker - interpolate timestamps for all lines between prevNoiseIdx and i
+                    if (prevNoiseIdx >= 0 && i > prevNoiseIdx + 1) {
+                        const timeSpan = line.timestamp - prevNoiseTime;
+                        const lineCount = i - prevNoiseIdx;
+                        for (let j = prevNoiseIdx + 1; j < i; j++) {
+                            const fraction = (j - prevNoiseIdx) / lineCount;
+                            parsed[j].timestamp = prevNoiseTime + fraction * timeSpan;
+                        }
+                    }
+                    prevNoiseIdx = i;
+                    prevNoiseTime = line.timestamp;
+                }
+            }
+
+            return {
+                data: parsed,
+                index,
+                events,
+                duration: lastTime,
+                noise
+            };
+        };
+
+        const parseLogContentAsync = async (text) => {
+            const blob = new Blob([text]);
+            const { index, events, duration, noise } = await scanLogFile(blob);
+            // Extract stats if needed, or simple placeholders
+            const linesCount = text.split('\n').length;
+
+            return {
+                data: new LogDataset(blob, index, events, noise, duration),
+                stats: { lines: linesCount, anchors: index.length },
+                duration,
+                calls: events.filter(e => e.type === 'FLOOR_UPDATE' || (e.type === 'EVENT' && (e.reason.includes('Floor') || e.reason.includes('CALLING')))).map(e => {
+                    if (e.floor !== undefined) return e;
+                    // Extract level from reason for CALLING events
+                    const m = e.reason.match(/Level\s+(\d+)/);
+                    return { ...e, floor: m ? parseInt(m[1]) : '?' };
+                })
+            };
+        };
+
+
+
+        const getAlignedSlots = (slots) => slots; // Streaming Disable Alignment for now
+
+        // --- COMPONENTS ---
+        const TimelinePlot = ({ pattern, data, duration, selectedRanges, onRangeSelect, calls, zoom = 1 }) => {
+            const canvasRef = useRef(null);
+            const isDragging = useRef(false);
+            const dragStart = useRef(0);
+
+            useEffect(() => {
+                if (!canvasRef.current || !data || duration === 0) return;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width = canvas.offsetWidth;
+                const height = canvas.height = canvas.offsetHeight;
+
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#111827';
+                ctx.fillRect(0, 0, width, height);
+                ctx.strokeStyle = '#374151';
+                ctx.beginPath();
+                ctx.moveTo(0, height / 2);
+                ctx.lineTo(width, height / 2);
+                ctx.stroke();
+
+                if (data.noise && data.noise.length > 0) {
+                    const noisePoints = data.noise; // Use pre-calculated downsampled noise
+                    if (noisePoints.length > 0) {
+                        const minVal = Math.min(...noisePoints.map(d => d.val));
+                        const safeMin = minVal > 0 ? minVal : 1;
+                        const logMin = Math.log10(safeMin);
+                        const logMax = Math.log10(Math.max(...noisePoints.map(d => d.val)));
+                        const logRange = logMax - logMin || 1;
+
+                        ctx.beginPath();
+                        ctx.strokeStyle = 'rgba(147, 51, 234, 0.6)';
+                        ctx.lineWidth = 1.5;
+                        let first = true;
+                        noisePoints.forEach(d => {
+                            const x = (d.time / duration) * width;
+                            const val = d.val > 0 ? d.val : 1;
+                            const normalizedY = (Math.log10(val) - logMin) / logRange;
+                            const y = height - (normalizedY * height * 0.8) - (height * 0.1);
+                            if (first) { ctx.moveTo(x, y); first = false; } else { ctx.lineTo(x, y); }
+                        });
+                        ctx.stroke();
+                    }
+                } else if (data.noiseValues) {
+                    // Legacy Support for old parsed format if needed, but LogDataset is preferred
+                    // ... (Rest omitted for brevity, assuming LogDataset usage)
+                }
+
+                if (pattern && data.lines && data.lines.length > 0) {
+                    // Only render pattern ticks if data is in memory (small file)
+                    // For streaming, searching purely on client render is too heavy.
+                    ctx.fillStyle = '#FACC15';
+                    let checkFn = (text) => text.includes(pattern.sequence);
+                    if (pattern.isRegex) {
+                        try {
+                            const re = new RegExp(pattern.sequence);
+                            checkFn = (text) => re.test(text);
+                        } catch (e) { }
+                    }
+
+                    const lines = data.lines;
+                    // Limit pattern rendering to prevent freeze on medium files
+                    const maxRender = Math.min(lines.length, 100000);
+
+                    for (let i = 0; i < maxRender; i++) {
+                        const line = lines[i];
+                        // Handle both string and object wrappers
+                        const text = typeof line === 'string' ? line : line.raw;
+                        const t = typeof line === 'string' ? (i * 0.1) : line.timestamp; // Fallback time usage
+
+                        if (text && checkFn(text)) {
+                            const x = (t / duration) * width;
+                            ctx.fillRect(x, height * 0.2, 2, height * 0.6);
+                        }
+                    }
+                }
+
+                if (selectedRanges && selectedRanges.length > 0) {
+                    ctx.fillStyle = 'rgba(34, 197, 94, 0.2)'; // Green transparent
+                    ctx.strokeStyle = 'rgba(34, 197, 94, 0.5)';
+                    selectedRanges.forEach(range => {
+                        const x1 = (range.start / duration) * width;
+                        const x2 = (range.end / duration) * width;
+                        ctx.fillRect(x1, 0, x2 - x1, height);
+                        ctx.strokeRect(x1, 0, x2 - x1, height);
+                    });
+                }
+
+                // Draw Call Events (White Lines)
+                if (calls && calls.length > 0) {
+                    ctx.lineWidth = 1;
+                    ctx.font = 'bold 10px monospace';
+                    ctx.textAlign = 'center';
+                    calls.forEach(call => {
+                        const x = (call.timestamp / duration) * width;
+
+                        // Line
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                        ctx.beginPath();
+                        ctx.moveTo(x, 15); // Start below text
+                        ctx.lineTo(x, height);
+                        ctx.stroke();
+
+                        // Floor Number
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(call.floor, x, 10);
+                    });
+                }
+            }, [pattern, data, duration, selectedRanges, calls]);
+
+            const handleMouseDown = (e) => {
+                const rect = canvasRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const time = (x / rect.width) * duration;
+                isDragging.current = true;
+                dragStart.current = time;
+            };
+
+            const handleMouseUp = (e) => {
+                if (!isDragging.current) return;
+                isDragging.current = false;
+                const rect = canvasRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const time = (x / rect.width) * duration;
+                const start = Math.min(dragStart.current, time);
+                const end = Math.max(dragStart.current, time);
+                if (end - start > 0.1) { // Min duration
+                    // Add new range to existing ones
+                    const newRange = { start, end };
+                    if (onRangeSelect) onRangeSelect(prev => [...prev, newRange]);
+                }
+            };
+
+            return (
+                <div className="mb-4">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1 font-mono">
+                        <span>{pattern ? <>Pattern: <span className="text-green-400">{pattern.sequence}</span></> : <span className="text-purple-400 font-bold">Noise Level (Purple)</span>}</span>
+                        <span>Duration: {duration.toFixed(1)}s</span>
+                    </div>
+                    <div className="h-24 w-full border border-gray-700 rounded overflow-x-auto overflow-y-hidden relative cursor-crosshair custom-scrollbar">
+                        <div style={{ width: `${zoom * 100}%`, height: '100%' }}>
+                            <canvas ref={canvasRef} className="w-full h-full" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+
+        const StreamColumn = ({ slot, onTimeChange, onScroll, isActive, onClick, config, onClear, isLinked, onAnalyze }) => {
+            const { logData, currentTime, duration, liftState, stats, fileName } = slot;
+            const [localLines, setLocalLines] = useState([]);
+            const containerRef = useRef(null);
+            const activeLineRef = useRef(null);
+
+            // Auto-center active line
+            useLayoutEffect(() => {
+                console.log("DEBUG useLayoutEffect: containerRef:", !!containerRef.current, "activeLineRef:", !!activeLineRef.current);
+                if (containerRef.current && activeLineRef.current) {
+                    const container = containerRef.current;
+                    const element = activeLineRef.current;
+                    // Center the element: elementTop - (containerHeight/2) + (elementHeight/2)
+                    // We need to account for the container's relative positioning if needed, but offsetTop is usually relative to offsetParent
+                    const targetScroll = element.offsetTop - (container.clientHeight / 2) + (element.clientHeight / 2);
+                    console.log("DEBUG useLayoutEffect: offsetTop:", element.offsetTop, "containerHeight:", container.clientHeight, "targetScroll:", targetScroll);
+                    container.scrollTop = targetScroll;
+                }
+            }, [localLines, isActive]); // Run when lines change or tab becomes active
+
+            // Fetch Window on Time Change
+            useEffect(() => {
+                let active = true;
+                console.log("DEBUG StreamColumn: useEffect triggered. logData exists:", !!logData, "currentTime:", currentTime);
+
+                if (!logData) {
+                    console.log("DEBUG StreamColumn: No logData, clearing lines");
+                    setLocalLines([]);
+                    return;
+                }
+
+                // Check if logData has data to fetch
+                if (logData.isEmpty()) {
+                    console.log("DEBUG StreamColumn: logData is empty, skipping fetch");
+                    return;
+                }
+
+                // Debounce slightly if needed, but for now just fetch
+                const fetch = async () => {
+                    try {
+                        console.log("DEBUG StreamColumn: Calling fetchWindow for time:", currentTime);
+                        const lines = await logData.fetchWindow(currentTime, 4.0); // 4 second window (2s before, 2s after)
+                        console.log("DEBUG StreamColumn: fetchWindow returned", lines?.length || 0, "lines");
+                        if (active) {
+                            setLocalLines(lines);
+                        }
+                    } catch (e) {
+                        console.error("DEBUG StreamColumn: fetchWindow error:", e);
+                    }
+                };
+                fetch();
+                return () => { active = false; };
+            }, [logData, currentTime]); // Ensure no other deps
+
+            const handleWheel = (e) => { e.stopPropagation(); onScroll(slot.id, e.deltaY > 0 ? 1 : -1); };
+            const handleTouchStart = useRef(0);
+            const handleTouch = (e) => {
+                const deltaY = handleTouchStart.current - e.touches[0].clientY;
+                if (Math.abs(deltaY) > 10) { onScroll(slot.id, deltaY > 0 ? 1 : -1); handleTouchStart.current = e.touches[0].clientY; }
+            };
+
+            // Find line closest to current time
+            let activeIdx = -1;
+            let minDiff = Infinity;
+            localLines.forEach((l, i) => {
+                if (l.timestamp !== null) {
+                    const d = Math.abs(l.timestamp - currentTime);
+                    if (d < minDiff) { minDiff = d; activeIdx = i; }
+                }
+            });
+
+            return (
+                <div className={`flex flex-col h-full border-r border-gray-800 bg-gray-950 relative group ${isActive ? 'bg-gray-900/50' : ''}`} onClick={onClick}>
+                    <div className={`p-2 border-b border-gray-800 flex justify-between items-center text-xs ${isActive ? 'bg-blue-900/20' : 'bg-gray-900'}`}>
+                        <div className="flex flex-col">
+                            <span className={`font-bold ${isActive ? 'text-blue-400' : 'text-gray-400'}`}>{fileName || `Slot ${slot.id + 1}`}</span>
+                            {logData.file && <span className="text-[10px] text-gray-500">Streaming | {duration.toFixed(1)}s</span>}
+                        </div>
+                        <div className="flex gap-2">
+                            {logData.file && (
+                                <button onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onAnalyze) onAnalyze(slot.id);
+                                }} className="text-gray-400 hover:text-green-400 p-1" title="Run Analysis"><PlayCircle size={14} /></button>
+                            )}
+                            {logData.file && <button onClick={(e) => { e.stopPropagation(); onClear(slot.id); }} className="text-gray-600 hover:text-red-400 p-1"><XCircle size={14} /></button>}
+                        </div>
+                    </div>
+                    <div className="px-2 py-1 bg-gray-900 border-b border-gray-800">
+                        <input type="range" min="0" max={duration || 100} step="0.1" value={currentTime} onChange={(e) => onTimeChange(slot.id, parseFloat(e.target.value))} className={`w-full h-1 bg-gray-700 rounded appearance-none cursor-pointer ${isLinked ? 'accent-purple-500' : 'accent-blue-500'}`} />
+                        {/* Timeline Visualization Bar */}
+                        <div className="relative h-10 bg-gray-800 rounded mt-1 overflow-hidden" style={{ minWidth: '100%' }}>
+                            {/* Background grid lines every 60 seconds */}
+                            {duration > 0 && Array.from({ length: Math.ceil(duration / 60) + 1 }, (_, i) => i * 60).map(t => (
+                                <div key={`grid-${t}`} className="absolute top-0 bottom-0 w-px bg-gray-700" style={{ left: `${(t / duration) * 100}%` }}>
+                                    <span className="absolute top-0.5 left-0.5 text-[8px] text-gray-500">{Math.floor(t / 60)}m</span>
+                                </div>
+                            ))}
+                            {/* NOISE level indicators (purple bars) - from parsed data */}
+                            {logData && logData.preParsedLines && (() => {
+                                const noiseData = [];
+                                let maxNoise = 1;
+                                // Parse NOISE markers from lines
+                                for (const line of logData.preParsedLines) {
+                                    const match = line.raw?.match(/\[NOISE:\s*(\d+)\s*\|\s*T=([\d.]+)s\]/);
+                                    if (match) {
+                                        const noise = parseInt(match[1]);
+                                        const time = parseFloat(match[2]);
+                                        noiseData.push({ noise, time });
+                                        if (noise > maxNoise) maxNoise = noise;
+                                    }
+                                }
+                                // Render noise as purple bars at bottom half
+                                return noiseData.map((n, i) => {
+                                    const height = (n.noise / maxNoise) * 50; // Max 50% of bar height
+                                    return (
+                                        <div key={`noise-${i}`} className="absolute bottom-0 bg-purple-500/60" style={{ left: `${(n.time / duration) * 100}%`, width: '2px', height: `${height}%` }} title={`Noise: ${n.noise} at ${n.time.toFixed(1)}s`} />
+                                    );
+                                });
+                            })()}
+                            {/* EVENT markers (white vertical lines with level number) - CALLING events */}
+                            {logData && logData.preParsedLines && (() => {
+                                const events = [];
+                                for (const line of logData.preParsedLines) {
+                                    const match = line.raw?.match(/\[\[\s*EVENT:\s*CALLING\s+Level\s+(\d+)\s*\|\s*T=([\d.]+)s\s*\]\]/);
+                                    if (match) {
+                                        events.push({ level: parseInt(match[1]), time: parseFloat(match[2]) });
+                                    }
+                                }
+                                return events.map((ev, i) => (
+                                    <div key={`event-${i}`} className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 cursor-pointer hover:bg-yellow-300 z-20" style={{ left: `${(ev.time / duration) * 100}%` }} title={`CALLING Level ${ev.level} at ${ev.time.toFixed(1)}s`} onClick={(e) => { e.stopPropagation(); onTimeChange(slot.id, ev.time); }}>
+                                        <span className="absolute top-0.5 left-1 text-[9px] font-bold text-yellow-400 bg-gray-900/90 px-0.5 rounded whitespace-nowrap">L{ev.level}</span>
+                                    </div>
+                                ));
+                            })()}
+                            {/* MOVING periods (blue bars) */}
+                            {slot.liftPath && (() => {
+                                const periods = [];
+                                let moveStart = null;
+                                const sorted = [...slot.liftPath].sort((a, b) => a.timestamp - b.timestamp);
+                                for (const ev of sorted) {
+                                    if (ev.type === 'STATE_CHANGE' && ev.state === 'MOVING' && !moveStart) {
+                                        moveStart = ev.timestamp;
+                                    } else if (ev.type === 'STATE_CHANGE' && ev.state === 'STOPPED' && moveStart !== null) {
+                                        periods.push({ start: moveStart, end: ev.timestamp });
+                                        moveStart = null;
+                                    }
+                                }
+                                return periods.map((p, i) => (
+                                    <div key={`move-${i}`} className="absolute top-1 h-3 bg-blue-500/50 rounded" style={{ left: `${(p.start / duration) * 100}%`, width: `${((p.end - p.start) / duration) * 100}%` }} title={`Moving: ${p.start.toFixed(1)}s - ${p.end.toFixed(1)}s`} />
+                                ));
+                            })()}
+                            {/* FLOOR_UPDATE markers (white vertical lines with floor number) */}
+                            {slot.liftPath && slot.liftPath.filter(e => e.type === 'FLOOR_UPDATE').map((ev, i) => (
+                                <div key={`floor-${i}`} className="absolute top-0 bottom-0 w-0.5 bg-white cursor-pointer hover:bg-green-400 z-10" style={{ left: `${(ev.timestamp / duration) * 100}%` }} title={`Floor ${ev.floor} at ${ev.timestamp.toFixed(1)}s`} onClick={(e) => { e.stopPropagation(); onTimeChange(slot.id, ev.timestamp); }}>
+                                    <span className="absolute bottom-0.5 left-1 text-[9px] font-bold text-white bg-gray-900/90 px-0.5 rounded">F{ev.floor}</span>
+                                </div>
+                            ))}
+                            {/* DOOR_CLOSE markers (thin gray lines) */}
+                            {slot.liftPath && slot.liftPath.filter(e => e.type === 'DOOR_CLOSE').map((ev, i) => (
+                                <div key={`door-${i}`} className="absolute top-0 bottom-0 w-px bg-gray-500/50 z-10" style={{ left: `${(ev.timestamp / duration) * 100}%` }} title={`Door Close at ${ev.timestamp.toFixed(1)}s`} />
+                            ))}
+                            {/* Current position indicator */}
+                            <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30" style={{ left: `${(currentTime / duration) * 100}%` }} />
+                            {/* Time label */}
+                            <div className="absolute bottom-0.5 right-1 text-[9px] text-gray-400 bg-gray-900/80 px-1 rounded">{currentTime.toFixed(1)}s / {duration.toFixed(1)}s</div>
+                        </div>
+                    </div>
+                    <div className="flex-1 p-4 overflow-y-auto relative touch-none select-none" ref={containerRef} onWheel={handleWheel} onTouchStart={(e) => handleTouchStart.current = e.touches[0].clientY} onTouchMove={handleTouch}>
+                        <div className="space-y-1 font-mono text-sm h-full flex flex-col">
+                            {localLines.map((entry, idx) => {
+                                const isCurrent = idx === activeIdx;
+                                const isPast = idx < activeIdx;
+                                // Styling: current = highlighted, past = dimmed but visible, future = normal
+                                const lineClass = isCurrent
+                                    ? 'bg-blue-900/30 border-l-2 border-blue-500 scale-105 shadow-lg my-2 text-white'
+                                    : isPast
+                                        ? 'opacity-50 text-gray-400'
+                                        : 'text-gray-300';
+                                const eventClass = entry.raw.includes('EVENT') ? 'text-yellow-400' : '';
+                                return (
+                                    <div key={idx} ref={isCurrent ? activeLineRef : null} className={`flex items-center gap-2 py-1 px-2 rounded transition-all duration-200 ${lineClass} ${eventClass}`}>
+                                        <div className="w-12 text-right text-[10px] text-gray-600 font-mono">{entry.timestamp ? entry.timestamp.toFixed(1) : ''}</div>
+                                        <div className="flex-1 truncate text-xs sm:text-sm">
+                                            <span>{renderHighlightedText(entry.raw, isCurrent, config)}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {localLines.length === 0 && (
+                                <div className="text-center text-gray-600 text-xs italic mt-10">
+                                    {!logData.file && logData.length === 0 ? "Empty Slot" : "Buffering..."}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- ANALYSIS ENGINE ---
+        const analyzeLiftPath = async (logData, timingTable, heuristics) => {
+            console.log("DEBUG: Starting Analysis Engine V4 (Aggressive Descent)...");
+            const events = [];
+            const lines = logData.lines || (logData.preParsedLines ? logData.preParsedLines : await logData.fetchWindow(0, logData.duration));
+            const data = Array.isArray(lines) ? lines : [];
+            if (data.length === 0) return events;
+
+            const patterns = {};
+            Object.entries(heuristics.markers).forEach(([key, val]) => {
+                if (val) { try { patterns[key] = new RegExp(val); } catch (e) { console.error("Bad Regex:", key, val); } }
+            });
+
+            // WINDOWED DETECTION STATE
+            const WINDOW_SIZE = heuristics.aaaWindow || 6.0;
+            const MIN_COUNT = heuristics.aaaMinCount || 5;
+            const DESCENT_MIN_COUNT = 2; // VERY loose threshold for descent
+
+            let currentFloor = 0;
+            let moveState = 'STOPPED';
+            let moveStartTime = 0;
+
+            // Sliding window buffers
+            let aaaTimes = []; // Ascent signals
+            let nhTimes = [];  // Descent signals
+
+            // Helper to clean old timestamps
+            const cleanWindow = (arr, now) => arr.filter(t => now - t <= WINDOW_SIZE);
+
+            for (let i = 0; i < data.length; i++) {
+                const line = data[i];
+                if (!line.isData) continue;
+                const txt = line.raw;
+                const time = line.timestamp;
+
+                // 1. Explicit Floor Markers
+                if (patterns.arrL0 && patterns.arrL0.test(txt)) {
+                    const lastFloorEv = events.slice().reverse().find(e => e.type === 'FLOOR_UPDATE');
+                    if (!lastFloorEv || lastFloorEv.floor !== 0 || (time - lastFloorEv.timestamp > 5.0)) {
+                        currentFloor = 0;
+                        events.push({ type: 'FLOOR_UPDATE', floor: 0, timestamp: time, raw: txt, method: 'marker' });
+                        if (moveState === 'MOVING') {
+                            moveState = 'STOPPED';
+                            events.push({ type: 'STATE_CHANGE', state: 'STOPPED', timestamp: time, raw: txt });
+                            aaaTimes = []; nhTimes = [];
+                        }
+                    }
+                }
+
+                // 2. Door Closing Markers
+                if (patterns.doorsClose && patterns.doorsClose.test(txt)) {
+                    events.push({ type: 'DOOR_CLOSE', timestamp: time, raw: txt });
+                }
+
+                // 3. Movement Detection
+                const hasAAA = patterns.moveSignal && patterns.moveSignal.test(txt);
+                const hasNh = patterns.intermediateDescent && patterns.intermediateDescent.test(txt);
+
+                if (hasAAA) aaaTimes.push(time);
+                if (hasNh) nhTimes.push(time);
+
+                aaaTimes = cleanWindow(aaaTimes, time);
+                nhTimes = cleanWindow(nhTimes, time);
+
+                const aaaCount = aaaTimes.length;
+                const nhCount = nhTimes.length;
+                const totalActivity = aaaCount + nhCount;
+
+                if (moveState === 'STOPPED') {
+                    // Check triggers - favor descent
+                    const isLikelyDescent = nhCount > 0; // Even 1 descent signal in window is suspicious if total activity is low?
+                    // But we used DESCENT_MIN_COUNT
+                    const threshold = (nhCount >= DESCENT_MIN_COUNT) ? DESCENT_MIN_COUNT : MIN_COUNT;
+
+                    // If we have enough descent signals, trigger immediately
+                    const descentTrigger = nhCount >= DESCENT_MIN_COUNT;
+                    const ascentTrigger = aaaCount >= MIN_COUNT;
+
+                    if (descentTrigger || ascentTrigger) {
+                        moveState = 'MOVING';
+                        const likelyDir = (nhCount > aaaCount * 0.5) ? 'DOWN' : 'UP'; // Bias: if some Nh, probably Down
+                        const startSafe = time - WINDOW_SIZE > 0 ? time - WINDOW_SIZE : time;
+                        const allTimes = [...aaaTimes, ...nhTimes].sort((a, b) => a - b);
+                        const bestStart = allTimes.length > 0 ? allTimes[0] : startSafe;
+                        moveStartTime = bestStart;
+                        events.push({ type: 'STATE_CHANGE', state: 'MOVING', timestamp: bestStart, likelyDirection: likelyDir });
+                    }
+                } else {
+                    if (totalActivity === 0) {
+                        moveState = 'STOPPED';
+                        const stopTime = time - WINDOW_SIZE + 1.0;
+                        events.push({ type: 'STATE_CHANGE', state: 'STOPPED', timestamp: stopTime });
+
+                        // INFER DESTINATION
+                        const travelTime = stopTime - moveStartTime;
+                        const minTravelForFloor = 2.0; // Reduced to 2s to catch short moves
+
+                        if (travelTime >= minTravelForFloor) {
+                            // Determine dominant signal during the move
+                            let tripAAA = 0, tripNh = 0;
+                            let tripNoise = 0;
+                            for (let k = 0; k < data.length; k++) {
+                                if (data[k].timestamp >= moveStartTime && data[k].timestamp <= stopTime) {
+                                    if (patterns.moveSignal && patterns.moveSignal.test(data[k].raw)) tripAAA++;
+                                    if (patterns.intermediateDescent && patterns.intermediateDescent.test(data[k].raw)) tripNh++;
+                                }
+                            }
+
+                            // Direction Inference with heavy Descent Bias
+                            let direction = 'UNKNOWN';
+                            if (tripNh > 0 && tripNh >= tripAAA * 0.3) direction = 'DOWN'; // If 30% relative to AAA, or just present?
+                            else if (tripAAA > tripNh) direction = 'UP';
+
+                            // If almost no signals but travelTime > min, check heuristic from start/end?
+                            // We stick to what we found.
+
+                            console.log(`DEBUG: Move done. T=${travelTime.toFixed(1)}s. AAA:${tripAAA} Nh:${tripNh} -> ${direction}`);
+
+                            // TIMING TABLE LOOKUP (Priority)
+                            let matchFound = false;
+
+                            if (timingTable && timingTable.length > 0) {
+                                // 1. Filter by Start Floor
+                                let candidates = timingTable.filter(t => t.from === currentFloor);
+
+                                // 2. Filter by Direction (if known)
+                                if (direction === 'UP') candidates = candidates.filter(t => t.to > currentFloor);
+                                else if (direction === 'DOWN') candidates = candidates.filter(t => t.to < currentFloor);
+
+                                // 3. Find closest match
+                                let bestMove = null;
+                                let minDiff = Infinity;
+
+                                candidates.forEach(move => {
+                                    const diff = Math.abs(move.time - travelTime);
+                                    if (diff < minDiff) {
+                                        minDiff = diff;
+                                        bestMove = move;
+                                    }
+                                });
+
+                                // 4. Accept if valid (Tolerance 3.0s)
+                                if (bestMove && minDiff <= 3.0) {
+                                    currentFloor = bestMove.to;
+                                    matchFound = true;
+                                    events.push({ type: 'FLOOR_UPDATE', floor: currentFloor, timestamp: stopTime, inferred: true, method: 'table_match' });
+                                } else if (candidates.length === 0 && direction !== 'UNKNOWN') {
+                                    // If strict direction filtering yields no results, maybe we got direction wrong?
+                                    // Or maybe it's an unlisted move. 
+                                    // Try global match from currentFloor ignoring direction? 
+                                    // No, safe fallback is better.
+                                }
+                            }
+
+                            if (!matchFound) {
+                                // Fallback Heuristics
+                                // Based on the user's table, avg is roughly ~10-12s per floor?
+                                // 1F: 8-12s, 2F: 14-16s, 3F: 18-20s
+                                const getFloorsTraversed = (t) => {
+                                    if (t < 13.0) return 1;
+                                    if (t < 17.0) return 2;
+                                    return 3;
+                                };
+                                const floorsToCheck = getFloorsTraversed(travelTime);
+                                if (direction === 'UP') {
+                                    currentFloor = Math.min(3, currentFloor + floorsToCheck);
+                                } else if (direction === 'DOWN') {
+                                    currentFloor = Math.max(0, currentFloor - floorsToCheck);
+                                } else {
+                                    // Unknown
+                                    if (currentFloor >= 2) currentFloor = Math.max(0, currentFloor - floorsToCheck);
+                                    else currentFloor = Math.min(3, currentFloor + floorsToCheck);
+                                }
+                                events.push({ type: 'FLOOR_UPDATE', floor: currentFloor, timestamp: stopTime, inferred: true, method: 'fallback_heuristic' });
+                            }
+                        }
+                        aaaTimes = []; nhTimes = [];
+                    }
+                }
+            }
+
+            console.log("DEBUG: V4 Analysis complete.", events.length, "events.");
+            return events;
+        };
+
+        const LiftAnalyzer = () => {
+            const [config, setConfig] = useState({ threshold: 3 });
+            const [timingTable, setTimingTable] = useState([
+                { from: 0, to: 0, time: 0.00, note: "Door Cycle" },
+                { from: 0, to: 1, time: 12.10 },
+                { from: 1, to: 2, time: 10.10 },
+                { from: 2, to: 3, time: 8.60 },
+                { from: 3, to: 0, time: 13.70 },
+                { from: 0, to: 2, time: 15.90 },
+                { from: 2, to: 0, time: 12.20 },
+                { from: 0, to: 3, time: 18.90 },
+                { from: 3, to: 1, time: 10.90 },
+                { from: 1, to: 3, time: 13.30 },
+                { from: 3, to: 2, time: 8.00 },
+                { from: 2, to: 1, time: 8.50 },
+                { from: 1, to: 0, time: 9.40 }
+            ]);
+            const [heuristics, setHeuristics] = useState({
+                ascentRate: 4.0, descentRate: 1.0, thresholdWindow: 1.0,
+                aaaWindow: 6.0, aaaMinCount: 5,
+                markers: { arrL0: '0h', doorsClose: 'i.@', doorsOpenL0: ' ha', intermediateDescent: 'Nh', moveSignal: 'AAA' }
+            });
+
+            // Sync playback time when play starts to prevent reset
+            useEffect(() => {
+                if (isPlaying) {
+                    slots.forEach(s => {
+                        currentTimesRef.current[s.id] = s.currentTime;
+                    });
+                    lastTimeRef.current = performance.now();
+                }
+            }, [isPlaying]);
+
+            const createEmptySlot = (id) => ({
+                id, fileName: null, logData: new LogDataset(null, [], [], [], 0), stats: { lines: 0, anchors: 0 }, duration: 0, currentTime: 0,
+                liftState: { floor: 0, direction: 'STOPPED', moving: false, rawLine: '', matchedSignal: null, groundTruth: 'Waiting...', candidateFloor: null, candidateCount: 0 },
+                liftPath: []
+            });
+            const [slots, setSlots] = useState([createEmptySlot(0), createEmptySlot(1), createEmptySlot(2)]);
+            const [activeSlotId, setActiveSlotId] = useState(0);
+            const [isLinked, setIsLinked] = useState(false);
+            const [isAligned, setIsAligned] = useState(false);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [playbackSpeed, setPlaybackSpeed] = useState(1);
+
+            const [showConfigModal, setShowConfigModal] = useState(false);
+            const [configTab, setConfigTab] = useState('general');
+            const [showPasteModal, setShowPasteModal] = useState(false);
+            const [showPatternModal, setShowPatternModal] = useState(false);
+            const pasteTextAreaRef = useRef(null);
+
+            // Pattern State
+            const [discoveredPatterns, setDiscoveredPatterns] = useState([]);
+            const [isAnalyzing, setIsAnalyzing] = useState(false);
+            const [patternConfig, setPatternConfig] = useState({ minLength: 2, minFreq: 3, strictMode: false });
+            const [selectedPattern, setSelectedPattern] = useState(null);
+            const [manualPattern, setManualPattern] = useState('');
+            const [timeRanges, setTimeRanges] = useState([]); // Array of {start, end}
+            const [zoomLevel, setZoomLevel] = useState(1);
+
+
+            const animationRef = useRef();
+            const lastTimeRef = useRef();
+            const renderCountRef = useRef(0);
+            const lastResetTimeRef = useRef(Date.now());
+
+            // Increment render counter and detect infinite loops (reset every 5 seconds to allow sustained playback)
+            renderCountRef.current++;
+            const now = Date.now();
+            if (now - lastResetTimeRef.current > 5000) {
+                // Reset counter every 5 seconds during normal operation
+                renderCountRef.current = 0;
+                lastResetTimeRef.current = now;
+            }
+            if (renderCountRef.current > 1000) {
+                // Only throw if we get 1000 renders in under 5 seconds (true infinite loop)
+                console.error("DEBUG CRITICAL: Render count exceeded 1000 in 5 seconds! Stopping to prevent crash.");
+                throw new Error("Infinite render loop detected - stopping to prevent browser crash");
+            }
+
+            const updateSlotState = (id, updates) => { setSlots(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s)); };
+
+            const displaySlots = useMemo(() => {
+                console.log("DEBUG displaySlots: Recomputing. isAligned:", isAligned);
+                return isAligned ? getAlignedSlots(slots) : slots;
+            }, [slots, isAligned]);
+
+            const activeSlot = slots.find(s => s.id === activeSlotId) || slots[0];
+
+            // Compute liftState on-demand for the visualizer (replaces the removed useEffect)
+            const activeSlotLiftState = useMemo(() => {
+                if (!activeSlot || activeSlot.logData.isEmpty()) {
+                    return activeSlot?.liftState || { floor: 0, direction: 'STOPPED', moving: false };
+                }
+
+                const tsArr = activeSlot.logData.timestamps;
+                if (!tsArr || tsArr.length === 0) {
+                    return activeSlot.liftState;
+                }
+
+                // Binary search for timestamp
+                let l = 0, r = activeSlot.logData.length - 1;
+                let idx = -1;
+
+                while (l <= r) {
+                    const m = (l + r) >> 1;
+                    if (tsArr[m] >= activeSlot.currentTime) { idx = m; r = m - 1; }
+                    else l = m + 1;
+                }
+
+                if (idx === -1) {
+                    idx = tsArr.length - 1;
+                }
+
+                // Look up state in liftPath
+                let currentFloor = 0;
+                let isMoving = false;
+                let direction = 'STOPPED';
+
+                console.log("DEBUG activeSlotLiftState: liftPath length:", activeSlot.liftPath?.length || 0, "currentTime:", activeSlot.currentTime);
+
+                if (activeSlot.liftPath && activeSlot.liftPath.length > 0) {
+                    console.log("DEBUG activeSlotLiftState: First event at:", activeSlot.liftPath[0].timestamp, "Last event at:", activeSlot.liftPath[activeSlot.liftPath.length - 1].timestamp);
+                    // 1. Find latest Floor and State by scanning backwards
+                    let foundFloor = false;
+                    let foundState = false;
+
+                    for (let i = activeSlot.liftPath.length - 1; i >= 0; i--) {
+                        const ev = activeSlot.liftPath[i];
+                        if (ev.timestamp <= activeSlot.currentTime) {
+                            if (!foundFloor && ev.type === 'FLOOR_UPDATE') {
+                                currentFloor = ev.floor;
+                                foundFloor = true;
+                            }
+                            if (!foundState && (ev.type === 'STATE_CHANGE' || ev.type === 'MOVE_START')) {
+                                if (ev.type === 'STATE_CHANGE') isMoving = (ev.state === 'MOVING');
+                                else isMoving = true; // MOVE_START
+                                foundState = true;
+                            }
+                        }
+                        if (foundFloor && foundState) break;
+                    }
+
+                    // 2. Infer Direction if Moving (Look ahead)
+                    if (isMoving) {
+                        direction = 'UP'; // Default
+                        // Scan forward for next destination
+                        for (let i = 0; i < activeSlot.liftPath.length; i++) {
+                            const ev = activeSlot.liftPath[i];
+                            if (ev.timestamp > activeSlot.currentTime && ev.type === 'FLOOR_UPDATE') {
+                                if (ev.floor > currentFloor) direction = 'UP';
+                                else if (ev.floor < currentFloor) direction = 'DOWN';
+                                break;
+                            }
+                        }
+                    } else {
+                        direction = 'STOPPED';
+                    }
+                }
+
+                console.log("DEBUG activeSlotLiftState: RESULT floor:", currentFloor, "direction:", direction, "moving:", isMoving);
+
+                return {
+                    ...activeSlot.liftState,
+                    floor: currentFloor,
+                    direction,
+                    moving: isMoving,
+                    doorsClosing: activeSlot.liftPath.some(e => e.type === 'DOOR_CLOSE' && Math.abs(e.timestamp - activeSlot.currentTime) < 1.0)
+                };
+            }, [activeSlot?.currentTime, activeSlot?.liftPath, activeSlot?.logData]);
+
+            console.log("DEBUG: LiftAnalyzer Render. Active Slot:", activeSlotId);
+
+            /* 
+             * REMOVED: The useEffect that was calling setSlots based on currentTime
+             * This was causing infinite re-renders because:
+             * 1. Effect runs -> calls setSlots() 
+             * 2. setSlots() creates new slots array reference
+             * 3. Component re-renders -> effect runs again
+             * 
+             * Instead, liftState is now computed on-demand using useMemo (activeSlotLiftState).
+             * This is the proper React pattern for derived state.
+             */
+
+            // Throttle state updates to prevent infinite re-renders
+            const lastUpdateRef = useRef(0);
+            const UPDATE_INTERVAL = 33; // Update React state at ~30fps for smooth playback
+            const currentTimesRef = useRef({}); // Store current times in refs
+            const slotsRef = useRef(slots); // Keep a ref to current slots
+            slotsRef.current = slots; // Update ref on every render (doesn't cause re-render)
+
+            const updateLoop = useCallback((timestamp) => {
+                if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+                const delta = (timestamp - lastTimeRef.current) / 1000;
+                lastTimeRef.current = timestamp;
+
+                if (isPlaying) {
+                    console.log("DEBUG updateLoop: isPlaying=true, delta:", delta.toFixed(3), "currentTimesRef:", JSON.stringify(currentTimesRef.current));
+                    // Update times in ref (doesn't cause re-render)
+                    slotsRef.current.forEach(slot => {
+                        if (!slot.logData.isEmpty()) {
+                            const current = currentTimesRef.current[slot.id] ?? slot.currentTime;
+                            let nextTime = current + (delta * playbackSpeed);
+                            if (nextTime >= slot.duration) nextTime = slot.duration;
+                            currentTimesRef.current[slot.id] = nextTime;
+                        }
+                    });
+
+                    // Only update React state periodically (throttled)
+                    if (timestamp - lastUpdateRef.current >= UPDATE_INTERVAL) {
+                        lastUpdateRef.current = timestamp;
+                        setSlots(prev => prev.map(slot => {
+                            const newTime = currentTimesRef.current[slot.id];
+                            if (newTime !== undefined && Math.abs(newTime - slot.currentTime) > 0.01) {
+                                return { ...slot, currentTime: newTime };
+                            }
+                            return slot;
+                        }));
+                    }
+                }
+                animationRef.current = requestAnimationFrame(updateLoop);
+            }, [isPlaying, playbackSpeed]); // Removed slots - using slotsRef instead
+
+            useEffect(() => {
+                animationRef.current = requestAnimationFrame(updateLoop);
+                return () => cancelAnimationFrame(animationRef.current);
+            }, [updateLoop]);
+
+            // --- PATTERN LOGIC ---
+            const analyzeManualPattern = () => {
+                if (!manualPattern || activeSlot.logData.isEmpty()) return;
+                // Accumulate text
+                let rawText = "";
+                for (let i = 0; i < activeSlot.logData.length; i++) {
+                    if (activeSlot.logData.types[i] === 0) rawText += activeSlot.logData.lines[i].raw + "\n";
+                }
+
+                let count = 0;
+                let isValidRegex = true;
+
+                try {
+                    const re = new RegExp(manualPattern, 'g');
+                    const matches = rawText.match(re);
+                    count = matches ? matches.length : 0;
+                } catch (e) {
+                    alert("Invalid Regex: " + e.message);
+                    isValidRegex = false;
+                }
+
+                if (isValidRegex) {
+                    const score = (manualPattern.length * Math.log2(count > 0 ? count : 1)).toFixed(2);
+                    setSelectedPattern({ sequence: manualPattern, length: manualPattern.length, count, score, isRegex: true });
+                }
+            };
+
+            const runPatternDiscovery = () => {
+                const activeSlots = slots.filter(s => s.logData.hasData());
+                if (!activeSlots.length) return;
+                setIsAnalyzing(true);
+                setSelectedPattern(null);
+                setTimeout(() => {
+                    // MULTI-STREAM: Combine text from all active slots for global search
+                    let rawText = "";
+                    activeSlots.forEach(s => {
+                        for (let i = 0; i < s.logData.length; i++) {
+                            if (s.logData.types[i] === 0) rawText += s.logData.lines[i].raw + "\n";
+                        }
+                    });
+
+                    const { minLength, minFreq } = patternConfig;
+                    const len = rawText.length;
+                    const results = new Map();
+                    const countOccurrences = (sub) => {
+                        if (!sub) return 0;
+                        let count = 0, pos = rawText.indexOf(sub);
+                        while (pos !== -1) { count++; pos = rawText.indexOf(sub, pos + 1); }
+                        return count;
+                    };
+
+                    let candidates = new Set();
+                    let currentLength = minLength;
+                    // --- GENERATE CANDIDATES ---
+                    // Strategy: Use text from ALL active slots.
+                    if (manualPattern && manualPattern.trim().length > 0) {
+                        candidates.add(manualPattern.trim());
+                        currentLength = manualPattern.trim().length;
+                    } else if (timeRanges.length > 0) {
+                        // Gather text from IN ranges across ALL slots
+                        // This involves timestamp checking
+                        let inText = "";
+                        activeSlots.forEach(s => {
+                            for (let i = 0; i < s.logData.length; i++) {
+                                if (s.logData.types[i] === 0) {
+                                    const t = s.logData.timestamps[i];
+                                    if (timeRanges.some(r => t >= r.start && t <= r.end)) {
+                                        inText += s.logData.lines[i].raw + "\n";
+                                    }
+                                }
+                            }
+                        });
+
+                        // Sample candidates to prevent freeze on long text
+                        const MAX_CANDIDATES = 50000;
+                        const step = Math.max(1, Math.floor(inText.length / MAX_CANDIDATES));
+                        for (let i = 0; i <= inText.length - minLength; i += step) {
+                            const sub = inText.substring(i, i + minLength);
+                            if (!sub.includes('\n')) candidates.add(sub);
+                            if (candidates.size >= MAX_CANDIDATES) break;
+                        }
+                    } else {
+                        // Global search with sampling to prevent freeze on large files
+                        const MAX_CANDIDATES = 50000;
+                        const step = Math.max(1, Math.floor((len - minLength) / MAX_CANDIDATES));
+                        for (let i = 0; i <= len - minLength; i += step) {
+                            const sub = rawText.substring(i, i + minLength);
+                            if (!sub.includes('\n')) candidates.add(sub);
+                            if (candidates.size >= MAX_CANDIDATES) break;
+                        }
+                    }
+
+                    // Pre-calculate texts for discriminative scoring
+                    let discriminativeContext = null;
+                    if (timeRanges.length > 0) {
+                        const countInStr = (str, sub) => {
+                            if (!sub) return 0;
+                            let c = 0, p = str.indexOf(sub);
+                            while (p !== -1) { c++; p = str.indexOf(sub, p + 1); }
+                            return c;
+                        };
+
+                        discriminativeContext = {
+                            countInStr,
+                            slots: activeSlots.map(s => {
+                                // Split text into In/Out
+                                let inT = "", outT = "", lIn = 0, lOut = 0;
+                                for (let i = 0; i < s.logData.length; i++) {
+                                    if (s.logData.types[i] === 0) {
+                                        const t = s.logData.timestamps[i];
+                                        const isIn = timeRanges.some(r => t >= r.start && t <= r.end);
+                                        if (isIn) { inT += s.logData.lines[i].raw + "\n"; lIn++; }
+                                        else { outT += s.logData.lines[i].raw + "\n"; lOut++; }
+                                    }
+                                }
+                                return {
+                                    inText: inT,
+                                    outText: outT,
+                                    lenIn: Math.max(1, lIn),
+                                    lenOut: Math.max(1, lOut)
+                                };
+                            })
+                        };
+                    }
+
+                    let iterations = 0;
+                    const MAX_ITERATIONS = 10; // Limit growth iterations
+                    const MAX_CANDIDATES_PER_ITERATION = 5000;
+
+                    while (candidates.size > 0 && currentLength < 40 && iterations < MAX_ITERATIONS) {
+                        iterations++;
+                        const nextGen = new Set();
+                        // Limit candidates per iteration to prevent freeze
+                        let processed = 0;
+                        for (const cand of candidates) {
+                            if (processed++ >= MAX_CANDIDATES_PER_ITERATION) break;
+                            const count = countOccurrences(cand);
+
+                            // SCORING
+                            let score = 0;
+                            if (discriminativeContext) {
+                                let totalCountIn = 0;
+                                let totalCountOut = 0;
+                                let totalLenIn = 0;
+                                let totalLenOut = 0;
+                                let strictValid = true;
+
+                                for (const ctx of discriminativeContext.slots) {
+                                    const cIn = discriminativeContext.countInStr(ctx.inText, cand);
+                                    const cOut = discriminativeContext.countInStr(ctx.outText, cand);
+
+                                    totalCountIn += cIn;
+                                    totalCountOut += cOut;
+                                    totalLenIn += ctx.lenIn;
+                                    totalLenOut += ctx.lenOut;
+
+                                    if (cIn === 0 || cOut > 0) strictValid = false;
+                                }
+
+                                if (patternConfig.strictMode) {
+                                    if (strictValid) {
+                                        score = 100 + totalCountIn;
+                                    } else {
+                                        score = -1;
+                                    }
+                                } else {
+                                    // Standard Multi-Stream Scoring
+                                    // Aggregate Densities
+                                    const densityIn = totalCountIn / Math.max(1, totalLenIn);
+                                    const densityOut = totalCountOut / Math.max(1, totalLenOut);
+                                    score = parseFloat((densityIn / (densityOut + 0.0001)).toFixed(2));
+                                }
+                            } else {
+                                score = parseFloat((cand.length * Math.log2(count)).toFixed(2));
+                            }
+
+                            if (score >= 0 && count >= minFreq) {
+                                results.set(cand, { count, score }); // Store object
+                                let pos = rawText.indexOf(cand);
+                                while (pos !== -1 && pos + currentLength < len) {
+                                    const nextChar = rawText[pos + currentLength];
+                                    if (nextChar !== '\n') nextGen.add(cand + nextChar);
+                                    pos = rawText.indexOf(cand, pos + 1);
+                                }
+                            }
+                        }
+                        candidates = nextGen;
+                        currentLength++;
+                    }
+
+                    const finalPatterns = [];
+                    results.forEach((meta, pattern) => {
+                        let isRedundant = false;
+                        for (const [otherPat, otherMeta] of results) {
+                            if (otherPat.length > pattern.length && otherPat.includes(pattern) && otherMeta.count === meta.count) { isRedundant = true; break; }
+                        }
+                        if (/^[-=~]+$/.test(pattern)) isRedundant = true;
+
+                        if (!isRedundant) {
+                            finalPatterns.push({ sequence: pattern, length: pattern.length, count: meta.count, score: meta.score });
+                        }
+                    });
+
+                    setDiscoveredPatterns(finalPatterns.sort((a, b) => b.score - a.score).slice(0, 50));
+                    setIsAnalyzing(false);
+                }, 100);
+            };
+
+            const handleFileUpload = (e, slotId) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const HYBRID_THRESHOLD = 2 * 1024 * 1024; // 2MB
+
+                if (file.size < HYBRID_THRESHOLD) {
+                    console.log("DEBUG: Fast Path selected for", file.name, "Size:", file.size);
+                    // FAST PATH: Synchronous Load
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        console.log("DEBUG: File Read Complete");
+                        try {
+                            const { data, index, events, duration, noise } = parseLogFileSynchronous(ev.target.result);
+                            console.log("DEBUG: Parse Complete. Data:", data.length, "Duration:", duration);
+
+                            // Pass 'data' (the array of lines) as preParsedLines to LogDataset
+                            const ds = new LogDataset(file, index, events, noise, duration, data);
+                            console.log("DEBUG: Dataset created. Timestamps:", ds.timestamps.length);
+
+                            updateSlotState(slotId, {
+                                fileName: file.name,
+                                logData: ds,
+                                stats: { lines: data.length, anchors: index.length },
+                                duration,
+                                calls: events.filter(e => e.type === 'FLOOR_UPDATE' || (e.type === 'EVENT' && (e.reason.includes('Floor') || e.reason.includes('CALLING')))).map(e => {
+                                    if (e.floor !== undefined) return e;
+                                    const m = e.reason.match(/Level\s+(\d+)/);
+                                    return { ...e, floor: m ? parseInt(m[1]) : '?' };
+                                }),
+                                currentTime: 0,
+                                liftState: createEmptySlot(slotId).liftState
+                            });
+                            setActiveSlotId(slotId);
+                        } catch (err) {
+                            console.error("DEBUG: Critical Error in Fast Path:", err);
+                        }
+                    };
+                    reader.readAsText(file);
+
+                } else {
+                    // SLOW PATH: Streaming Upload
+                    scanLogFile(file).then(({ index, events, duration, noise, linesCount }) => {
+                        const ds = new LogDataset(file, index, events, noise, duration);
+                        ds.length = linesCount; // Set compatibility length
+
+                        updateSlotState(slotId, {
+                            fileName: file.name,
+                            logData: ds,
+                            stats: { lines: linesCount, anchors: index.length },
+                            duration,
+                            calls: events.filter(e => e.type === 'FLOOR_UPDATE' || (e.type === 'EVENT' && (e.reason.includes('Floor') || e.reason.includes('CALLING')))).map(e => {
+                                if (e.floor !== undefined) return e;
+                                const m = e.reason.match(/Level\s+(\d+)/);
+                                return { ...e, floor: m ? parseInt(m[1]) : '?' };
+                            }),
+                            currentTime: 0,
+                            liftState: createEmptySlot(slotId).liftState
+                        });
+                        setActiveSlotId(slotId);
+                    });
+                }
+            };
+
+            const handlePaste = (text) => {
+                parseLogContentAsync(text).then(({ data, stats, duration, calls }) => {
+                    updateSlotState(activeSlotId, { fileName: "Pasted Data", logData: data, stats, duration, calls, currentTime: 0, liftState: createEmptySlot(activeSlotId).liftState });
+                });
+            }
+
+            return (
+                <div className="flex flex-col h-screen bg-gray-900 text-gray-100 font-mono overflow-hidden">
+                    <div className="p-2 sm:p-4 bg-gray-800 border-b border-gray-700 flex flex-wrap justify-between items-center shadow-md z-10 gap-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-600 rounded-lg hidden sm:block"><Activity /></div>
+                            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">Lift Inspector <span className="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-400 font-normal">Multi</span></h1>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg border border-gray-700">
+                            {slots.map(slot => (
+                                <label key={slot.id} className={`flex items-center justify-center w-8 h-8 rounded cursor-pointer transition-all border ${slot.logData.hasData() ? 'bg-blue-900/40 border-blue-500 text-blue-400' : 'bg-gray-800 border-gray-700 text-gray-600'} ${activeSlotId === slot.id ? 'ring-2 ring-blue-400' : ''}`} onClick={() => setActiveSlotId(slot.id)}>
+                                    {slot.logData.hasData() ? <span className="text-xs font-bold">{slot.id + 1}</span> : <Upload size={14} />}
+                                    <input type="file" onChange={(e) => handleFileUpload(e, slot.id)} className="hidden" accept=".txt,.log" />
+                                </label>
+                            ))}
+                            <div className="w-px h-6 bg-gray-700 mx-1"></div>
+                            <div className="w-px h-6 bg-gray-700 mx-1"></div>
+                            <button onClick={() => setIsLinked(!isLinked)} className={`p-1.5 rounded border ${isLinked ? 'bg-purple-900 text-purple-400 border-purple-500' : 'bg-gray-800 text-gray-500 border-gray-700'}`} title="Link Scroll"><LinkIcon size={16} /></button>
+                            <button onClick={() => setIsAligned(!isAligned)} className={`p-1.5 rounded border ${isAligned ? 'bg-green-900 text-green-400 border-green-500' : 'bg-gray-800 text-gray-500 border-gray-700'}`} title="Align Padding"><AlignJustify size={16} /></button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => { setShowPatternModal(true); if (discoveredPatterns.length === 0) runPatternDiscovery(); }} className="flex items-center gap-2 bg-yellow-900/50 hover:bg-yellow-800/50 text-yellow-200 px-3 py-2 rounded-md border border-yellow-700/50"><Sparkles size={16} /><span className="hidden sm:inline">Patterns</span></button>
+                            <button onClick={() => { console.log("DEBUG: Play button clicked! isPlaying was:", isPlaying, "-> now:", !isPlaying); setIsPlaying(!isPlaying); }} className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${isPlaying ? 'bg-red-600' : 'bg-blue-600'}`}>{isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}</button>
+                            <button onClick={() => setShowConfigModal(true)} className="p-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700"><Settings size={18} /></button>
+                            <button onClick={() => setShowPasteModal(true)} className="p-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700"><FileText size={18} /></button>
+                        </div>
+                    </div>
+
+                    {showPatternModal && (
+                        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                            <div className="bg-gray-800 rounded-lg p-0 w-full max-w-4xl border border-gray-700 shadow-2xl flex flex-col max-h-[90vh]">
+                                <div className="p-6 border-b border-gray-700 flex justify-between items-center">
+                                    <h2 className="text-lg font-bold text-white flex items-center gap-2"><Sparkles size={20} className="text-yellow-400" /> Pattern Discovery <span className="text-xs text-gray-500 font-normal ml-2">Active Slot Data</span></h2>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2 bg-gray-900/50 px-2 py-1 rounded border border-gray-700">
+                                            <span className="text-xs text-gray-400">Zoom:</span>
+                                            <input type="range" min="1" max="10" step="0.5" value={zoomLevel} onChange={(e) => setZoomLevel(parseFloat(e.target.value))} className="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer" />
+                                            <span className="text-xs w-8 text-right font-mono">{zoomLevel}x</span>
+                                        </div>
+                                        {timeRanges.length > 0 && <span className="text-xs text-green-400 font-mono">{timeRanges.length} Ranges</span>}
+                                        <button onClick={() => { setTimeRanges([]); setDiscoveredPatterns([]); }} className="text-xs text-gray-400 hover:text-red-400 mr-4 disabled:opacity-50" disabled={timeRanges.length === 0}>Clear Ranges</button>
+                                        <button onClick={() => setShowPatternModal(false)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-gray-900 border-b border-gray-800">
+                                    <div className="max-h-[40vh] overflow-y-auto pr-2 space-y-4 mb-4 border-b border-gray-800 pb-4 custom-scrollbar">
+                                        {slots.filter(s => s.logData.hasData()).map((slot, idx) => (
+                                            <div key={slot.id}>
+                                                <div className="flex justify-between items-center text-xs mb-1">
+                                                    <span className="font-bold text-gray-400">Slot {slot.id + 1} <span className="text-gray-600 font-normal">{slot.fileName}</span></span>
+                                                    {slot.id === activeSlotId && <span className="bg-blue-900/50 text-blue-400 px-1.5 rounded text-[10px]">Active</span>}
+                                                </div>
+                                                <TimelinePlot pattern={selectedPattern} data={slot.logData} duration={slot.duration} selectedRanges={timeRanges} onRangeSelect={setTimeRanges} calls={slot.calls} zoom={zoomLevel} />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* MANUAL PATTERN INPUT RESTORED */}
+                                    <div className="flex gap-2 mb-4 border-b border-gray-700 pb-4">
+                                        <input type="text" value={manualPattern} onChange={(e) => setManualPattern(e.target.value)} placeholder="Enter manual pattern..." className="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono" />
+                                        <button onClick={analyzeManualPattern} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-bold">Check Pattern</button>
+                                    </div>
+
+                                    <div className="flex gap-4 items-center">
+                                        <span className="text-xs text-gray-400">Min Length:</span>
+                                        <input type="number" min="2" value={patternConfig.minLength} onChange={(e) => setPatternConfig({ ...patternConfig, minLength: parseInt(e.target.value) })} className="w-12 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                        <span className="text-xs text-gray-400">Min Freq:</span>
+                                        <input type="number" min="2" value={patternConfig.minFreq} onChange={(e) => setPatternConfig({ ...patternConfig, minFreq: parseInt(e.target.value) })} className="w-12 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+
+                                        {timeRanges.length > 0 && (
+                                            <label className="flex items-center gap-1 text-xs text-gray-400 select-none cursor-pointer">
+                                                <input type="checkbox" checked={patternConfig.strictMode} onChange={(e) => setPatternConfig({ ...patternConfig, strictMode: e.target.checked })} className="rounded bg-gray-800 border-gray-600 text-blue-600" />
+                                                Strict Mode (Multi-Stream)
+                                            </label>
+                                        )}
+
+                                        <button onClick={runPatternDiscovery} className="px-4 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded font-bold ml-auto flex items-center gap-2">{isAnalyzing ? "Analyzing..." : "Auto-Find"}</button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-0">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="bg-gray-900 text-xs text-gray-500 uppercase sticky top-0"><tr><th className="p-3">#</th><th className="p-3">Pattern Sequence</th><th className="p-3 text-right">Len</th><th className="p-3 text-right">Freq</th><th className="p-3 text-right">Score</th><th className="p-3 text-right">Action</th></tr></thead>
+                                        <tbody>
+                                            {discoveredPatterns.map((pat, i) => (
+                                                <tr key={i} className={`border-b border-gray-800 hover:bg-gray-700/50 cursor-pointer ${selectedPattern === pat ? 'bg-blue-900/30' : ''}`} onClick={() => setSelectedPattern(pat)}>
+                                                    <td className="p-3 text-gray-500 text-xs">{i + 1}</td>
+                                                    <td className="p-3 font-mono text-green-400 break-all text-xs">{pat.sequence}</td>
+                                                    <td className="p-3 text-gray-400 text-right text-xs">{pat.length}</td>
+                                                    <td className="p-3 text-gray-400 text-right text-xs">{pat.count}</td>
+                                                    <td className="p-3 text-blue-400 font-bold text-right text-xs">{pat.score}</td>
+                                                    <td className="p-3 text-right"><button onClick={(e) => { e.stopPropagation(); setSelectedPattern(pat) }} className="text-blue-400 hover:text-white"><Eye size={14} /></button></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {discoveredPatterns.length === 0 && <div className="p-8 text-center text-gray-500 italic">No patterns found yet. Click "Auto-Find".</div>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showPasteModal && (
+                        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl border border-gray-700 shadow-2xl relative">
+                                <div className="flex justify-between items-start mb-4"><h2 className="text-lg font-bold text-white flex items-center gap-2"><FileText size={20} className="text-blue-400" /> Paste to Slot {activeSlotId + 1}</h2><button onClick={() => setShowPasteModal(false)} className="text-gray-400 hover:text-white"><X size={24} /></button></div>
+                                <textarea ref={pasteTextAreaRef} className="w-full h-64 bg-gray-900 border border-gray-700 rounded p-4 text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500 mb-2 resize-none" placeholder="Paste content here..." autoFocus />
+                                <div className="flex justify-end gap-3 mt-4">
+                                    <button onClick={() => setShowPasteModal(false)} className="px-4 py-2 text-sm text-gray-400 border border-gray-700 rounded">Cancel</button>
+                                    <button onClick={() => { if (pasteTextAreaRef.current?.value) { handlePaste(pasteTextAreaRef.current.value); setShowPasteModal(false); } }} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-bold shadow-lg">Analyze</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showConfigModal && (
+                        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                            <div className="bg-gray-800 rounded-lg p-0 w-full max-w-2xl border border-gray-700 shadow-2xl flex flex-col max-h-[90vh]">
+                                <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+                                    <h2 className="text-lg font-bold text-white flex items-center gap-2"><Settings size={20} className="text-purple-400" /> Configuration</h2>
+                                    <button onClick={() => setShowConfigModal(false)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+                                </div>
+                                <div className="flex bg-gray-900 border-b border-gray-700">
+                                    {['general', 'timing', 'heuristics'].map(tab => (
+                                        <button key={tab} onClick={() => setConfigTab(tab)} className={`px-4 py-2 text-sm font-bold capitalize ${configTab === tab ? 'text-purple-400 border-b-2 border-purple-500 bg-gray-800' : 'text-gray-500 hover:text-gray-300'}`}>{tab}</button>
+                                    ))}
+                                </div>
+                                <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                                    {configTab === 'general' && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-4 items-center gap-4"><label className="text-xs text-gray-400 col-span-1 text-right">Confidence:</label><input type="number" min="1" max="20" value={config.threshold} onChange={(e) => setConfig({ ...config, threshold: parseInt(e.target.value) || 1 })} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm text-white col-span-1" /><span className="text-xs text-gray-500 col-span-2">Consecutive matches (Display Only)</span></div>
+                                            <div className="grid grid-cols-4 items-center gap-4"><label className="text-xs text-gray-400 col-span-1 text-right">Speed:</label><select value={playbackSpeed} onChange={(e) => setPlaybackSpeed(parseFloat(e.target.value))} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm text-white col-span-1"><option value={0.1}>0.1x</option><option value={0.5}>0.5x</option><option value={1}>1.0x</option><option value={2}>2.0x</option><option value={5}>5.0x</option><option value={10}>10x</option></select></div>
+                                            <div className="p-2 bg-blue-900/20 text-blue-200 text-xs rounded border border-blue-800 mt-4">Legacy Regex Config (Only used for display matching, not state logic)</div>
+                                            <hr className="border-gray-700 my-2" />
+                                            {['L0', 'L1', 'L2', 'L3', 'Moving'].map((key) => (<div key={key} className="grid grid-cols-4 items-center gap-4"><label className="text-xs text-gray-400 col-span-1 text-right font-bold">{key}:</label><input type="text" value={config[key] || ''} onChange={(e) => setConfig({ ...config, [key]: e.target.value })} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm text-green-400 font-mono col-span-3 opacity-50" /></div>))}
+                                        </div>
+                                    )}
+                                    {configTab === 'timing' && (
+                                        <div className="space-y-4">
+                                            <table className="w-full text-left text-xs text-gray-400 border-collapse">
+                                                <thead><tr className="border-b border-gray-700"><th className="p-2">From</th><th className="p-2">To</th><th className="p-2">Seconds</th><th className="p-2">Note</th><th className="p-2"></th></tr></thead>
+                                                <tbody>
+                                                    {timingTable.map((row, idx) => (
+                                                        <tr key={idx} className="border-b border-gray-800 hover:bg-gray-700/50">
+                                                            <td className="p-1"><input type="number" value={row.from} onChange={(e) => { const n = [...timingTable]; n[idx].from = parseInt(e.target.value); setTimingTable(n); }} className="w-10 bg-transparent text-center border-b border-gray-700 focus:border-purple-500" /></td>
+                                                            <td className="p-1"><input type="number" value={row.to} onChange={(e) => { const n = [...timingTable]; n[idx].to = parseInt(e.target.value); setTimingTable(n); }} className="w-10 bg-transparent text-center border-b border-gray-700 focus:border-purple-500" /></td>
+                                                            <td className="p-1"><input type="number" step="0.01" value={row.time} onChange={(e) => { const n = [...timingTable]; n[idx].time = parseFloat(e.target.value); setTimingTable(n); }} className="w-16 bg-transparent text-center border-b border-gray-700 focus:border-purple-500" /></td>
+                                                            <td className="p-1"><input type="text" value={row.note || ''} onChange={(e) => { const n = [...timingTable]; n[idx].note = e.target.value; setTimingTable(n); }} className="w-full bg-transparent border-b border-gray-700 focus:border-purple-500" /></td>
+                                                            <td className="p-1"><button onClick={() => setTimingTable(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-400"><X size={14} /></button></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            <button onClick={() => setTimingTable([...timingTable, { from: 0, to: 0, time: 0, note: "New" }])} className="w-full py-1 border border-dashed border-gray-600 rounded text-xs text-gray-400 hover:text-white hover:border-gray-500">+ Add Row</button>
+                                        </div>
+                                    )}
+                                    {configTab === 'heuristics' && (
+                                        <div className="space-y-4">
+                                            <div className="p-2 bg-yellow-900/20 text-yellow-200 text-xs rounded border border-yellow-800 mb-4">Regex Markers & Rates for advanced state analysis.</div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><label className="text-xs text-gray-500 block mb-1">Ascent Rate (AAA/sec)</label><input type="number" step="0.1" value={heuristics.ascentRate} onChange={(e) => setHeuristics({ ...heuristics, ascentRate: parseFloat(e.target.value) })} className="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm" /></div>
+                                                <div><label className="text-xs text-gray-500 block mb-1">Descent Rate (AAA/sec)</label><input type="number" step="0.1" value={heuristics.descentRate} onChange={(e) => setHeuristics({ ...heuristics, descentRate: parseFloat(e.target.value) })} className="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm" /></div>
+                                                <div><label className="text-xs text-gray-500 block mb-1">Window Size (sec)</label><input type="number" step="0.1" value={heuristics.thresholdWindow} onChange={(e) => setHeuristics({ ...heuristics, thresholdWindow: parseFloat(e.target.value) })} className="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm" /></div>
+                                            </div>
+                                            <hr className="border-gray-700 my-2" />
+                                            <h3 className="text-xs font-bold text-gray-400 mb-2">Absolute Event Markers (Regex)</h3>
+                                            {Object.entries(heuristics.markers).map(([key, val]) => (
+                                                <div key={key} className="grid grid-cols-3 gap-2 items-center mb-2">
+                                                    <label className="text-[10px] text-gray-500 col-span-1 truncate" title={key}>{key}:</label>
+                                                    <input type="text" value={val} onChange={(e) => setHeuristics({ ...heuristics, markers: { ...heuristics.markers, [key]: e.target.value } })} className="col-span-2 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs font-mono text-green-400" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-4 border-t border-gray-700 flex justify-end">
+                                    <button onClick={() => setShowConfigModal(false)} className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm font-bold shadow-lg transition-colors">Apply & Analyze</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex-1 flex overflow-hidden">
+                        <div className="w-16 sm:w-24 md:w-64 bg-gray-900 border-r border-gray-800 p-2 sm:p-6 flex flex-col items-center relative transition-all hidden md:flex">
+                            <div className="absolute inset-y-10 w-32 bg-gray-800/30 rounded-lg border border-gray-700/30 flex flex-col justify-between py-4 pointer-events-none">{[3, 2, 1, 0].map(level => (<div key={level} className="w-full text-center text-gray-600 text-sm border-t border-dashed border-gray-700/50 pt-1">L{level}</div>))}</div>
+                            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-blue-600 rounded-lg shadow-[0_0_20px_rgba(37,99,235,0.5)] z-10 flex items-center justify-center transition-all duration-500 ease-in-out border-2 border-blue-400" style={{ transform: `translateY(${(3 - activeSlotLiftState.floor) * 80 - 64}px)` }}><span className="text-2xl sm:text-4xl font-bold text-white">{activeSlotLiftState.floor}</span></div>
+                            <div className="absolute top-10 right-4 sm:right-10 flex flex-col gap-2"><ArrowUp className={`w-8 h-8 sm:w-12 sm:h-12 transition-opacity ${activeSlotLiftState.direction === 'UP' ? 'text-green-400 opacity-100' : 'text-gray-800 opacity-20'}`} /><ArrowDown className={`w-8 h-8 sm:w-12 sm:h-12 transition-opacity ${activeSlotLiftState.direction === 'DOWN' ? 'text-red-400 opacity-100' : 'text-gray-800 opacity-20'}`} /></div>
+                            {/* Doors Closing Indicator */}
+                            <div className={`absolute top-28 right-4 sm:right-10 transition-opacity duration-300 ${activeSlotLiftState.doorsClosing ? 'opacity-100' : 'opacity-0'}`}>
+                                <div className="px-2 py-1 bg-yellow-600/80 text-white text-[10px] font-bold rounded uppercase tracking-wider animate-pulse">Doors Closing</div>
+                            </div>
+                            <div className="absolute bottom-6 w-full px-2 sm:px-6 pointer-events-none"><div className="bg-gray-800 rounded-lg p-3 border border-gray-700 shadow-lg text-center"><div className="text-[10px] text-gray-400 uppercase mb-1">Visualizing</div><div className="text-xs font-bold text-blue-300 truncate">{activeSlot.fileName || `Slot ${activeSlotId + 1}`}</div></div></div>
+                        </div>
+
+                        <div className={`flex-1 grid gap-0 divide-x divide-gray-800 overflow-hidden ${slots.filter(s => s.logData.hasData()).length >= 2 ? (slots.filter(s => s.logData.hasData()).length === 2 ? 'grid-cols-2' : 'grid-cols-3') : 'grid-cols-1'}`}>
+                            {displaySlots.map(slot => {
+                                const hasData = slot.logData.hasData();
+                                const activeCount = slots.filter(s => s.logData.hasData()).length;
+                                if (!hasData && activeCount > 0) return null;
+                                if (!hasData && slot.id !== 0) return null;
+                                return (<StreamColumn key={slot.id} slot={slot}
+                                    onTimeChange={(id, t) => {
+                                        if (isPlaying) setIsPlaying(false);
+                                        if (isLinked) setSlots(prev => prev.map(s => ({ ...s, currentTime: Math.min(t, s.duration) })));
+                                        else { updateSlotState(id, { currentTime: t }); setActiveSlotId(id); }
+                                    }}
+                                    onScroll={(id, dir) => {
+                                        if (isPlaying) setIsPlaying(false);
+                                        const slotState = slots.find(s => s.id === id);
+
+                                        // Time-based scroll: Move 0.1s per tick?
+                                        let newTime = slotState.currentTime + (dir * 0.1);
+                                        newTime = Math.max(0, Math.min(newTime, slotState.duration));
+
+                                        if (isLinked) setSlots(prev => prev.map(s => ({ ...s, currentTime: newTime })));
+                                        else { updateSlotState(id, { currentTime: newTime }); setActiveSlotId(id); }
+                                    }}
+                                    isActive={activeSlotId === slot.id}
+                                    onClick={() => setActiveSlotId(slot.id)}
+                                    config={config}
+                                    onClear={(id) => createEmptySlot(id).logData && setSlots(prev => prev.map(s => s.id === id ? createEmptySlot(id) : s))}
+                                    isLinked={isLinked}
+                                    onAnalyze={(id) => {
+                                        const slotState = slots.find(s => s.id === id);
+                                        if (!slotState || !slotState.logData || slotState.logData.isEmpty()) return;
+                                        console.log("DEBUG: Manual Trigger Analysis for Slot", id);
+                                        analyzeLiftPath(slotState.logData, timingTable, heuristics).then(events => {
+                                            console.log("DEBUG: Analysis Done slot", id, "Events:", events.length);
+                                            setSlots(prev => prev.map(s => s.id === id ? { ...s, liftPath: events } : s));
+                                        });
+                                    }}
+                                />);
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LiftAnalyzer />);
+    </script>
+</body>
+
+</html>
