@@ -142,7 +142,18 @@
                     </div>
                     <span class="text-white/40">LIFT <span class="text-bronze font-bold"
                             id="nav-lift-floor-mini">--</span></span>
-                    <!-- Backup Clock Icon (Visible on Hover) -->
+                    <!-- Direction Arrow (Nav) -->
+                    <span id="nav-lift-arrow-container" class="hidden ml-1">
+                        <svg id="nav-lift-arrow-up" class="w-3 h-3 text-success prediction-arrow hidden"
+                            fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 4l-8 8h5v8h6v-8h5z" />
+                        </svg>
+                        <svg id="nav-lift-arrow-down" class="w-3 h-3 text-bronze prediction-arrow hidden"
+                            fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 20l8-8h-5V4H9v8H4z" />
+                        </svg>
+                    </span>
+                    <!-- Clock Icon (Visible on Hover) -->
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                         stroke="currentColor"
                         class="w-3 h-3 text-white/20 group-hover:text-white/60 ml-1 transition-colors">
@@ -476,9 +487,13 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
 
                         <!-- Eufy Doorbell Viewer Widget -->
-                        <div class="glass-panel p-4 rounded-lg relative overflow-hidden h-64 flex flex-col">
+                        <div id="eufy-widget-container"
+                            class="glass-panel p-4 rounded-lg relative overflow-hidden h-64 flex flex-col transition-shadow duration-500">
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center gap-3">
+                                    <!-- New Event Pulse Indicator -->
+                                    <div id="eufy-new-event-pulse" class="hidden w-2 h-2 rounded-full animate-pulse">
+                                    </div>
                                     <h3 class="font-mono text-[10px] uppercase tracking-widest text-bronze">Doorbell
                                     </h3>
                                     <!-- Filter Controls -->
@@ -1338,24 +1353,48 @@
                 const arrowUp = document.getElementById('lift-arrow-up');
                 const arrowDown = document.getElementById('lift-arrow-down');
 
+                // Navbar arrows
+                const navArrowContainer = document.getElementById('nav-lift-arrow-container');
+                const navArrowUp = document.getElementById('nav-lift-arrow-up');
+                const navArrowDown = document.getElementById('nav-lift-arrow-down');
+
                 db.collection('lift_prediction').doc('current').onSnapshot((doc) => {
-                    if (doc.exists && arrowContainer && arrowUp && arrowDown) {
+                    if (doc.exists) {
                         const data = doc.data();
                         const direction = data.direction || 'STOPPED';
 
-                        if (direction === 'UP') {
-                            arrowContainer.classList.remove('hidden');
-                            arrowUp.classList.remove('hidden');
-                            arrowDown.classList.add('hidden');
-                        } else if (direction === 'DOWN') {
-                            arrowContainer.classList.remove('hidden');
-                            arrowUp.classList.add('hidden');
-                            arrowDown.classList.remove('hidden');
-                        } else {
-                            // STOPPED or unknown - hide arrow
-                            arrowContainer.classList.add('hidden');
-                            arrowUp.classList.add('hidden');
-                            arrowDown.classList.add('hidden');
+                        // Main Widget Arrows
+                        if (arrowContainer && arrowUp && arrowDown) {
+                            if (direction === 'UP') {
+                                arrowContainer.classList.remove('hidden');
+                                arrowUp.classList.remove('hidden');
+                                arrowDown.classList.add('hidden');
+                            } else if (direction === 'DOWN') {
+                                arrowContainer.classList.remove('hidden');
+                                arrowUp.classList.add('hidden');
+                                arrowDown.classList.remove('hidden');
+                            } else {
+                                arrowContainer.classList.add('hidden');
+                                arrowUp.classList.add('hidden');
+                                arrowDown.classList.add('hidden');
+                            }
+                        }
+
+                        // Navbar Arrows (Sync)
+                        if (navArrowContainer && navArrowUp && navArrowDown) {
+                            if (direction === 'UP') {
+                                navArrowContainer.classList.remove('hidden');
+                                navArrowUp.classList.remove('hidden');
+                                navArrowDown.classList.add('hidden');
+                            } else if (direction === 'DOWN') {
+                                navArrowContainer.classList.remove('hidden');
+                                navArrowUp.classList.add('hidden');
+                                navArrowDown.classList.remove('hidden');
+                            } else {
+                                navArrowContainer.classList.add('hidden');
+                                navArrowUp.classList.add('hidden');
+                                navArrowDown.classList.add('hidden');
+                            }
                         }
                     }
                 }, (error) => {
@@ -1899,13 +1938,19 @@
                 amStart: document.getElementById('eufy-am-start'),
                 amEnd: document.getElementById('eufy-am-end'),
                 pmStart: document.getElementById('eufy-pm-start'),
-                pmEnd: document.getElementById('eufy-pm-end')
+                pmEnd: document.getElementById('eufy-pm-end'),
+                // Widget container for glow effect
+                widgetContainer: document.getElementById('eufy-widget-container'),
+                newEventPulse: document.getElementById('eufy-new-event-pulse')
             };
 
             if (!eufyEls.carousel) return; // Exit if widget not in DOM
 
             const eufyApp = initializeApp({ databaseURL: EUFY_DATABASE_URL }, 'eufy-viewer');
             const eufyDb = getDatabase(eufyApp);
+
+            // Firestore reference for settings persistence
+            const fsDb = firebase.firestore();
 
             // State
             let eufyState = {
@@ -1917,8 +1962,101 @@
                 config: {
                     am: { start: '00:00', end: '12:00' },
                     pm: { start: '12:00', end: '23:59' }
-                }
+                },
+                lastSeenEventId: null,
+                lastEventTime: null,
+                lastEventIsRing: false,
+                pulseTimeout: null
             };
+
+            // --- FIRESTORE SETTINGS PERSISTENCE ---
+            async function loadEufySettings() {
+                try {
+                    const doc = await fsDb.collection('settings').doc('eufy_viewer').get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (data.config) {
+                            eufyState.config = data.config;
+                            // Update input fields
+                            if (eufyEls.amStart) eufyEls.amStart.value = data.config.am?.start || '00:00';
+                            if (eufyEls.amEnd) eufyEls.amEnd.value = data.config.am?.end || '12:00';
+                            if (eufyEls.pmStart) eufyEls.pmStart.value = data.config.pm?.start || '12:00';
+                            if (eufyEls.pmEnd) eufyEls.pmEnd.value = data.config.pm?.end || '23:59';
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Eufy settings load error:', err.message);
+                }
+            }
+
+            async function saveEufySettings() {
+                try {
+                    await fsDb.collection('settings').doc('eufy_viewer').set({
+                        config: eufyState.config,
+                        updated: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                } catch (err) {
+                    console.warn('Eufy settings save error:', err.message);
+                }
+            }
+
+            // --- NEW EVENT GLOW/PULSE ---
+            function checkNewEvent(events) {
+                if (!events || events.length === 0) return;
+
+                // Get the latest event
+                const latestEvent = events[events.length - 1];
+                const latestEventId = latestEvent.id;
+                const latestEventTime = parseEufyTime(latestEvent);
+
+                // Check if this is a new event we haven't seen
+                if (eufyState.lastSeenEventId && latestEventId !== eufyState.lastSeenEventId) {
+                    const now = Date.now();
+                    const eventAge = latestEventTime ? (now - latestEventTime.getTime()) / 1000 : 999;
+
+                    // Only trigger glow if event is within last 30 seconds
+                    if (eventAge <= 30) {
+                        const isRing = (latestEvent.title || '').toLowerCase().includes('ring');
+                        triggerNewEventGlow(isRing);
+                        eufyState.lastEventIsRing = isRing;
+                    }
+                }
+
+                eufyState.lastSeenEventId = latestEventId;
+                eufyState.lastEventTime = latestEventTime;
+            }
+
+            function triggerNewEventGlow(isRing) {
+                const container = eufyEls.widgetContainer;
+                const pulse = eufyEls.newEventPulse;
+
+                if (!container || !pulse) return;
+
+                // Clear any existing timeout
+                if (eufyState.pulseTimeout) {
+                    clearTimeout(eufyState.pulseTimeout);
+                }
+
+                // Set glow color based on urgency (Ring = alert/red, Motion = bronze)
+                if (isRing) {
+                    container.classList.add('shadow-lg', 'shadow-alert/40');
+                    container.classList.remove('shadow-bronze/30');
+                    pulse.classList.remove('hidden', 'bg-bronze');
+                    pulse.classList.add('bg-alert');
+                } else {
+                    container.classList.add('shadow-lg', 'shadow-bronze/30');
+                    container.classList.remove('shadow-alert/40');
+                    pulse.classList.remove('hidden', 'bg-alert');
+                    pulse.classList.add('bg-bronze');
+                }
+
+                // Clear glow after 30 seconds
+                eufyState.pulseTimeout = setTimeout(() => {
+                    container.classList.remove('shadow-lg', 'shadow-bronze/30', 'shadow-alert/40');
+                    pulse.classList.add('hidden');
+                    pulse.classList.remove('bg-bronze', 'bg-alert');
+                }, 30000);
+            }
 
             function parseEufyTime(ev) {
                 const raw = ev.timestamp || ev.time || ev.date;
@@ -2079,6 +2217,12 @@
                     });
 
                     eufyState.events = events;
+
+                    // Check for new events (glow/pulse)
+                    if (eufyState.isLive) {
+                        checkNewEvent(events);
+                    }
+
                     applyFilters();
                 }
 
@@ -2137,6 +2281,7 @@
                 eufyEls.settingsApply.addEventListener('click', () => {
                     eufyState.config.am = { start: eufyEls.amStart.value, end: eufyEls.amEnd.value };
                     eufyState.config.pm = { start: eufyEls.pmStart.value, end: eufyEls.pmEnd.value };
+                    saveEufySettings(); // Persist to Firestore
                     applyFilters();
                     eufyEls.settingsModal.classList.add('hidden');
                 });
@@ -2177,6 +2322,7 @@
             }
 
             // Initialize
+            loadEufySettings(); // Load saved settings from Firestore
             formatDateDisplay(eufyState.currentDate);
             updateFilterButtons();
             fetchEufyData();
