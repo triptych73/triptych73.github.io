@@ -31,51 +31,52 @@ SETTINGS = {
     'MQTT_TOPIC_ROOT': 'lift_monitor',
 
     # --- DETECTION LOGIC ---
-    
+
     # PREDICTION WINDOW: Time to wait after first AAA before guessing direction
-    'PREDICTION_WINDOW': 2.0,
+    'PREDICTION_WINDOW': 2.5,
 
     # TIMEOUTS
-    # Base timeout: If no AAA seen for 3.0s, consider stopped.
-    'MOVE_TIMEOUT': 3.0, 
+    # Direction-specific timeouts for stop detection
+    'ASCENT_TIMEOUT': 2.0,   # Ascents have frequent AAA, cut quickly
+    'DESCENT_TIMEOUT': 5.0,  # Descents have sparse AAA, need patience
 
-    # EXTENDED TIMEOUT (Safety Net): 
+    # EXTENDED TIMEOUT (Safety Net):
     # Some descents (e.g. 2->0) have only 1 AAA total in 12s.
     # If we saw Doors Close recently, we extend patience to bridge the silence.
     'EXTENDED_MOVE_TIMEOUT': 10.0,
-    
+
     # PRE-ROLL: Seconds of history to include BEFORE the first AAA
     'PRE_ROLL_SECONDS': 3.0,
-    
+
     # RATE THRESHOLD (AAA per second)
     # Ascent: ~2.0+ AAA/sec
     # Descent: ~0.5 AAA/sec or less
     # Divider: 1.0 AAA/sec
-    'ASCENT_RATE_THRESHOLD': 1.0,
-    
+    'ASCENT_RATE_THRESHOLD': 4.0,
+
     # MINIMUM TRIP DURATION (seconds)
     # Trips shorter than this are considered re-levelling events
     # Based on shortest timing table entry (8.0s for 3→2)
-    'MIN_TRIP_DURATION': 5.5,
-    
+    'MIN_TRIP_DURATION': 4.5,
+
     # Tolerance for timing table matches (seconds)
     'TIMING_TOLERANCE': 3.0,
 }
 
 # Specific timing table provided by user
 TIMING_TABLE = [
-    {'from': 0, 'to': 1, 'time': 12.10},
-    {'from': 1, 'to': 2, 'time': 10.10},
-    {'from': 2, 'to': 3, 'time': 8.60},
+    {'from': 0, 'to': 1, 'time': 10.10}, #originally 11.1
+    {'from': 1, 'to': 2, 'time': 9.60}, #originally 10.1
+    {'from': 2, 'to': 3, 'time': 8.10}, #originall 8.6
     {'from': 3, 'to': 0, 'time': 13.70},
-    {'from': 0, 'to': 2, 'time': 15.90},
-    {'from': 2, 'to': 0, 'time': 12.20},
-    {'from': 0, 'to': 3, 'time': 18.90},
-    {'from': 3, 'to': 1, 'time': 10.90},
-    {'from': 1, 'to': 3, 'time': 13.30},
-    {'from': 3, 'to': 2, 'time': 8.00},
-    {'from': 2, 'to': 1, 'time': 8.50},
-    {'from': 1, 'to': 0, 'time': 9.40}
+    {'from': 0, 'to': 2, 'time': 13.90}, #originally 15.9
+    {'from': 2, 'to': 0, 'time': 11.70}, #originally 12.2
+    {'from': 0, 'to': 3, 'time': 16.90}, #originally 18.9
+    {'from': 3, 'to': 1, 'time': 10.40}, #originally 10.9
+    {'from': 1, 'to': 3, 'time': 12.30}, #originally 13.3
+    {'from': 3, 'to': 2, 'time': 6.00}, #originally 8.0
+    {'from': 2, 'to': 1, 'time': 6.50}, #originally 8.5
+    {'from': 1, 'to': 0, 'time': 7.40}  #originally 9.4
 ]
 
 # Regex Patterns for stream parsing
@@ -95,7 +96,7 @@ class LiftState:
     STATIONARY = "STATIONARY"
     MOVING = "MOVING"
     DOORS_CLOSING = "DOORS_CLOSING"
-    DOORS_OPENING = "DOORS_OPENING" 
+    DOORS_OPENING = "DOORS_OPENING"
     UNKNOWN = "UNKNOWN"
 
 class LiftMonitor:
@@ -105,27 +106,28 @@ class LiftMonitor:
         self.mock_mode = mock_mode
         self.current_floor = 0
         self.state = LiftState.STATIONARY
-        
+
         # Movement Tracking
         self.move_start_time = 0
         self.last_signal_time = 0
         self.trip_aaa_count = 0
-        self.move_buffer = [] 
-        self.start_floor = 0 
+        self.move_buffer = []
+        self.start_floor = 0
         self.prediction_sent = False
-        
+        self.predicted_direction = None  # Track predicted direction for timeout logic
+
         # Smart Timeout Tracking
         self.last_door_close_time = 0
-        
+
         # Ring Buffer for Pre-Roll
-        self.continuous_buffer = deque(maxlen=500) 
-        
+        self.continuous_buffer = deque(maxlen=500)
+
         # Heartbeat
         self.last_heartbeat = 0
-        
+
         # Buffer for regex splitting
         self.regex_buffer = b''
-        
+
         # MQTT
         self.mqtt_client = None
         if MQTT_AVAILABLE:
@@ -136,7 +138,7 @@ class LiftMonitor:
                 logging.info(f"MQTT Connected to {SETTINGS['MQTT_BROKER']}")
             except Exception as e:
                 logging.error(f"MQTT Setup Failed: {e}")
-        
+
         # Firebase Setup
         self.db = None
         self.firebase_available = False
@@ -148,11 +150,11 @@ class LiftMonitor:
             from firebase_admin import credentials
             from firebase_admin import firestore
             import os
-            
+
             if self.db: return
 
             SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-            KEY_PATH = os.path.join(SCRIPT_DIR, "st-mary-somerset-firebase-admin.json") 
+            KEY_PATH = os.path.join(SCRIPT_DIR, "st-mary-somerset-firebase-admin.json")
 
             if os.path.exists(KEY_PATH):
                 try:
@@ -160,11 +162,11 @@ class LiftMonitor:
                         cred = credentials.Certificate(KEY_PATH)
                         firebase_admin.initialize_app(cred)
                     self.db = firestore.client()
-                    
+
                     test_ref = self.db.collection('lift_monitor').document('_connection_test')
                     test_ref.set({'status': 'OK', 'timestamp': firestore.SERVER_TIMESTAMP})
                     logging.info("SUCCESS: Firebase connection verified.")
-                    
+
                     self.firebase_available = True
                     self.sync_firebase()
                 except Exception as e:
@@ -234,7 +236,7 @@ class LiftMonitor:
         if self.firebase_available and self.db:
             try:
                 from firebase_admin import firestore
-                
+
                 doc_ref = self.db.collection('lift_history').document()
                 data = {
                     'from': self.start_floor,
@@ -255,7 +257,7 @@ class LiftMonitor:
 
     def handle_floor_update(self, new_floor, method="inferred"):
         if self.current_floor == new_floor: return
-        
+
         old = self.current_floor
         self.current_floor = new_floor
         self.publish("floor", self.current_floor)
@@ -268,25 +270,25 @@ class LiftMonitor:
         """
         # Calculate Rate (AAA per second)
         rate = aaa / duration if duration > 0 else 0
-        
+
         if rate >= SETTINGS['ASCENT_RATE_THRESHOLD']:
             direction = 'UP'
         else:
             direction = 'DOWN'
-            
+
         logging.info(f"Trip Analysis: T={duration:.2f}s, AAA={aaa}, Rate={rate:.2f}/s -> Dir={direction}")
 
         # Timing Table Lookup
         best_match = None
         min_diff = float('inf')
-        
+
         candidates = [t for t in TIMING_TABLE if t['from'] == self.current_floor]
-        
+
         if direction == 'UP':
             candidates = [t for t in candidates if t['to'] > self.current_floor]
         elif direction == 'DOWN':
             candidates = [t for t in candidates if t['to'] < self.current_floor]
-            
+
         for entry in candidates:
             diff = abs(entry['time'] - duration)
             if diff < min_diff:
@@ -302,7 +304,7 @@ class LiftMonitor:
             floors_moved = 1
             if duration > 17.0: floors_moved = 3
             elif duration > 13.0: floors_moved = 2
-            
+
             target = self.current_floor
             if direction == 'UP':
                 target = min(3, self.current_floor + floors_moved)
@@ -313,13 +315,13 @@ class LiftMonitor:
 
     def analyze_chunk(self, chunk):
         now = time.time()
-        
+
         if not chunk and not self.regex_buffer: return
-        
+
         full_data = b''
         if chunk:
             full_data = self.regex_buffer + chunk
-            
+
             # Continuous Pre-Roll Buffer
             try:
                 data_str = chunk.decode('utf-8', errors='ignore')
@@ -329,7 +331,7 @@ class LiftMonitor:
 
             # ONLY COUNT AAA
             chunk_aaa = len(PATTERNS['AAA'].findall(full_data))
-            
+
             self.trip_aaa_count += chunk_aaa
 
             # Events (Only change state if NOT currently moving)
@@ -339,7 +341,7 @@ class LiftMonitor:
                 # Don't interrupt MOVING state with DOORS_CLOSING
                 if self.state != LiftState.MOVING:
                     self.handle_state_change(LiftState.DOORS_CLOSING)
-            
+
             if PATTERNS['DoorOpenL0'].search(full_data):
                 logging.info("EVENT: Doors Opening L0")
                 # Don't interrupt MOVING state - let timeout handle it
@@ -351,23 +353,24 @@ class LiftMonitor:
                 logging.info("EVENT: Arrival L0")
                 # Floor update is always valid, even while moving (L0 arrival signal)
                 self.handle_floor_update(0, method="Signal (8h)")
-                
+
             self.regex_buffer = full_data[-20:]
         else:
             chunk_aaa = 0
 
         # === STATE MACHINE ===
-        
+
         # 1. TRIGGER MOVEMENT (Only on AAA)
         if self.state != LiftState.MOVING and chunk_aaa > 0:
             logging.info(f"--- MOVEMENT STARTED (Trigger: AAA) ---")
             self.state = LiftState.MOVING
             self.move_start_time = now
             self.last_signal_time = now
-            self.start_floor = self.current_floor 
+            self.start_floor = self.current_floor
             self.trip_aaa_count = chunk_aaa # Start with current chunk
             self.prediction_sent = False
-            
+            self.predicted_direction = None  # Reset until prediction window
+
             # Pre-Roll
             cutoff_time = now - SETTINGS['PRE_ROLL_SECONDS']
             pre_roll_data = [item[1] for item in self.continuous_buffer if item[0] >= cutoff_time]
@@ -378,7 +381,7 @@ class LiftMonitor:
         elif self.state == LiftState.MOVING:
             if chunk_aaa > 0:
                 self.last_signal_time = now
-            
+
             # Store Data
             try:
                 if chunk:
@@ -394,16 +397,24 @@ class LiftMonitor:
                 # Calculate Initial Rate
                 pred_rate = self.trip_aaa_count / trip_duration
                 pred_dir = 'UP' if pred_rate >= SETTINGS['ASCENT_RATE_THRESHOLD'] else 'DOWN'
-                
+
                 logging.info(f"PREDICTION: T={trip_duration:.2f}s, Count={self.trip_aaa_count}, Rate={pred_rate:.2f} -> {pred_dir}")
                 self.log_prediction(pred_dir, method="window_rate")
                 self.prediction_sent = True
+                self.predicted_direction = pred_dir  # Store for timeout selection
 
-            # B. STOP DETECTION (Timeouts)
-            current_timeout = SETTINGS['MOVE_TIMEOUT'] # Default 3.0s
-            if (now - self.last_door_close_time) < 30.0:
-                current_timeout = SETTINGS['EXTENDED_MOVE_TIMEOUT'] # 10.0s for silent descents
+            # B. STOP DETECTION (Timeouts based on predicted direction)
+            if self.predicted_direction == 'UP':
+                current_timeout = SETTINGS['ASCENT_TIMEOUT']  # 2.0s
+            elif self.predicted_direction == 'DOWN':
+                current_timeout = SETTINGS['DESCENT_TIMEOUT']  # 5.0s
+            else:
+                current_timeout = SETTINGS['DESCENT_TIMEOUT']  # Default to patient before prediction
             
+            # Extended timeout if doors closed recently (safety net for silent descents)
+            if (now - self.last_door_close_time) < 30.0:
+                current_timeout = max(current_timeout, SETTINGS['EXTENDED_MOVE_TIMEOUT'])
+
             if (now - self.last_signal_time) > current_timeout:
                 # STOP CONFIRMED
                 total_duration = self.last_signal_time - self.move_start_time
@@ -419,14 +430,14 @@ class LiftMonitor:
                     self.log_trip(total_duration, trip_type='TRIP', raw_data=move_data_str)
                     logging.info("INFERRED: Doors Opening")
                     self.handle_state_change(LiftState.DOORS_OPENING)
-                
+
                 self.log_prediction('STOPPED', method="end")
                 self.trip_aaa_count = 0
                 self.move_buffer = []
 
     def run(self):
         logging.info(f"Starting LiftMonitor on {self.port}...")
-        
+
         if not self.mock_mode:
             try:
                 ser = serial.Serial(self.port, self.baud, timeout=0.1)
@@ -446,19 +457,19 @@ class LiftMonitor:
                         self.analyze_chunk(clean)
                 else:
                     time.sleep(1)
-                
+
                 now = time.time()
                 if (now - self.last_heartbeat) > 60:
                     self.last_heartbeat = now
                     if self.state == LiftState.STATIONARY:
                         self.sync_firebase()
-                
+
                 if self.state == LiftState.MOVING:
                      # Check timeout even if no data coming in
-                     self.analyze_chunk(b'') 
+                     self.analyze_chunk(b'')
 
                 time.sleep(0.05)
-                
+
             except KeyboardInterrupt:
                 logging.info("Stopping...")
                 break
@@ -472,7 +483,7 @@ if __name__ == "__main__":
         format='%(asctime)s [%(levelname)s] %(message)s',
         datefmt='%H:%M:%S'
     )
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--mock", action="store_true", help="Run without serial port")
     parser.add_argument("--port", default='/dev/ttyUSB0', help="Serial port")
