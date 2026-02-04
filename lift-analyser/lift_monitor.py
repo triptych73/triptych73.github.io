@@ -332,19 +332,24 @@ class LiftMonitor:
             
             self.trip_aaa_count += chunk_aaa
 
-            # Events
+            # Events (Only change state if NOT currently moving)
             if PATTERNS['DoorClose'].search(full_data):
                 logging.info("EVENT: Doors Closing")
-                self.handle_state_change(LiftState.DOORS_CLOSING)
                 self.last_door_close_time = now
+                # Don't interrupt MOVING state with DOORS_CLOSING
+                if self.state != LiftState.MOVING:
+                    self.handle_state_change(LiftState.DOORS_CLOSING)
             
             if PATTERNS['DoorOpenL0'].search(full_data):
                 logging.info("EVENT: Doors Opening L0")
-                self.handle_state_change(LiftState.DOORS_OPENING)
-                self.handle_floor_update(0, method="Signal (ha)")
+                # Don't interrupt MOVING state - let timeout handle it
+                if self.state != LiftState.MOVING:
+                    self.handle_state_change(LiftState.DOORS_OPENING)
+                    self.handle_floor_update(0, method="Signal (ha)")
 
             if PATTERNS['ArrL0'].search(full_data):
                 logging.info("EVENT: Arrival L0")
+                # Floor update is always valid, even while moving (L0 arrival signal)
                 self.handle_floor_update(0, method="Signal (8h)")
                 
             self.regex_buffer = full_data[-20:]
