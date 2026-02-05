@@ -587,6 +587,30 @@
                             </div>
                         </div>
 
+                        <!-- Door Audio Status Row -->
+                        <div id="door-audio-status"
+                            class="flex items-center justify-between px-3 py-2 bg-white/[0.02] rounded-lg border border-white/5 mt-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                                <span class="text-[9px] text-white/40 font-mono uppercase">Last Close:</span>
+                                <span id="door-last-close-time" class="text-[10px] text-bronze font-mono">--</span>
+                            </div>
+                            <button id="view-door-history-btn"
+                                class="p-1 hover:bg-white/10 rounded text-white/30 hover:text-white transition-colors group relative">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                                <div
+                                    class="absolute right-0 top-full mt-1 w-max px-2 py-1 bg-black/90 border border-white/10 rounded text-[9px] text-white/70 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                    Door History</div>
+                            </button>
+                        </div>
+
                         <!-- Eufy Settings Modal -->
                         <div id="eufy-settings-modal"
                             class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -1072,7 +1096,7 @@
         </main>
 
         <footer class="text-center py-8 text-[10px] text-white/20 font-mono uppercase tracking-widest">
-            St Mary Somerset | Project ID: SMS-1694 | System V2.5 | Build: 2026-02-04T20:28
+            St Mary Somerset | Project ID: SMS-1694 | System V2.6 | Build: 2026-02-05T12:02
         </footer>
     </div>
 
@@ -1252,6 +1276,45 @@
     </div>
 
 
+    <!-- Door Audio History Modal -->
+    <div id="door-audio-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div
+            class="bg-[#1a1a1a] border border-white/10 rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col m-4 shadow-2xl">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <div>
+                    <h2 class="font-serif text-xl text-white">Door Audio Events</h2>
+                    <p class="text-xs text-white/40 font-mono mt-1">RECENT DOOR CLOSE DETECTIONS</p>
+                </div>
+                <button id="close-door-audio-btn"
+                    class="p-2 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-auto p-0">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-white/5 sticky top-0 backdrop-blur-md">
+                        <tr>
+                            <th class="py-3 pl-6 font-mono text-[10px] uppercase tracking-widest text-white/40">
+                                Timestamp</th>
+                            <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Event</th>
+                            <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Duration</th>
+                            <th
+                                class="py-3 pr-6 font-mono text-[10px] uppercase tracking-widest text-white/40 text-right">
+                                Device</th>
+                        </tr>
+                    </thead>
+                    <tbody id="door-audio-table-body" class="text-sm border-t border-white/5">
+                        <!-- Dynamic Content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -1280,6 +1343,8 @@
                         initLiftHistory();
                         // Initialize Helvar Control
                         initHelvarControl();
+                        // Initialize Door Audio Monitor
+                        initDoorAudio();
                     }, 500);
                 } else {
                     // Not Authenticated: Redirect
@@ -1952,6 +2017,81 @@
                     });
                 }
 
+            }
+        }
+
+        // --- DOOR AUDIO EVENTS LOGIC ---
+        function initDoorAudio() {
+            console.log("Door Audio Monitor v1.0");
+            const db = firebase.firestore();
+            const lastCloseDisp = document.getElementById('door-last-close-time');
+            const modal = document.getElementById('door-audio-modal');
+            const btn = document.getElementById('view-door-history-btn');
+            const closeBtn = document.getElementById('close-door-audio-btn');
+            const tbody = document.getElementById('door-audio-table-body');
+            let historyListener = null;
+
+            // Real-time listener for last close event
+            db.collection('door_audio_events')
+                .where('event', '==', 'DOOR_CLOSED')
+                .orderBy('timestamp', 'desc')
+                .limit(1)
+                .onSnapshot((snapshot) => {
+                    if (!snapshot.empty) {
+                        const doc = snapshot.docs[0];
+                        const d = doc.data();
+                        const ts = d.timestamp ? d.timestamp.toDate() : new Date();
+                        const timeStr = ts.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+                        if (lastCloseDisp) lastCloseDisp.innerText = timeStr;
+                    }
+                }, (err) => {
+                    console.warn('Door audio listener error:', err.message);
+                    if (lastCloseDisp) lastCloseDisp.innerText = 'Error';
+                });
+
+            // Modal open/close
+            if (btn) btn.addEventListener('click', () => { modal.style.display = 'flex'; loadDoorHistory(); });
+            if (closeBtn) closeBtn.addEventListener('click', () => { modal.style.display = 'none'; if (historyListener) historyListener(); });
+
+            function loadDoorHistory() {
+                if (historyListener) historyListener();
+                tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-white/20 animate-pulse">Fetching records...</td></tr>';
+
+                historyListener = db.collection('door_audio_events')
+                    .orderBy('timestamp', 'desc')
+                    .limit(50)
+                    .onSnapshot((snapshot) => {
+                        if (snapshot.empty) {
+                            tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-white/20">No events found.</td></tr>';
+                            return;
+                        }
+                        tbody.innerHTML = '';
+                        snapshot.docs.forEach(doc => {
+                            const d = doc.data();
+                            const ts = d.timestamp ? d.timestamp.toDate() : new Date();
+                            const timeStr = ts.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            const event = d.event || 'UNKNOWN';
+                            const duration = d.duration_seconds ? `${d.duration_seconds.toFixed(1)}s` : '-';
+                            const device = d.device || '-';
+
+                            let eventClass = "text-white/40";
+                            if (event === 'DOOR_CLOSED') eventClass = "text-bronze";
+                            if (event === 'SERVICE_STARTED') eventClass = "text-success";
+
+                            const row = document.createElement('tr');
+                            row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
+                            row.innerHTML = `
+                                <td class="py-3 pl-6 font-mono text-white/50">${timeStr}</td>
+                                <td class="py-3 font-mono text-[11px] uppercase ${eventClass}">${event.replace('_', ' ')}</td>
+                                <td class="py-3 font-mono text-bronze">${duration}</td>
+                                <td class="py-3 pr-6 text-right font-mono text-white/30">${device}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    }, (error) => {
+                        console.error("Door audio history error:", error);
+                        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-alert text-xs">Error: ${error.message}</td></tr>`;
+                    });
             }
         }
 
