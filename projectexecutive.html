@@ -1089,7 +1089,7 @@
         </main>
 
         <footer class="text-center py-8 text-[10px] text-white/20 font-mono uppercase tracking-widest">
-            St Mary Somerset | Project ID: SMS-1694 | System V2.6 | Build: 2026-02-05T12:07
+            St Mary Somerset | Project ID: SMS-1694 | System V2.7 | Build: 2026-02-05T14:32
         </footer>
     </div>
 
@@ -1295,9 +1295,10 @@
                                 Timestamp</th>
                             <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Event</th>
                             <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Duration</th>
+                            <th class="py-3 font-mono text-[10px] uppercase tracking-widest text-white/40">Device</th>
                             <th
                                 class="py-3 pr-6 font-mono text-[10px] uppercase tracking-widest text-white/40 text-right">
-                                Device</th>
+                                Audio</th>
                         </tr>
                     </thead>
                     <tbody id="door-audio-table-body" class="text-sm border-t border-white/5">
@@ -2048,14 +2049,14 @@
 
             function loadDoorHistory() {
                 if (historyListener) historyListener();
-                tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-white/20 animate-pulse">Fetching records...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/20 animate-pulse">Fetching records...</td></tr>';
 
                 historyListener = db.collection('door_audio_events')
                     .orderBy('timestamp', 'desc')
                     .limit(50)
                     .onSnapshot((snapshot) => {
                         if (snapshot.empty) {
-                            tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-white/20">No events found.</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/20">No events found.</td></tr>';
                             return;
                         }
                         tbody.innerHTML = '';
@@ -2071,21 +2072,47 @@
                             if (event === 'DOOR_CLOSED') eventClass = "text-bronze";
                             if (event === 'SERVICE_STARTED') eventClass = "text-success";
 
+                            // Audio play button if audio file exists
+                            const audioFile = d.audio_file;
+                            let audioBtn = '<span class="text-white/10">-</span>';
+                            if (audioFile) {
+                                audioBtn = `<button onclick="playDoorAudio('${audioFile}')" class="p-1 hover:bg-white/10 rounded text-white/40 hover:text-bronze transition-colors" title="Play Audio">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>`;
+                            }
+
                             const row = document.createElement('tr');
                             row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
                             row.innerHTML = `
                                 <td class="py-3 pl-6 font-mono text-white/50">${timeStr}</td>
                                 <td class="py-3 font-mono text-[11px] uppercase ${eventClass}">${event.replace('_', ' ')}</td>
                                 <td class="py-3 font-mono text-bronze">${duration}</td>
-                                <td class="py-3 pr-6 text-right font-mono text-white/30">${device}</td>
+                                <td class="py-3 font-mono text-white/30">${device}</td>
+                                <td class="py-3 pr-6 text-right">${audioBtn}</td>
                             `;
                             tbody.appendChild(row);
                         });
                     }, (error) => {
                         console.error("Door audio history error:", error);
-                        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-alert text-xs">Error: ${error.message}</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-alert text-xs">Error: ${error.message}</td></tr>`;
                     });
             }
+
+            // Global function to play door audio
+            window.playDoorAudio = async function (storagePath) {
+                try {
+                    const storageRef = firebase.storage().ref(storagePath);
+                    const url = await storageRef.getDownloadURL();
+                    const audio = new Audio(url);
+                    audio.play();
+                } catch (e) {
+                    console.error('Audio playback failed:', e);
+                    alert('Could not load audio: ' + e.message);
+                }
+            };
         }
 
         // ==============================================
