@@ -171,7 +171,7 @@
             <h1 class="font-serif text-xl tracking-widest uppercase text-midnight">St Mary Somerset</h1>
             <span class="h-4 w-px bg-bronze/30"></span>
             <span class="text-xs tracking-[0.2em] text-bronze uppercase">Drawings Archive</span>
-            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.2.2</span>
+            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.2.3</span>
         </div>
 
         <div class="flex items-center gap-4">
@@ -208,9 +208,15 @@
 
                 <!-- Building Visualizer -->
                 <div class="space-y-3">
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center bg-white/50 p-2 rounded-sm border border-bronze/5">
                         <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Select Level</h2>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 items-center">
+                            <button id="openConfigBtn"
+                                class="text-[10px] uppercase text-midnight hover:text-bronze border border-gray-200 hover:border-bronze px-2 py-0.5 rounded transition-all bg-white shadow-sm"
+                                title="Configure Rooms per Floor">
+                                ⚙️ Rooms
+                            </button>
+                            <span class="w-px h-3 bg-gray-300 mx-1"></span>
                             <button id="toggleMeasureBtn"
                                 class="text-[10px] uppercase text-gray-400 hover:text-bronze border border-transparent hover:border-bronze px-2 py-0.5 rounded transition-all"
                                 title="Measure floor heights">
@@ -247,8 +253,7 @@
                 <div class="space-y-6">
                     <!-- Room -->
                     <div class="space-y-3">
-                        <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Room Type</h2>
-                        <div id="roomTypeTabs" class="grid grid-cols-2 gap-2">
+                        <div id="roomList" class="space-y-6">
                             <!-- Injected via JS -->
                         </div>
                     </div>
@@ -377,6 +382,31 @@
         <div class="text-xs uppercase tracking-[0.3em] text-midnight">Retrieving Archival Data...</div>
     </div>
 
+    <!-- Room Configurator Modal -->
+    <div id="configModal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-8">
+        <div class="bg-white w-full max-w-lg rounded shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="font-serif text-lg text-midnight tracking-wide">Room Configuration</h2>
+                <button id="closeConfigBtn" class="text-gray-400 hover:text-midnight transition-colors">✕</button>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-1">
+                <p class="text-xs text-gray-400 mb-4 uppercase tracking-wider">Select number of rooms per floor</p>
+                <div id="configList" class="space-y-1 divide-y divide-gray-50">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
+                <button id="saveConfigBtn"
+                    class="bg-midnight text-white text-xs uppercase tracking-widest px-6 py-3 hover:bg-bronze transition-colors shadow-sm">
+                    Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notification Toast -->
     <div id="notification"
         class="fixed top-24 right-8 bg-midnight text-white px-6 py-4 shadow-xl z-[100] transform translate-y-[-20px] opacity-0 transition-all duration-300">
@@ -416,6 +446,8 @@
         let activeType = 'G';
         let activeOrientation = 'Default';
         let activeStage = 'O'; // Default active stage
+        let roomConfig = {}; // e.g. { '01': 3, '02': 1 }
+
 
         // Viewport State
         let currentScale = 1;
@@ -430,7 +462,7 @@
         const navToggle = document.getElementById('navToggle');
         const navToggleIcon = document.getElementById('navToggleIcon');
         const floorOverlay = document.getElementById('floorOverlay');
-        const roomTypeTabs = document.getElementById('roomTypeTabs');
+        const roomList = document.getElementById('roomList');
         const orientationTabs = document.getElementById('orientationTabs');
         const stageTabs = document.getElementById('stageTabs');
         const drawingContainer = document.getElementById('drawingContainer');
@@ -452,6 +484,12 @@
         const loadingEl = document.getElementById('loading');
         const notification = document.getElementById('notification');
         const notificationMessage = document.getElementById('notificationMessage');
+        const openConfigBtn = document.getElementById('openConfigBtn');
+        const configModal = document.getElementById('configModal');
+        const closeConfigBtn = document.getElementById('closeConfigBtn');
+        const saveConfigBtn = document.getElementById('saveConfigBtn');
+        const configList = document.getElementById('configList');
+
 
         // Initialize
         function init() {
@@ -468,6 +506,8 @@
                     // For simplicity, we trust the saved data if it exists
                     if (savedData.csvData && savedData.csvData.length > 0) csvData = savedData.csvData;
                     if (savedData.urlData && savedData.urlData.length > 0) urlData = savedData.urlData;
+                    if (savedData.roomConfig) roomConfig = savedData.roomConfig;
+
 
                     showNotification('Project Cache Loaded');
                 } catch (e) {
@@ -551,7 +591,13 @@
             importCsvBtn.addEventListener('click', () => csvFileInput.click());
             csvFileInput.addEventListener('change', importCsv);
             saveBtn.addEventListener('click', saveCsv);
+
+            // Configurator
+            openConfigBtn.addEventListener('click', openConfigurator);
+            closeConfigBtn.addEventListener('click', () => configModal.classList.add('hidden'));
+            saveConfigBtn.addEventListener('click', saveConfigurator);
         }
+
 
         // Render the floor regions on the building image
         // Floor heights measured using the measurement tool (bottom to top)
@@ -616,46 +662,83 @@
         }
 
         function updateUI() {
-            renderRoomTypeTabs();
+            renderRoomList();
             renderOrientationTabs();
             renderStageTabs();
             updateDrawingView();
         }
 
-        // Render room-type tabs
-        function renderRoomTypeTabs() {
-            roomTypeTabs.innerHTML = '';
+        // Render Room List with Icons
+        function renderRoomList() {
+            roomList.innerHTML = '';
 
-            rooms.forEach(room => {
-                types.forEach(type => {
-                    const hasDrawing = hasAnyDrawingForRoomType(activeFloor, room, type.code);
+            const numRooms = roomConfig[activeFloor] || 3;
 
-                    const tabBtn = document.createElement('button');
-                    // Styling logic
-                    const isActive = activeRoom === room && activeType === type.code;
-                    const isDisabled = !hasDrawing;
+            // Icon Definitions
+            const icons = {
+                'G': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
+                'I': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="15.5" r="1.5"/><circle cx="8.5" cy="15.5" r="1.5"/></svg>`, // RCP (Grid dots)
+                'E': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M13 11h4"/><path d="M13 15h4"/></svg>`,
+                'S': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M3 21h18"/></svg>` // Section (Cut/Profile) - Using user icon or generic? Let's use a "Section" look.
+                // Better Section: Cut plane
+            };
+            // Override Section to simpler cut
+            icons['S'] = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="21" y1="3" x2="3" y2="21"/></svg>`;
 
-                    let classes = "text-xs py-2 px-1 border rounded transition-all duration-200 truncate ";
+            for (let i = 1; i <= numRooms; i++) {
+                const room = i.toString();
+
+                const roomGroup = document.createElement('div');
+
+                const header = document.createElement('h3');
+                header.className = "font-serif text-sm text-bronze uppercase tracking-widest pl-1 mb-2";
+                header.textContent = `Room ${room}`;
+
+                const grid = document.createElement('div');
+                grid.className = "grid grid-cols-4 gap-2";
+
+                // Render 4 Icons
+                const viewTypes = [
+                    { code: 'G', label: 'GA' },
+                    { code: 'I', label: 'RCP' },
+                    { code: 'E', label: 'Elev' },
+                    { code: 'S', label: 'Sect' }
+                ];
+
+                viewTypes.forEach(vt => {
+                    const hasDrawing = hasAnyDrawingForRoomType(activeFloor, room, vt.code);
+                    const isActive = activeRoom === room && activeType === vt.code;
+                    const btn = document.createElement('button');
+
+                    let classes = "flex flex-col items-center justify-center p-2 rounded border transition-all duration-200 ";
                     if (isActive) {
-                        classes += "bg-bronze text-white border-bronze font-medium shadow-sm";
-                    } else if (isDisabled) {
-                        classes += "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed";
+                        classes += "bg-bronze text-white border-bronze shadow-md ring-1 ring-bronze ring-offset-1";
+                    } else if (!hasDrawing) {
+                        classes += "bg-gray-50 text-gray-200 border-gray-100 cursor-not-allowed";
                     } else {
-                        classes += "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-bronze/50 hover:text-bronze";
+                        classes += "bg-white text-gray-500 border-gray-200 hover:border-bronze hover:text-bronze hover:bg-white";
                     }
 
-                    tabBtn.className = classes;
-                    tabBtn.textContent = `R${room} • ${type.name}`;
+                    btn.className = classes;
+                    btn.innerHTML = `
+                        ${icons[vt.code]}
+                        <span class="text-[9px] uppercase mt-1 font-medium tracking-wider">${vt.label}</span>
+                    `;
+                    btn.title = `${vt.label} - Room ${room}`;
 
-                    if (!isDisabled || isActive) {
-                        tabBtn.addEventListener('click', () => {
-                            setActiveRoomType(room, type.code);
+                    if (hasDrawing || isActive) {
+                        btn.addEventListener('click', () => {
+                            setActiveRoomType(room, vt.code);
                         });
                     }
 
-                    roomTypeTabs.appendChild(tabBtn);
+                    grid.appendChild(btn);
                 });
-            });
+
+                roomGroup.appendChild(header);
+                roomGroup.appendChild(grid);
+                roomList.appendChild(roomGroup);
+            }
         }
 
         function setActiveRoomType(room, type) {
@@ -792,7 +875,70 @@
             }
         }
 
+        // --- ROOM CONFIGURATOR ---
+        function openConfigurator() {
+            configList.innerHTML = '';
+
+            // Ensure defaults
+            floors.forEach(f => {
+                if (!roomConfig[f]) roomConfig[f] = 3; // Default to 3 rooms
+            });
+
+            floors.forEach(floor => {
+                const current = roomConfig[floor] || 3;
+
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between py-2";
+                row.innerHTML = `
+                    <span class="font-serif text-sm w-16 text-midnight">Lvel ${floor}</span>
+                    <div class="flex gap-2">
+                        ${[1, 2, 3].map(n => `
+                            <button class="room-count-btn w-8 h-8 text-xs font-medium rounded-full border ${current === n ? 'bg-bronze text-white border-bronze' : 'bg-white text-gray-400 border-gray-200 hover:border-bronze'}"
+                                data-floor="${floor}" data-count="${n}" onclick="selectRoomCount('${floor}', ${n})">
+                                ${n}
+                            </button>
+                        `).join('')}
+                    </div>
+                 `;
+                configList.appendChild(row);
+            });
+
+            configModal.classList.remove('hidden');
+        }
+
+        function selectRoomCount(floor, count) {
+            // Update local state temporarily? Or direct update?
+            // VISUAL UPDATE
+            const btns = configList.querySelectorAll(`button[data-floor="${floor}"]`);
+            btns.forEach(b => {
+                if (parseInt(b.dataset.count) === count) {
+                    b.className = "room-count-btn w-8 h-8 text-xs font-medium rounded-full border bg-bronze text-white border-bronze transition-all scale-110";
+                } else {
+                    b.className = "room-count-btn w-8 h-8 text-xs font-medium rounded-full border bg-white text-gray-400 border-gray-200 hover:border-bronze transition-all";
+                }
+            });
+            // STORE
+            roomConfig[floor] = count;
+        }
+        // Expose to window for onclick
+        window.selectRoomCount = selectRoomCount;
+
+        function saveConfigurator() {
+            // Persist
+            const data = {
+                csvData: csvData,
+                urlData: urlData,
+                roomConfig: roomConfig
+            };
+            localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
+
+            showNotification('Room Types Saved');
+            configModal.classList.add('hidden');
+            updateUI(); // Refresh view
+        }
+
         // --- HELPER FUNCTIONS ---
+
 
         function getCurrentKey(stageCode) {
             return `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${stageCode}`;
