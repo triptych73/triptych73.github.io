@@ -207,7 +207,21 @@
 
                 <!-- Building Visualizer -->
                 <div class="space-y-3">
-                    <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Select Level</h2>
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Select Level</h2>
+                        <div class="flex gap-2">
+                            <button id="toggleMeasureBtn"
+                                class="text-[10px] uppercase text-gray-400 hover:text-bronze border border-transparent hover:border-bronze px-2 py-0.5 rounded transition-all"
+                                title="Measure floor heights">
+                                📏 Measure
+                            </button>
+                            <button id="clearMeasureBtn"
+                                class="hidden text-[10px] uppercase text-red-400 hover:text-red-600 border border-transparent hover:border-red-200 px-2 py-0.5 rounded transition-all"
+                                title="Clear measurements">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- Centered Container -->
                     <div
@@ -220,6 +234,9 @@
                             <!-- Floor Overlay Grid -->
                             <div class="absolute inset-0 flex flex-col" id="floorOverlay">
                                 <!-- Injected via JS -->
+                            </div>
+                            <div id="measureOverlay" class="absolute inset-0 z-[60] hidden cursor-crosshair">
+                                <!-- Measurement lines injected via JS -->
                             </div>
                         </div>
                     </div>
@@ -975,6 +992,65 @@
 
         // Init
         window.addEventListener('DOMContentLoaded', init);
+
+
+        // --- MEASUREMENT HELPER TOOL ---
+        const toggleMeasureBtn = document.getElementById('toggleMeasureBtn');
+        const clearMeasureBtn = document.getElementById('clearMeasureBtn');
+        const measureOverlay = document.getElementById('measureOverlay');
+        let isMeasuring = false;
+        let measurePoints = [];
+
+        toggleMeasureBtn.addEventListener('click', () => {
+            isMeasuring = !isMeasuring;
+            if (isMeasuring) {
+                toggleMeasureBtn.classList.add('bg-bronze', 'text-white');
+                toggleMeasureBtn.classList.remove('text-gray-400');
+                measureOverlay.classList.remove('hidden');
+                clearMeasureBtn.classList.remove('hidden');
+            } else {
+                toggleMeasureBtn.classList.remove('bg-bronze', 'text-white');
+                toggleMeasureBtn.classList.add('text-gray-400');
+                measureOverlay.classList.add('hidden');
+                clearMeasureBtn.classList.add('hidden');
+            }
+        });
+
+        clearMeasureBtn.addEventListener('click', () => {
+            measurePoints = [];
+            measureOverlay.innerHTML = '';
+        });
+
+        measureOverlay.addEventListener('click', (e) => {
+            if (!isMeasuring) return;
+
+            const rect = measureOverlay.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+
+            // Add visual line
+            const line = document.createElement('div');
+            line.className = 'absolute w-full h-px bg-red-500 z-50 pointer-events-none';
+            line.style.top = `${y}px`;
+
+            // Calculate distance if not first point
+            let labelText = '0px';
+            if (measurePoints.length > 0) {
+                const prevY = measurePoints[measurePoints.length - 1];
+                const diff = Math.abs(prevY - y).toFixed(1);
+                labelText = `+${diff}px`;
+            }
+
+            // Label
+            const label = document.createElement('div');
+            label.className = 'absolute right-0 bg-red-500 text-white text-[10px] px-1 rounded pointer-events-none transform -translate-y-1/2';
+            label.style.top = `${y}px`;
+            label.textContent = labelText;
+
+            measureOverlay.appendChild(line);
+            measureOverlay.appendChild(label);
+
+            measurePoints.push(y);
+        });
 
     </script>
 </body>
