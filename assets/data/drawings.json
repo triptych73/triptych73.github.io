@@ -1,0 +1,1360 @@
+{
+  "ARCH": [
+    {
+      "number": "section thru lift shaft",
+      "title": "",
+      "status": "Item moved",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "kitchen elevation",
+      "title": "",
+      "status": "design change",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "counter elevation",
+      "title": "",
+      "status": "design change",
+      "phase": ""
+    },
+    {
+      "number": "lambeth hill entrance door, D1 - internal elevation",
+      "title": "",
+      "status": "fine if design not revisited",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "D2 - level 1, east elevation, internal elevation",
+      "title": "",
+      "status": "design revised",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "D3 - level 1, south elevation, internal elevation",
+      "title": "",
+      "status": "design revised",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "D5 - level 2, cupboard door",
+      "title": "",
+      "status": "Item removed",
+      "phase": ""
+    },
+    {
+      "number": "detailed section D3, D4",
+      "title": "",
+      "status": "design revised",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "typical glass pivot door head + cill detail",
+      "title": "",
+      "status": "different WC doors used - wood",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "W1-9 (spiral windows) +W12-14 (lower round)",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "W15: north elevation, landing, level 5",
+      "title": "",
+      "status": "window dims altered",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "w10 east elevation",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "Section thru W 23-26",
+      "title": "",
+      "status": "design revised - now split panes of glass",
+      "phase": "Phase 2"
+    },
+    {
+      "number": "plan detail, W1-9",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "Section thru W 16+18",
+      "title": "",
+      "status": "all DETAILS largely correct and useable",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "W11 - level 1",
+      "title": "",
+      "status": "design will be substantially revised: no recess, different wall construction. Non opening",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "W11- section thru' head",
+      "title": "",
+      "status": "roof light removed",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "plan guest WC, level 3",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "elevation bathroom2 & 3, level 5 & 6",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "design change; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "design change; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "design change; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "section detail thru' cupboard grill",
+      "title": "",
+      "status": "TBD",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "brush + radiator enclosures",
+      "title": "",
+      "status": "item dropped; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "item dropped; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "item dropped; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "item dropped; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "D1 - external elevation",
+      "title": "",
+      "status": "fine if design not revisited",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "D1 - lintel detail",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "detailed section thru' roof incl. parapet plan and section",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "section - level 1 extension",
+      "title": "",
+      "status": "multiple changes including elimination of stairs, fire route, bin store",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "phase 2; no replacement needed",
+      "phase": "Phase 2"
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "phase 2; no replacement needed",
+      "phase": "Phase 2"
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "phase 2; no replacement needed",
+      "phase": "Phase 2"
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "phase 2; no replacement needed",
+      "phase": "Phase 2"
+    },
+    {
+      "number": "junction of timber floor + glass balustrade, level 2",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "floor make up @ junction with interior wall - level 1",
+      "title": "",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "design change; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "design change; no replacement needed",
+      "phase": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "status": "design change; no replacement needed",
+      "phase": ""
+    }
+  ],
+  "ENGINEERING": [
+    {
+      "title": "Level 10 roof section - 1:10",
+      "number": "D01",
+      "status": "Design changed",
+      "phase": "Phase 2"
+    },
+    {
+      "title": "Level 9 perimeter section - 1:10",
+      "number": "D02",
+      "status": "",
+      "phase": "Phase 2"
+    },
+    {
+      "title": "Level 9 perimeter section - 1:10",
+      "number": "D03",
+      "status": "Needs changing as now keeping concrete grid",
+      "phase": "Phase 2"
+    },
+    {
+      "title": "Level 9 typical angle fixing detail - 1:10",
+      "number": "D04",
+      "status": "",
+      "phase": "Phase 2"
+    },
+    {
+      "title": "Level 8 beam detail - 1:10",
+      "number": "D05",
+      "status": "Lift Removed",
+      "phase": ""
+    },
+    {
+      "title": "Level 7 extension roof - 1:20",
+      "number": "D06",
+      "status": "Much stuctural steelwork here not needed without hanging stairs.\n=D07",
+      "phase": ""
+    },
+    {
+      "title": "section thru roof Lvl 7 - 1:10",
+      "number": "D07",
+      "status": "Wall construction differs",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "section thru roof flitch beam Lvl 7 - 1:10",
+      "number": "D08",
+      "status": "Wall construction differs",
+      "phase": ""
+    },
+    {
+      "title": "support to cut oak beam - 1:10",
+      "number": "D09",
+      "status": "Lift Removed",
+      "phase": ""
+    },
+    {
+      "title": "section thru Lvl 7 - 1:10",
+      "number": "D10",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail Lvl 7 lintols - 1:10",
+      "number": "D11",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail thru Lvl 6 - 1:10",
+      "number": "D12",
+      "status": "Item Removed",
+      "phase": ""
+    },
+    {
+      "title": "detail thru Lvl 6 - 1:10",
+      "number": "D13",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "section thru extension wall \u2013 1:10 - A",
+      "number": "D14 A",
+      "status": "Wall construction differs",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "section thru extension wall \u2013 1:10 - B",
+      "number": "D14 B",
+      "status": "Wall construction differs",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "section thru wall \u2013 1:10",
+      "number": "D15",
+      "status": "The wall tie system will have to be redesigned for the new wall construction - significant work",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail thru Lvl 6 - 1:10",
+      "number": "D16",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "Lvl 6 extension landing beam \u2013 1:10",
+      "number": "D17",
+      "status": "Item Removed?",
+      "phase": ""
+    },
+    {
+      "title": "Lvl 6 extension landing beam \u2013 1:10",
+      "number": "D18",
+      "status": "Item Removed. Lift landing details needed though.",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail thru Lvl 5 stair support - 1:10",
+      "number": "D19",
+      "status": "Item Removed",
+      "phase": ""
+    },
+    {
+      "title": "detail thru extn beam connections - 1:1",
+      "number": "D20",
+      "status": "Needs redesigning for new wall construction",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail thru extn beam connections - 1:10",
+      "number": "D21",
+      "status": "=D20 as course heights no longer relevant with new wall construction",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail thru Lvl 4 floor - 1:10",
+      "number": "D22",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail thru lift pit - 1:10",
+      "number": "D23",
+      "status": "Item removed; but detail could be reused for lift pit in basement of extension",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail thru lift pit - 1:10",
+      "number": "D24",
+      "status": "Item removed; but detail could be reused for lift pit in basement of extension",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "section thru main door threashold - 1:10",
+      "number": "D25",
+      "status": "",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail thru Lvl 2 gallery floor - 1:10",
+      "number": "D26",
+      "status": "Items Removed",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "detail Lvl 2 columns - 1:10",
+      "number": "D27",
+      "status": "No longer using support column as mezzanine no longer projects. Refer to D26 also.",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "section thru rubbish store - 1:20",
+      "number": "D28",
+      "status": "Item Removed",
+      "phase": ""
+    },
+    {
+      "title": "section/elevation of east upstand - 1:20",
+      "number": "D29",
+      "status": "New wall construction",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "section/elevation of west upstand - 1:20",
+      "number": "D30",
+      "status": "New wall construction",
+      "phase": ""
+    },
+    {
+      "title": "section thru perimeter upstand - 1:10",
+      "number": "D31",
+      "status": "",
+      "phase": ""
+    },
+    {
+      "title": "junction piled/grd bearing slabs - 1:10",
+      "number": "D32",
+      "status": "Currently extension base slab not connected to main building base slab as excavation of north side of towerat doorway not yet completed.",
+      "phase": "Phase 1"
+    },
+    {
+      "title": "junction extg retaining wall/new retaining wall/stone - 1:10",
+      "number": "D33",
+      "status": "",
+      "phase": ""
+    },
+    {
+      "title": "section thru pile/pile cap - 1:10",
+      "number": "D34",
+      "status": "",
+      "phase": ""
+    }
+  ],
+  "APPR. D": [
+    {
+      "title": "Site Plan (red line plan)",
+      "number": "01 Site Plan",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 1",
+      "number": "02",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 2",
+      "number": "03",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 3",
+      "number": "04",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 4",
+      "number": "05",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 5",
+      "number": "06",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 6",
+      "number": "07",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 7",
+      "number": "08",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 8",
+      "number": "09",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 9",
+      "number": "10",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 10",
+      "number": "11",
+      "scale": "1:50",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "GA plan level 11",
+      "number": "GA 012",
+      "scale": "1:100",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Section North/South",
+      "number": "013",
+      "scale": "1:100",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Section East/West thru stair",
+      "number": "014",
+      "scale": "1:100",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Section east west through addition",
+      "number": "015",
+      "scale": "1:100",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Elevations, North & East",
+      "number": "016",
+      "scale": "1:100",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Proposed small passenger lift - section",
+      "number": "017",
+      "scale": "1:75",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Proposed small passenger lift - plans",
+      "number": "018",
+      "scale": "1:75",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Model photographs: levels 1-10",
+      "number": "019",
+      "scale": "nts",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Model photographs: levels 1-10",
+      "number": "020",
+      "scale": "nts",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Details-level 01-doors D1",
+      "number": "021",
+      "scale": "1:20",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Details-level 01-doors D1",
+      "number": "022",
+      "scale": "1:15",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Details-level 01-doors D1, D2, & D4",
+      "number": "023",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Details-level 04-windows w5, 6 & 7",
+      "number": "024",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Details-level 05 & 06-windows w9 10 & 11",
+      "number": "025",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Addition door details",
+      "number": "026 rev A",
+      "scale": "1:20",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Addition circular details",
+      "number": "027",
+      "scale": "1:25",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Stair window + glazed roof details",
+      "number": "028",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Addition arched window + parapet",
+      "number": "028",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "External lighting scheme",
+      "number": "GA 030",
+      "scale": "1:100",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Sketch of the new stone extension and its proposed foundations",
+      "number": "1381/40/SK11",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Sketch detail of the new RC Slabs within the new stone extension",
+      "number": "1381/40/SK12",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Sketch detail showing proposed reinforcement within the new stone extension - sheet 1",
+      "number": "1381/40/SK14",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Sketch detail showing proposed reinforcement within the new stone extension - sheet 2",
+      "number": "1381/40/SK15",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Connection detail of new steel beams",
+      "number": "1381/40/SK16",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Sketch detail showing proposed method for re-supporting existing timber beam",
+      "number": "1381/40/SK17 Rev A",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Sketch detail of proposed enlargement to existing opening",
+      "number": "1381/40/SK18",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Support detail for new floor structures",
+      "number": "1381/40/SK19 rev A",
+      "scale": "As indicated",
+      "status": "Approved 12/05/05"
+    },
+    {
+      "title": "Exploratory works relating to existing retaining wall structure",
+      "number": "1381/40/S01",
+      "scale": "1:100",
+      "status": "Approved 12/09/05"
+    },
+    {
+      "title": "Assumed existing retaining wall structure",
+      "number": "1381/40/SK20 rev A",
+      "scale": "As indicated",
+      "status": "Approved 12/09/05"
+    },
+    {
+      "title": "Elevations: East, North, West & South",
+      "number": "Pre-tender 02",
+      "scale": "1:100",
+      "status": "Approved 18/05/06"
+    },
+    {
+      "title": "Windows schedule W10/11, details 1",
+      "number": "68",
+      "scale": "1:5",
+      "status": "Approved 18/05/06"
+    },
+    {
+      "title": "Windows schedule W10/11, details 2",
+      "number": "69",
+      "scale": "1:5",
+      "status": "Approved 18/05/06"
+    },
+    {
+      "title": "Extension roof details",
+      "number": "71",
+      "scale": "As indicated",
+      "status": "Approved 18/05/06"
+    },
+    {
+      "title": "Extension stone details",
+      "number": "093",
+      "scale": "1:25 and 1:5",
+      "status": "Approved 18/05/06"
+    },
+    {
+      "title": "Stone details 1",
+      "number": "S1",
+      "scale": "1:5",
+      "status": "Approved 18/05/06"
+    },
+    {
+      "title": "Stone details 2",
+      "number": "S2 rev A",
+      "scale": "1:5",
+      "status": "Approved 18/05/06"
+    },
+    {
+      "title": "W10/11 elevations",
+      "number": "Windows schedule 2",
+      "scale": "1:30",
+      "status": "Approved 18/05/06"
+    },
+    {
+      "title": "GA Plan Level 2",
+      "number": "002B",
+      "scale": "1:50",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "GA Plan Level 10",
+      "number": "010 Rev C",
+      "scale": "1:50",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Section NS Level 9-10",
+      "number": "023 Rev B",
+      "scale": "1:25",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Section EW Level 9-10",
+      "number": "024 Rev B",
+      "scale": "1:25",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Section EW thru Lift Levels 9-10",
+      "number": "025 Rev B",
+      "scale": "1:25",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Circular Window Typical Detail",
+      "number": "044",
+      "scale": "As indicated",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Manufacturers Details of Bega Wall Luminaire",
+      "number": "L15",
+      "scale": "As indicated",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Stair window and glazed roof details",
+      "number": "BMA 028",
+      "scale": "As indicated",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Window Schedule 1",
+      "number": "BMA 036",
+      "scale": "1:20",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Window Schedule 2",
+      "number": "BMA 037",
+      "scale": "1:20",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Window Schedule 3",
+      "number": "BMA 038",
+      "scale": "1:30",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Window Schedule 4",
+      "number": "BMA 039",
+      "scale": "1:25",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Extension roof details",
+      "number": "BMA 071",
+      "scale": "As indicated",
+      "status": "Approved 23/08/07"
+    },
+    {
+      "title": "Location and Site Plan",
+      "number": "SMS/101",
+      "scale": "1:100",
+      "status": "Approved 27/07/09"
+    },
+    {
+      "title": "Elevations as Proposed",
+      "number": "SMS/201",
+      "scale": "1:100",
+      "status": "Approved 27/07/09"
+    },
+    {
+      "title": "G.A. Plan Level 1",
+      "number": "SMS/211",
+      "scale": "1:25",
+      "status": "Approved 27/07/09"
+    },
+    {
+      "title": "G.A. Plan Level 2",
+      "number": "SMS/212",
+      "scale": "1:25",
+      "status": "Approved 27/07/09"
+    },
+    {
+      "title": "Sections as Proposed",
+      "number": "SMS/023",
+      "scale": "1:100",
+      "status": "Approved 27/07/09"
+    }
+  ],
+  "ADR UP": [
+    {
+      "number": "1407-A090-P1",
+      "title": "GA Plan Levels 1-6",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A091-P1",
+      "title": "GA Plan Levels 7-11",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A101-P1",
+      "title": "GA Plan Level 1",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A102-P1",
+      "title": "GA Plan Level 2",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A103-P1",
+      "title": "GA Plan Level 3",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A104-P1",
+      "title": "GA Plan Level 4",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A105-P1",
+      "title": "GA Plan Level 5",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A106-P1",
+      "title": "GA Plan Level 6",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A107-P1",
+      "title": "GA Plan Level 7",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A108-P1",
+      "title": "GA Plan Level 8",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A109-P1",
+      "title": "GA Plan Level 9",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A110-P1",
+      "title": "GA Plan Level 10",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A111-P1",
+      "title": "GA Plan Level 11",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A200-P1",
+      "title": "Elevations All Sides",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A250-P1",
+      "title": "Sections All",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A251-P1",
+      "title": "Section SN (Facing W) BOTTOM",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A252-P1",
+      "title": "Section SN (Facing W) TOP",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A253-P1",
+      "title": "Section NS (Facing E) BOTTOM",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A254-P1",
+      "title": "Section NS (Facing E) TOP",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A255-P1",
+      "title": "Section WE thru Extension",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A256-P1",
+      "title": "Section WE thru Stair BOTTOM",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A257-P1",
+      "title": "Section WE thru Stair TOP",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A320-P1",
+      "title": "Extension - Plans Elevations and Sections",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A550-10-P1",
+      "title": "Extension Wall / Floor / Roof Details",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A550-11-P1",
+      "title": "Slot Windows Elevation / Plans",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A550-12-P1",
+      "title": "Extension Window Details",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A551-P1",
+      "title": "Slot Window Sections and Details",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A552-P1",
+      "title": "Extension Windows Details 1",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A560-P1",
+      "title": "Window / Door Surrounds Stone Schedule",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A561-P1",
+      "title": "Stone Profile Sections",
+      "date": "2014-06-15"
+    },
+    {
+      "number": "1407-A800-P2",
+      "title": "Lift Drawing Sheet",
+      "date": "2014-06-15"
+    }
+  ],
+  "EDR UP": [
+    {
+      "number": "1368-300A",
+      "title": "Typical Sections and General Notes",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-301A",
+      "title": "Level 01, Showing Structures at 01 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-302A",
+      "title": "Level 01, Showing Structures at Top of Side Retaining Walls",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-303A",
+      "title": "Level 02, Showing Structures at 02 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-304A",
+      "title": "",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-305B",
+      "title": "Level 04, Showing Structures at 04 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-306A",
+      "title": "Level 05, Showing Structures at 05 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-307A",
+      "title": "Level 06, Showing Structures at 06 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-308A",
+      "title": "Level 07, Showing Structures at 07 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-309A",
+      "title": "Level 08, Showing Structures at 08 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-310A",
+      "title": "Level 09, Showing Structures at 09 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-311A",
+      "title": "Level 10, Showing Structures at 10 Level",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-312A",
+      "title": "Typical Details Sheet 1 of 6",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-313B",
+      "title": "Typical Details Sheet 2 of 6",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-314B",
+      "title": "Typical Details Sheet 3 of 6",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-315A",
+      "title": "Typical Details Sheet 4 of 6",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-316A",
+      "title": "Typical Details Sheet 5 of 6",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-317A",
+      "title": "Typical Details Sheet 6 of 6",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-318B",
+      "title": "Typical Cross Section and Elevation",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-319B",
+      "title": "Typical Cross Section and Elevation",
+      "date": "2014-08-01"
+    },
+    {
+      "number": "1368-320B",
+      "title": "Typical Cross Section and Elevation",
+      "date": "2014-08-01"
+    }
+  ],
+  "PLANNING": [
+    {
+      "number": "1",
+      "title": "",
+      "date": "1.07"
+    },
+    {
+      "number": "Demolition",
+      "title": "",
+      "date": "5.06"
+    },
+    {
+      "number": "Current Equivalent Construction/",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "Dwg No",
+      "title": "",
+      "date": "Date"
+    },
+    {
+      "number": "Current Equivalent Construction/",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "Dwg No",
+      "title": "",
+      "date": "Date"
+    },
+    {
+      "number": "Demolition",
+      "title": "",
+      "date": "5.06"
+    },
+    {
+      "number": "Current Equivalent Construction/",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "Dwg No",
+      "title": "",
+      "date": "Date"
+    },
+    {
+      "number": "Demolition",
+      "title": "",
+      "date": "5.06"
+    },
+    {
+      "number": "Demolition",
+      "title": "",
+      "date": "5.06"
+    },
+    {
+      "number": "Current Equivalent Construction/",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "Dwg No",
+      "title": "",
+      "date": "Date"
+    },
+    {
+      "number": "Demolition",
+      "title": "",
+      "date": "5.06"
+    },
+    {
+      "number": "Demolition",
+      "title": "",
+      "date": "5.06"
+    },
+    {
+      "number": "Current Equivalent Construction/",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "Dwg No",
+      "title": "",
+      "date": "Date"
+    },
+    {
+      "number": "Demolition 09",
+      "title": "",
+      "date": "5.06"
+    },
+    {
+      "number": "Demolition",
+      "title": "",
+      "date": "5.06"
+    },
+    {
+      "number": "",
+      "title": "Comment on Planning Issues",
+      "date": "Current Equivalent Construction/"
+    },
+    {
+      "number": "Date",
+      "title": "",
+      "date": "Dwg No"
+    },
+    {
+      "number": "2.05",
+      "title": "Omission of 1950\u2019s concrete beams significant change. No \u2013 too much risk  \u00d6",
+      "date": "Demolition 10"
+    },
+    {
+      "number": "2.05",
+      "title": "Previously shown on application drawing extended both sides, but not annotated. OK\u00d6",
+      "date": "Demolition 10"
+    },
+    {
+      "number": "",
+      "title": "Comment on Planning Issues",
+      "date": "Current Equivalent Construction/"
+    },
+    {
+      "number": "Date",
+      "title": "",
+      "date": "Dwg No"
+    },
+    {
+      "number": "",
+      "title": "OK\u00d6",
+      "date": ""
+    },
+    {
+      "number": "2.05",
+      "title": "All information on drawing No GA012 dated Feb 05 now indicated on drawing No 13 dated Jan 07.",
+      "date": "Demolition 10"
+    },
+    {
+      "number": "2.05",
+      "title": "As noted before Not acceptable \u00d6",
+      "date": "Demolition 04"
+    },
+    {
+      "number": "2.05",
+      "title": "As noted before.",
+      "date": "Demolition 05"
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": "Demolition 02"
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "Current Equivalent Construction/",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "Dwg No",
+      "title": "",
+      "date": "Date"
+    },
+    {
+      "number": "31A",
+      "title": "",
+      "date": "1.07"
+    },
+    {
+      "number": "33A",
+      "title": "",
+      "date": "1.07"
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    },
+    {
+      "number": "41A",
+      "title": "",
+      "date": "1.07"
+    },
+    {
+      "number": "07B",
+      "title": "",
+      "date": "1.07"
+    },
+    {
+      "number": "42A",
+      "title": "",
+      "date": "1.07"
+    },
+    {
+      "number": "40A",
+      "title": "",
+      "date": "1.07"
+    },
+    {
+      "number": "",
+      "title": "",
+      "date": ""
+    }
+  ]
+}
