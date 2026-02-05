@@ -103,6 +103,20 @@
             background: #F5F5F0;
         }
     </style>
+    <script>
+        // Global Error Handler for initial load
+        window.onerror = function (msg, url, line, col, error) {
+            const loader = document.getElementById('loadingState');
+            if (loader) {
+                loader.innerHTML = `<div class="text-red-600 text-center p-4">
+                    <p class="font-bold">Error Loading Application</p>
+                    <p class="text-xs mt-2 font-mono">${msg}</p>
+                    <p class="text-xs text-gray-400 mt-1">Line: ${line}</p>
+                </div>`;
+            }
+            return false;
+        };
+    </script>
 </head>
 
 <body class="bg-portland text-midnight font-sans h-screen flex flex-col overflow-hidden">
@@ -113,7 +127,7 @@
         <div class="flex items-center gap-4">
             <h1 class="font-serif text-lg tracking-widest uppercase text-midnight">St Mary Somerset</h1>
             <span class="h-4 w-px bg-bronze/30"></span>
-            <span class="text-[10px] tracking-[0.2em] text-bronze uppercase">Manager v2.0</span>
+            <span class="text-[10px] tracking-[0.2em] text-bronze uppercase">Manager v2.1</span>
         </div>
 
         <div class="flex items-center gap-3">
