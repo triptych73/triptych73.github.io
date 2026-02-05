@@ -2104,11 +2104,15 @@
 
             // Global function to play door audio
             window.playDoorAudio = async function (storagePath) {
+                console.log('playDoorAudio called with:', storagePath);
                 try {
                     const storageRef = firebase.storage().ref(storagePath);
+                    console.log('Getting download URL...');
                     const url = await storageRef.getDownloadURL();
+                    console.log('Audio URL:', url);
                     const audio = new Audio(url);
-                    audio.play();
+                    await audio.play();
+                    console.log('Audio playing');
                 } catch (e) {
                     console.error('Audio playback failed:', e);
                     alert('Could not load audio: ' + e.message);
