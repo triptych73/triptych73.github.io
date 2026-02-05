@@ -43,6 +43,8 @@
                         'bronze': '#9A8C74',   // Patinated Bronze
                         'bronze-light': '#B5A894',
                         'bronze-dark': '#7d705a',
+                        'success': '#16a34a',
+                        'warning': '#ca8a04',
                     },
                     fontFamily: {
                         'serif': ['Cinzel', 'serif'],
@@ -59,42 +61,82 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Custom Checkbox */
-        .custom-checkbox input:checked+div {
-            background-color: #9A8C74;
-            border-color: #9A8C74;
+        /* Matrix Scrollbar */
+        .matrix-scroll::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
         }
 
-        .custom-checkbox input:checked+div svg {
-            display: block;
+        .matrix-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .matrix-scroll::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        .matrix-scroll::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* Sticky Headers */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #F5F5F0;
+            z-index: 10;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: #F5F5F0;
+            z-index: 20;
+        }
+
+        .sticky-corner {
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 30;
+            background: #F5F5F0;
         }
     </style>
 </head>
 
-<body class="bg-portland text-midnight font-sans min-h-screen flex flex-col">
+<body class="bg-portland text-midnight font-sans h-screen flex flex-col overflow-hidden">
 
     <!-- HEADER -->
     <header
-        class="h-20 bg-white/50 backdrop-blur-md border-b border-bronze/10 flex justify-between items-center px-10 fixed top-0 w-full z-40 shadow-sm">
-        <div class="flex items-center gap-6">
-            <h1 class="font-serif text-xl tracking-widest uppercase text-midnight">St Mary Somerset</h1>
-            <span class="h-5 w-px bg-bronze/30"></span>
-            <span class="text-xs tracking-[0.2em] text-bronze uppercase">Drawings Manager</span>
+        class="h-16 bg-white/50 backdrop-blur-md border-b border-bronze/10 flex justify-between items-center px-6 flex-shrink-0">
+        <div class="flex items-center gap-4">
+            <h1 class="font-serif text-lg tracking-widest uppercase text-midnight">St Mary Somerset</h1>
+            <span class="h-4 w-px bg-bronze/30"></span>
+            <span class="text-[10px] tracking-[0.2em] text-bronze uppercase">Manager v2.0</span>
         </div>
 
-        <div class="flex items-center gap-4">
-            <button id="viewerBtn"
-                class="text-xs uppercase tracking-widest text-midnight hover:text-bronze transition-colors px-4 py-2">
-                Back to Viewer
+        <div class="flex items-center gap-3">
+            <button id="autoAssignBtn"
+                class="flex items-center gap-2 bg-midnight/5 hover:bg-midnight/10 text-midnight text-[10px] uppercase tracking-widest px-4 py-2 transition-colors rounded-sm border border-transparent hover:border-bronze/20">
+                <span>🪄 Auto-Assign</span>
             </button>
-            <div class="flex gap-2 border-l border-bronze/10 pl-4">
+
+            <span class="h-4 w-px bg-bronze/30 mx-2"></span>
+
+            <button id="viewerBtn"
+                class="text-[10px] uppercase tracking-widest text-gray-500 hover:text-bronze transition-colors px-2">
+                Viewer
+            </button>
+
+            <div class="flex gap-2">
                 <button id="saveBtn"
-                    class="bg-bronze text-white text-xs uppercase tracking-widest px-6 py-3 hover:bg-bronze-dark transition-colors shadow-sm">
-                    Save Config
+                    class="bg-bronze text-white text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-bronze-dark transition-colors shadow-sm rounded-sm">
+                    Save
                 </button>
                 <div class="relative">
                     <button id="importBtn"
-                        class="border border-bronze text-bronze text-xs uppercase tracking-widest px-6 py-3 hover:bg-white transition-colors">
+                        class="border border-bronze text-bronze text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-white transition-colors rounded-sm">
                         Import CSV
                     </button>
                     <input type="file" id="importInput" accept=".csv"
@@ -104,403 +146,435 @@
         </div>
     </header>
 
-    <!-- CONTENT -->
-    <main class="mt-20 p-10 max-w-7xl mx-auto w-full space-y-10">
-
-        <!-- FEEDBACK MESSAGE -->
-        <div id="message"
-            class="fixed top-24 left-1/2 -translate-x-1/2 -translate-y-10 opacity-0 bg-midnight text-white px-8 py-4 shadow-xl z-50 transition-all duration-300 pointer-events-none rounded-sm">
-            <span class="text-sm tracking-wide font-medium"></span>
+    <!-- MAIN MATRIX -->
+    <main class="flex-1 overflow-auto p-6 matrix-scroll relative">
+        <div id="loadingState" class="absolute inset-0 flex items-center justify-center bg-portland z-50">
+            <span class="animate-pulse text-bronze font-serif tracking-widest">Loading Matrix...</span>
         </div>
 
-        <!-- 1. FLOOR SELECTOR -->
-        <section class="space-y-4">
-            <h2 class="font-serif text-lg text-midnight border-b border-bronze/10 pb-2">1. Select Floor</h2>
-            <div id="floorTabs" class="flex flex-wrap gap-2">
-                <!-- Injected via JS -->
-            </div>
-        </section>
+        <table class="w-full text-xs border-collapse">
+            <thead>
+                <tr>
+                    <th class="sticky-corner p-2 border-b border-r border-bronze/20 text-left min-w-[100px]">Floor</th>
+                    <!-- Headers injected JS -->
+                    <th colspan="4"
+                        class="sticky-header p-2 border-b border-bronze/10 bg-gray-50 font-medium text-gray-500">General
+                        Arrangement (GA)</th>
+                    <th colspan="4"
+                        class="sticky-header p-2 border-b border-bronze/10 bg-gray-50 font-medium text-gray-500">
+                        Elevation (E)</th>
+                    <th colspan="4"
+                        class="sticky-header p-2 border-b border-bronze/10 bg-gray-50 font-medium text-gray-500">Section
+                        (S)</th>
+                    <th colspan="1"
+                        class="sticky-header p-2 border-b border-bronze/10 bg-gray-50 font-medium text-gray-500">Detail
+                        (I)</th>
+                </tr>
+                <tr id="subHeaderRow">
+                    <!-- Inject Orientations -->
+                </tr>
+            </thead>
+            <tbody id="matrixBody">
+                <!-- Rows injected JS -->
+            </tbody>
+        </table>
+    </main>
 
-        <!-- 2. ROOM & TYPE CONFIGURATION -->
-        <section class="space-y-6">
-            <h2 class="font-serif text-lg text-midnight border-b border-bronze/10 pb-2">2. Configure Rooms & Types</h2>
-            <div id="roomTypeTabs" class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Injected via JS -->
-            </div>
-        </section>
-
-        <!-- 3. DETAILED TOGGLES -->
-        <section class="bg-white p-8 rounded-sm shadow-sm border border-bronze/10 min-h-[300px]">
-            <div id="detailConfig">
-                <!-- Content injected via JS -->
-                <div class="h-full flex flex-col items-center justify-center text-center space-y-4 text-gray-400 py-12">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="12" y1="18" x2="12" y2="12"></line>
-                        <line x1="9" y1="15" x2="15" y2="15"></line>
-                    </svg>
-                    <p class="uppercase tracking-widest text-xs">Select a Drawing Type above to configure stages</p>
+    <!-- AUTO ASSIGN MODAL -->
+    <div id="modalOverlay"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-10">
+        <div class="bg-white w-full max-w-5xl h-[80vh] flex flex-col rounded shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <div>
+                    <h2 class="font-serif text-xl text-midnight">Auto-Assign Review</h2>
+                    <p class="text-xs text-gray-500 mt-1">Review proposed metadata matches before applying.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="modalCancelBtn"
+                        class="px-4 py-2 text-xs uppercase tracking-widest text-gray-500 hover:text-midnight">Cancel</button>
+                    <button id="modalApplyBtn"
+                        class="px-6 py-2 text-xs uppercase tracking-widest bg-bronze text-white hover:bg-bronze-dark shadow-sm">Apply
+                        Selected</button>
                 </div>
             </div>
-        </section>
 
-    </main>
+            <div class="flex-1 overflow-auto p-0">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-gray-50 text-gray-500 sticky top-0 shadow-sm">
+                        <tr>
+                            <th class="p-4 w-10"><input type="checkbox" id="selectAllModal"></th>
+                            <th class="p-4">Source File (Description)</th>
+                            <th class="p-4">Detected Logic</th>
+                            <th class="p-4">Proposed Assignment</th>
+                            <th class="p-4">Confidence</th>
+                            <th class="p-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalBody" class="divide-y divide-gray-100">
+                        <!-- Items -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-t border-gray-100 text-xs text-gray-400 flex justify-between">
+                <span id="matchStats">Found 0 potential matches</span>
+                <span>Unchecked items will be ignored.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="message"
+        class="fixed bottom-10 right-10 opacity-0 bg-midnight text-white px-6 py-3 shadow-xl z-50 transition-all duration-300 pointer-events-none rounded-sm translate-y-10">
+        <span class="text-xs tracking-wide font-medium"></span>
+    </div>
 
     <script>
         // --- CONSTANTS ---
         const floors = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
-        const rooms = ['1', '2', '3'];
+        const rooms = ['1']; // Simplified to just Room 1 for now as per CSV pattern obs, but code supports scaling
+        // Inspecting the original CSV, it seems to have Room 1, 2, 3. 
+        // We will focus on showing Room 1 primarily in the main view, OR expanding rows.
+        // Let's iterate all rooms in the row generation.
+        const allRooms = ['1', '2', '3'];
+
         const types = [
-            { code: 'G', name: 'GA', hasOrientations: false },
-            { code: 'E', name: 'Elevation', hasOrientations: true },
-            { code: 'S', name: 'Section', hasOrientations: true },
-            { code: 'I', name: 'ICP', hasOrientations: false }
+            { code: 'G', name: 'GA', cols: ['Default'] }, // GA usually just 1
+            // Checking CSV: GA has Default. E has N,E,S,W. S has N,E,S,W. I has Default.
+            { code: 'E', name: 'Elevation', cols: ['N', 'E', 'S', 'W'] },
+            { code: 'S', name: 'Section', cols: ['N', 'E', 'S', 'W'] },
+            { code: 'I', name: 'Detail', cols: ['Default'] }
         ];
-        const orientations = [
-            { code: 'N', name: 'North' },
-            { code: 'E', name: 'East' },
-            { code: 'S', name: 'South' },
-            { code: 'W', name: 'West' },
-            { code: 'Default', name: 'Default' }
-        ];
-        const stages = [
-            { code: 'O', name: 'Original' },
-            { code: 'D', name: 'Demolition' },
-            { code: 'P', name: 'Proposed' },
-            { code: 'A', name: 'As Built' }
-        ];
+
+        // Flattened Columns for Matrix
+        // [ {type: 'G', orient: 'Default'}, {type: 'E', orient: 'N'} ... ]
+        const matrixColumns = [];
+        types.forEach(t => {
+            t.cols.forEach(o => {
+                matrixColumns.push({ type: t.code, orient: o, label: o === 'Default' ? t.code : o });
+            });
+        });
+
+        const stages = ['P', 'A']; // Proposed, As-Built. Check CSV for others. CSV has O, D, P, A.
+        // The matrix usually just shows "Has Drawing".
+        // To simplify, we will toggle the "Proposed" (P) stage by default on click.
+        // Or cycle? 0 -> P -> A -> D -> 0?
+        // Let's stick to toggling 'P' and 'A' primarily, or just generic "Has Drawing" (mapped to P for now).
+        // Original app set multiple stages.
+        // Let's make the cell a mini-grid? Too complex.
+        // Let's just track "Proposed" for the main view, and right-click for advanced?
+        // Or simpler: Click = Toggle Proposed. 
+        const primaryStage = 'P';
 
         // --- STATE ---
-        let csvData = [];
-        let activeFloor = '01';
-        let activeRoom = '1';
-        let activeType = 'G';
-        let activeOrientation = 'Default';
+        let csvData = {}; // Map: "key" -> 1/0
+        let metadata = null; // Loaded JSON
 
         // --- DOM ---
-        const floorTabsEl = document.getElementById('floorTabs');
-        const roomTypeTabsEl = document.getElementById('roomTypeTabs');
-        const detailConfigEl = document.getElementById('detailConfig');
-        const messageEl = document.getElementById('message');
+        const matrixBody = document.getElementById('matrixBody');
+        const subHeaderRow = document.getElementById('subHeaderRow');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalBody = document.getElementById('modalBody');
 
         // --- INIT ---
-        function init() {
-            // Load from localStorage if available
+        async function init() {
+            // Load CSV Data
             const savedData = localStorage.getItem('buildingDrawingsData');
             if (savedData) {
                 try {
                     const parsed = JSON.parse(savedData);
-                    if (parsed.csvData) csvData = parsed.csvData;
-                    else generateCsvData();
-                } catch (e) { generateCsvData(); }
-            } else {
-                generateCsvData();
+                    if (parsed.csvData) {
+                        // Convert Array to Map for O(1) lookup
+                        parsed.csvData.forEach(row => csvData[row[0]] = parseInt(row[1]));
+                    }
+                } catch (e) { console.error(e); }
             }
 
-            renderFloorTabs();
-            renderRoomTypeTabs();
-            // Start with empty detail view
+            // Generate Headers
+            renderHeaders();
+
+            // Build Matrix
+            renderMatrix();
+
+            // Remove Loading
+            document.getElementById('loadingState').remove();
+
+            // Load Metadata in background
+            try {
+                const res = await fetch('../assets/data/drawings.json');
+                metadata = await res.json();
+            } catch (e) {
+                console.warn('Could not load drawings.json', e);
+            }
 
             // Events
             document.getElementById('saveBtn').addEventListener('click', saveAndExport);
             document.getElementById('importInput').addEventListener('change', importCsv);
             document.getElementById('viewerBtn').addEventListener('click', () => window.location.href = 'drawings-viewer.html');
+            document.getElementById('autoAssignBtn').addEventListener('click', openAutoAssign);
+            document.getElementById('modalCancelBtn').addEventListener('click', () => modalOverlay.classList.add('hidden'));
+            document.getElementById('modalApplyBtn').addEventListener('click', applyAutoAssignments);
+            document.getElementById('selectAllModal').addEventListener('change', (e) => {
+                document.querySelectorAll('.modal-check').forEach(c => c.checked = e.target.checked);
+            });
         }
 
-        function generateCsvData() {
-            csvData = [];
+        function renderHeaders() {
+            // Subheader: Type/Orient labels
+            let html = '<th class="sticky-col p-2 bg-portland border-b border-r border-bronze/10"></th>'; // Corner under corner
+
+            matrixColumns.forEach(col => {
+                html += `<th class="p-2 border-b border-bronze/10 bg-gray-50 text-[10px] text-gray-400 font-normal border-r border-dashed border-gray-200 text-center w-10">${col.label}</th>`;
+            });
+            subHeaderRow.innerHTML = html;
+        }
+
+        function renderMatrix() {
+            matrixBody.innerHTML = '';
+
+            // We iterate Floors x Rooms in rows
             floors.forEach(floor => {
-                rooms.forEach(room => {
-                    types.forEach(type => {
-                        const orients = type.hasOrientations ? orientations.slice(0, 4) : [{ code: 'Default' }];
-                        orients.forEach(orient => {
-                            stages.forEach(stage => {
-                                const key = `${floor}-${room}-${type.code}-${orient.code}-${stage.code}`;
-                                csvData.push([key, 0]);
-                            });
+                allRooms.forEach(room => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-white transition-colors group";
+
+                    // Sticky Row Label
+                    const label = document.createElement('td');
+                    label.className = "sticky-col p-3 border-b border-r border-bronze/10 text-xs font-medium text-midnight bg-portland group-hover:bg-white transition-colors";
+                    label.innerHTML = `Lvl ${floor} <span class="text-gray-400 font-normal ml-1">R${room}</span>`;
+                    tr.appendChild(label);
+
+                    // Columns
+                    matrixColumns.forEach(col => {
+                        const td = document.createElement('td');
+                        td.className = "border-b border-r border-dashed border-gray-200 text-center p-1";
+
+                        // Check Status
+                        // Logic: If ANY stage is active? Or particular stage?
+                        // Let's check Proposed (P) and As-Built (A)
+                        const keyP = `${floor}-${room}-${col.type}-${col.orient}-P`;
+                        const keyA = `${floor}-${room}-${col.type}-${col.orient}-A`;
+
+                        const hasP = csvData[keyP] === 1;
+                        const hasA = csvData[keyA] === 1;
+
+                        // Visual
+                        const div = document.createElement('button');
+                        div.className = `w-full h-8 rounded-sm flex items-center justify-center transition-all text-[10px] font-bold ${hasP ? 'bg-bronze text-white shadow-sm' :
+                                hasA ? 'bg-gray-300 text-gray-600' :
+                                    'bg-transparent hover:bg-gray-100 text-transparent hover:text-gray-300'
+                            }`;
+                        div.textContent = hasP ? 'P' : (hasA ? 'A' : '+');
+
+                        // Click Handler - Toggle P
+                        div.addEventListener('click', () => {
+                            const newStatus = !hasP;
+                            csvData[keyP] = newStatus ? 1 : 0;
+
+                            // Visual instant update
+                            if (newStatus) {
+                                div.className = 'w-full h-8 rounded-sm flex items-center justify-center transition-all text-[10px] font-bold bg-bronze text-white shadow-sm';
+                                div.textContent = 'P';
+                            } else {
+                                div.className = 'w-full h-8 rounded-sm flex items-center justify-center transition-all text-[10px] font-bold bg-transparent hover:bg-gray-100 text-transparent hover:text-gray-300';
+                                div.textContent = '+';
+                            }
+
+                            saveToLocalStorage(); // Auto-save on click
                         });
+
+                        // Right Click - Toggle As-Built (A)
+                        div.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            const newStatusA = !hasA;
+                            csvData[keyA] = newStatusA ? 1 : 0;
+                            // Re-render cell logic simplified: reload matrix or just hack visual
+                            if (newStatusA) {
+                                div.className = 'w-full h-8 rounded-sm flex items-center justify-center transition-all text-[10px] font-bold bg-gray-300 text-gray-600';
+                                div.textContent = 'A';
+                            } else {
+                                // Fallback to P or Empty
+                                const currentP = csvData[keyP] === 1;
+                                if (currentP) {
+                                    div.className = 'w-full h-8 rounded-sm flex items-center justify-center transition-all text-[10px] font-bold bg-bronze text-white shadow-sm';
+                                    div.textContent = 'P';
+                                } else {
+                                    div.className = 'w-full h-8 rounded-sm flex items-center justify-center transition-all text-[10px] font-bold bg-transparent hover:bg-gray-100 text-transparent hover:text-gray-300';
+                                    div.textContent = '+';
+                                }
+                            }
+                            saveToLocalStorage();
+                        });
+
+                        td.appendChild(div);
+                        tr.appendChild(td);
                     });
+
+                    matrixBody.appendChild(tr);
                 });
             });
         }
 
-        // --- RENDERERS ---
+        // --- AUTO ASSIGN LOGIC ---
 
-        function renderFloorTabs() {
-            floorTabsEl.innerHTML = '';
-            floors.forEach(floor => {
-                const btn = document.createElement('button');
-                const isActive = activeFloor === floor;
-                let classes = "w-12 h-12 flex items-center justify-center text-sm font-medium border transition-all duration-300 ";
-
-                if (isActive) {
-                    classes += "bg-midnight text-white border-midnight shadow-md transform -translate-y-1";
-                } else {
-                    classes += "bg-white text-gray-400 border-gray-200 hover:border-bronze hover:text-bronze";
-                }
-
-                btn.className = classes;
-                btn.textContent = floor;
-                btn.addEventListener('click', () => {
-                    activeFloor = floor;
-                    renderFloorTabs();
-                    renderRoomTypeTabs();
-                    // clear detail view when switching floors? No, keep focus if possible or reset.
-                    // Let's reset detail for simplicity
-                    detailConfigEl.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-center space-y-4 text-gray-400 py-12">
-                        <p class="uppercase tracking-widest text-xs">Floor switched. Select a configuration below.</p>
-                    </div>`;
-                });
-                floorTabsEl.appendChild(btn);
-            });
-        }
-
-        function renderRoomTypeTabs() {
-            roomTypeTabsEl.innerHTML = '';
-
-            rooms.forEach(room => {
-                const card = document.createElement('div');
-                card.className = "bg-white p-6 border border-bronze/10 rounded-sm shadow-sm hover:shadow-md transition-shadow";
-
-                const title = document.createElement('h3');
-                title.className = "font-serif text-midnight uppercase tracking-widest text-sm mb-4 border-b border-gray-100 pb-2";
-                title.textContent = `Room ${room}`;
-                card.appendChild(title);
-
-                const grid = document.createElement('div');
-                grid.className = "grid grid-cols-2 gap-2";
-
-                types.forEach(type => {
-                    const item = document.createElement('div');
-                    const isActive = activeRoom === room && activeType === type.code;
-                    const hasData = hasAnyDrawingForRoomType(activeFloor, room, type.code);
-
-                    let classes = "relative p-3 border rounded-sm cursor-pointer transition-all flex justify-between items-center ";
-                    if (isActive) {
-                        classes += "bg-bronze/10 border-bronze text-midnight ring-1 ring-bronze/30";
-                    } else {
-                        classes += "bg-gray-50 border-gray-100 text-gray-500 hover:bg-white hover:border-bronze/50";
-                    }
-
-                    item.className = classes;
-
-                    // Name
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = "text-xs font-medium uppercase tracking-wide";
-                    nameSpan.textContent = type.name;
-                    item.appendChild(nameSpan);
-
-                    // Toggle Switch (Enable/Disable whole Group)
-                    const toggleWrapper = document.createElement('label');
-                    toggleWrapper.className = "relative inline-flex items-center cursor-pointer";
-                    toggleWrapper.addEventListener('click', e => e.stopPropagation()); // Prevent selecting card when toggling status
-
-                    const input = document.createElement('input');
-                    input.type = 'checkbox';
-                    input.className = "sr-only peer";
-                    input.checked = hasData;
-                    input.addEventListener('change', (e) => {
-                        updateRoomTypeStatus(activeFloor, room, type.code, e.target.checked);
-                        // Refresh this card UI to show new status
-                        renderRoomTypeTabs();
-                        if (isActive) renderDetailedConfig();
-                    });
-
-                    const slider = document.createElement('div');
-                    slider.className = "w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-bronze";
-
-                    toggleWrapper.appendChild(input);
-                    toggleWrapper.appendChild(slider);
-                    item.appendChild(toggleWrapper);
-
-                    // Click entire item to configure
-                    item.addEventListener('click', () => {
-                        activeRoom = room;
-                        activeType = type.code;
-                        activeOrientation = type.hasOrientations ? 'N' : 'Default';
-                        renderRoomTypeTabs();
-                        renderDetailedConfig();
-                    });
-
-                    grid.appendChild(item);
-                });
-
-                card.appendChild(grid);
-                roomTypeTabsEl.appendChild(card);
-            });
-        }
-
-        function renderDetailedConfig() {
-            detailConfigEl.innerHTML = '';
-
-            const typeObj = types.find(t => t.code === activeType);
-            if (!typeObj) return;
-
-            // Header
-            const header = document.createElement('div');
-            header.className = "flex justify-between items-end mb-8 border-b border-bronze/10 pb-4";
-            header.innerHTML = `
-                <div>
-                    <h3 class="font-serif text-2xl text-midnight">Floor ${activeFloor} <span class="text-bronze">/</span> Room ${activeRoom} <span class="text-bronze">/</span> ${typeObj.name}</h3>
-                    <p class="text-xs uppercase tracking-widest text-gray-400 mt-1">Configuration Panel</p>
-                </div>
-            `;
-            detailConfigEl.appendChild(header);
-
-            if (!hasAnyDrawingForRoomType(activeFloor, activeRoom, activeType)) {
-                const emptyState = document.createElement('div');
-                emptyState.className = "text-center py-10 bg-gray-50 rounded border border-dashed border-gray-300";
-                emptyState.innerHTML = `
-                    <p class="text-gray-500 mb-4">This drawing set is currently disabled.</p>
-                    <button id="enableSetBtn" class="text-xs uppercase tracking-widest bg-midnight text-white px-6 py-3 hover:bg-bronze transition-colors">Enable ${typeObj.name}</button>
-                 `;
-                detailConfigEl.appendChild(emptyState);
-                document.getElementById('enableSetBtn').addEventListener('click', () => {
-                    updateRoomTypeStatus(activeFloor, activeRoom, activeType, true);
-                    renderRoomTypeTabs();
-                    renderDetailedConfig();
-                });
+        function openAutoAssign() {
+            if (!metadata) {
+                showMessage('Metadata loading... please wait');
                 return;
             }
 
-            // Orientation Tabs (if needed)
-            if (typeObj.hasOrientations) {
-                const orientContainer = document.createElement('div');
-                orientContainer.className = "flex gap-2 mb-8 bg-gray-50 p-1 rounded w-fit";
+            modalOverlay.classList.remove('hidden');
+            modalBody.innerHTML = '';
 
-                orientations.slice(0, 4).forEach(orient => {
-                    const btn = document.createElement('button');
-                    const isActive = activeOrientation === orient.code;
-                    const hasData = hasAnyDrawingForOrientation(activeFloor, activeRoom, activeType, orient.code);
+            const matches = findMatches();
 
-                    let classes = "px-6 py-2 text-xs uppercase tracking-wider rounded-sm transition-all ";
-                    if (isActive) {
-                        classes += "bg-white text-midnight shadow-sm font-bold ring-1 ring-black/5";
-                    } else if (!hasData) {
-                        classes += "text-gray-300 hover:text-gray-500";
-                    } else {
-                        classes += "text-gray-500 hover:bg-white hover:text-midnight";
-                    }
+            document.getElementById('matchStats').textContent = `Found ${matches.length} potential matches`;
 
-                    btn.className = classes;
-                    btn.textContent = orient.name;
-                    btn.addEventListener('click', () => {
-                        activeOrientation = orient.code;
-                        renderDetailedConfig();
-                    });
-
-                    orientContainer.appendChild(btn);
-                });
-                detailConfigEl.appendChild(orientContainer);
+            if (matches.length === 0) {
+                modalBody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-400">No matches found in metadata based on heuristics.</td></tr>';
+                return;
             }
 
-            // Stage Checkboxes
-            const stageGrid = document.createElement('div');
-            stageGrid.className = "grid grid-cols-2 md:grid-cols-4 gap-6";
+            matches.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors border-b border-gray-50";
 
-            stages.forEach(stage => {
-                const isChecked = getCheckboxStatus(activeFloor, activeRoom, activeType, activeOrientation, stage.code);
-
-                const label = document.createElement('label');
-                label.className = "custom-checkbox group cursor-pointer block";
-
-                const input = document.createElement('input');
-                input.type = 'checkbox';
-                input.className = "sr-only";
-                input.checked = isChecked;
-                input.addEventListener('change', (e) => {
-                    updateDrawingStatus(activeFloor, activeRoom, activeType, activeOrientation, stage.code, e.target.checked);
-                    // No need for full re-render
-                });
-
-                const box = document.createElement('div');
-                box.className = "h-40 border-2 border-gray-200 rounded-sm flex flex-col items-center justify-center gap-3 transition-all group-hover:border-bronze/50 relative overflow-hidden bg-white";
-
-                // Content inside box
-
-                // SVG / Icon status
-                const iconCheck = `<svg class="w-8 h-8 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-                const iconEmpty = `<span class="text-4xl text-gray-200 group-hover:text-gray-300 font-serif">+</span>`;
-
-                box.innerHTML = `
-                    <div class="absolute inset-0 flex items-center justify-center transition-colors duration-300">
-                        ${iconCheck}
-                        <div class="absolute inset-0 flex items-center justify-center ${isChecked ? 'hidden' : ''}">
-                           ${iconEmpty}
+                tr.innerHTML = `
+                    <td class="p-4"><input type="checkbox" class="modal-check" checked data-key="${m.key}"></td>
+                    <td class="p-4">
+                        <div class="font-medium text-midnight">${m.source.number || 'No Number'}</div>
+                        <div class="text-xs text-gray-400">${m.source.title || ''}</div>
+                    </td>
+                    <td class="p-4 text-gray-500 font-mono text-[10px]">${m.logic}</td>
+                    <td class="p-4">
+                        <span class="bg-bronze/10 text-bronze px-2 py-1 rounded text-[10px] font-bold">${m.key}</span>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <div class="h-1.5 w-12 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-success" style="width: ${m.confidence}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400">${m.confidence}%</span>
                         </div>
-                    </div>
-                    <span class="absolute bottom-4 text-xs font-bold uppercase tracking-widest ${isChecked ? 'text-white' : 'text-gray-400 group-hover:text-bronze'} z-10">${stage.name}</span>
+                    </td>
+                    <td class="p-4 text-gray-400 text-xs">
+                        ${csvData[m.key] === 1 ? '<span class="text-warning">Overwrite</span>' : '<span class="text-success">New</span>'}
+                    </td>
                 `;
 
-                label.appendChild(input);
-                label.appendChild(box);
-                stageGrid.appendChild(label);
+                modalBody.appendChild(tr);
             });
-
-            detailConfigEl.appendChild(stageGrid);
         }
 
-        // --- DATA HELPERS ---
+        function findMatches() {
+            const results = [];
+            // Iterate known lists in metadata
+            // drawings.json structure: { "ARCH": [...], "APPR. D": [...], "ENGINEERING": [...] }
 
-        function getCheckboxStatus(floor, room, type, orient, stage) {
-            const key = `${floor}-${room}-${type}-${orient}-${stage}`;
-            // Search in csvData array
-            const row = csvData.find(r => r[0] === key);
-            return row ? (parseInt(row[1]) === 1) : false;
-        }
+            const allItems = [...(metadata["ARCH"] || []), ...(metadata["APPR. D"] || [])];
 
-        function hasAnyDrawingForRoomType(fl, rm, tp) {
-            // Check only the prefix
-            // Optimization: filter is slow on large checks, rely on `some`
-            const prefix = `${fl}-${rm}-${tp}`;
-            return csvData.some(row => row[0].startsWith(prefix) && parseInt(row[1]) === 1);
-        }
+            allItems.forEach(item => {
+                const text = ((item.number || '') + ' ' + (item.title || '')).toLowerCase();
 
-        function hasAnyDrawingForOrientation(fl, rm, tp, or) {
-            const prefix = `${fl}-${rm}-${tp}-${or}`;
-            return csvData.some(row => row[0].startsWith(prefix) && parseInt(row[1]) === 1);
-        }
+                // --- HEURISTICS ---
 
-        // Updates
-        function updateDrawingStatus(fl, rm, tp, or, st, status) {
-            const key = `${fl}-${rm}-${tp}-${or}-${st}`;
-            const idx = csvData.findIndex(r => r[0] === key);
-            if (idx >= 0) {
-                csvData[idx][1] = status ? 1 : 0;
-            }
-            saveToLocalStorage();
-        }
+                // 1. Floor
+                // Matches: "Level 1", "Lvl 01", "Level 10", "First Floor"(maybe?)
+                let floor = null;
+                const floorMatch = text.match(/(?:level|lvl|floor)\s*0?(\d+)/);
+                if (floorMatch) {
+                    floor = floorMatch[1].padStart(2, '0');
+                } else if (text.includes('ground floor') || text.includes('level G')) {
+                    floor = '01'; // Assuming G = 01 based on US/UK mix, or strictly UK G=00?
+                    // CSV shows Floor 01-12. Let's assume 01 is lowest.
+                    // Wait, previous file had floorHeights '01': 32 // Ground floor. So 01 is Ground.
+                }
 
-        function updateRoomTypeStatus(fl, rm, tp, status) {
-            const prefix = `${fl}-${rm}-${tp}`;
-            let changed = false;
-            csvData.forEach(row => {
-                if (row[0].startsWith(prefix)) {
-                    // Update all sub-items
-                    row[1] = status ? 1 : 0;
-                    changed = true;
+                if (!floor || !floors.includes(floor)) return; // Skip if no floor found
+
+                // 2. Type
+                let type = 'G'; // Default GA
+                if (text.includes('elevation')) type = 'E';
+                if (text.includes('section')) type = 'S';
+                if (text.includes('detail') || text.includes('schedule')) type = 'I';
+                if (text.includes('plan') && !text.includes('site plan')) type = 'G'; // "GA Plan"
+
+                // 3. Orientation
+                let orient = 'Default';
+                if (type === 'E' || type === 'S') {
+                    if (text.includes('north')) orient = 'N';
+                    else if (text.includes('south')) orient = 'S';
+                    else if (text.includes('east')) orient = 'E';
+                    else if (text.includes('west')) orient = 'W';
+                    else orient = 'N'; // Fallback for elevations without direction? or Default?
+                    // Matrix columns for E/S are N,E,S,W. If we can't find one, maybe we shouldn't assign?
+                    // Or default to N? Let's use N for now with lower confidence.
+                }
+
+                // 4. Room (Hardest)
+                // Default to Room 1 unless specified
+                let room = '1';
+                // If text says "Room 2", etc.
+                const roomMatch = text.match(/room\s*(\d)/);
+                if (roomMatch) room = roomMatch[1];
+
+                // 5. Stage
+                // Default to 'P' (Proposed)
+                let stage = 'P';
+
+                const key = `${floor}-${room}-${type}-${orient}-${stage}`;
+
+                // Calculate Confidence
+                let confidence = 0;
+                if (floorMatch) confidence += 40;
+                if (text.includes('elevation') || text.includes('section') || text.includes('plan')) confidence += 30;
+                if (orient !== 'Default' || type === 'G') confidence += 20; // If we found specific orient or it's generic
+                if (type === 'I') confidence += 10;
+
+                if (confidence >= 60) {
+                    results.push({
+                        source: item,
+                        key: key,
+                        logic: `F:${floor} R:${room} T:${type} O:${orient}`,
+                        confidence: confidence
+                    });
                 }
             });
-            if (changed) saveToLocalStorage();
+
+            return results;
         }
 
-        function saveToLocalStorage() {
-            // Retrieve existing LS object to avoid wiping urlData
-            const existing = localStorage.getItem('buildingDrawingsData');
-            let data = existing ? JSON.parse(existing) : {};
+        function applyAutoAssignments() {
+            const checks = document.querySelectorAll('.modal-check:checked');
+            let count = 0;
+            checks.forEach(chk => {
+                const key = chk.dataset.key;
+                if (key) {
+                    csvData[key] = 1;
+                    count++;
+                }
+            });
 
-            data.csvData = csvData; // Update the availablity flags
+            modalOverlay.classList.add('hidden');
+            showMessage(`Applied ${count} assignments`);
+            saveToLocalStorage();
+            renderMatrix();
+        }
+
+        // --- EXPORT/IMPORT ---
+        function saveToLocalStorage() {
+            // Convert Map back to Array for generic storage format expected by Viewer
+            const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
+            const data = { csvData: exportData };
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
         }
 
         function saveAndExport() {
-            saveToLocalStorage(); // Ensure LS is fresh
-
-            // Export CSV
+            saveToLocalStorage();
+            const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
             const csv = Papa.unparse({
                 fields: ['key', 'hasDrawing'],
-                data: csvData
+                data: exportData
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -508,8 +582,7 @@
             link.href = url;
             link.download = 'building_drawings.csv';
             link.click();
-
-            showMessage('Configuration Saved & Downloaded');
+            showMessage('Configuration Saved');
         }
 
         function importCsv(e) {
@@ -518,12 +591,13 @@
             Papa.parse(file, {
                 complete: function (results) {
                     const data = results.data[0][0] === 'key' ? results.data.slice(1) : results.data;
-                    // Merge logic
-                    const incomingData = data.filter(row => row.length >= 2 && row[0]);
-                    csvData = incomingData; // Replace entirely or merge? Replace is safer for import.
-
+                    data.forEach(row => {
+                        if (row.length >= 2 && row[0]) {
+                            csvData[row[0]] = parseInt(row[1]);
+                        }
+                    });
                     saveToLocalStorage();
-                    init(); // Re-render
+                    renderMatrix();
                     showMessage('CSV Imported');
                 }
             })
@@ -532,9 +606,9 @@
         function showMessage(msg) {
             const el = document.getElementById('message');
             el.querySelector('span').textContent = msg;
-            el.classList.remove('opacity-0', '-translate-y-10');
+            el.classList.remove('opacity-0', 'translate-y-10');
             setTimeout(() => {
-                el.classList.add('opacity-0', '-translate-y-10');
+                el.classList.add('opacity-0', 'translate-y-10');
             }, 3000);
         }
 
