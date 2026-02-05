@@ -315,7 +315,7 @@
 
             // Load Metadata in background
             try {
-                const res = await fetch('assets/data/drawings.json');
+                const res = await fetch('../assets/data/drawings.json');
                 if (!res.ok) throw new Error(res.statusText + " " + res.url);
                 metadata = await res.json();
             } catch (e) {
