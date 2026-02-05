@@ -265,34 +265,41 @@
 
         // --- INIT ---
         async function init() {
+        try {
         // Load CSV Data & Meta
         const savedData = localStorage.getItem('buildingDrawingsData');
         if (savedData) {
         try {
         const parsed = JSON.parse(savedData);
-        if (parsed.csvData) {
+        if (parsed.csvData && Array.isArray(parsed.csvData)) {
         // Convert Array to Map for O(1) lookup
         parsed.csvData.forEach(row => csvData[row[0]] = parseInt(row[1]));
         }
-        if (parsed.assignmentDetails) {
+        if (parsed.assignmentDetails && typeof parsed.assignmentDetails === 'object') {
         assignmentDetails = parsed.assignmentDetails;
         }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+        console.error("Error parsing saved data", e);
+        // If data is corrupt, maybe we should clear it or warn?
+        // For now, simple console error, fallback to defaults.
+        }
         }
 
-        // Generate Headers
         renderHeaders();
-
-        // Build Matrix
         renderMatrix();
-
-        // Remove Loading
-        document.getElementById('loadingState').remove();
+        } catch (err) {
+        console.error("Critical Init Error:", err);
+        alert("Error loading drawing manager. See console.");
+        } finally {
+        // ALWAYS remove loading screen
+        const loader = document.getElementById('loadingState');
+        if (loader) loader.remove();
+        }
 
         // Load Metadata in background
         try {
         const res = await fetch('assets/data/drawings.json');
-        if (!res.ok) throw new Error(res.statusText);
+        if (!res.ok) throw new Error(res.statusText + " " + res.url);
         metadata = await res.json();
         } catch (e) {
         console.warn('Could not load drawings.json', e);
