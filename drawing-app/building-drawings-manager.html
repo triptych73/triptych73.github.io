@@ -529,7 +529,7 @@
                 // Default to 'P' (Proposed)
                 let stage = 'P';
 
-                const key = `${floor} -${room} -${type} -${orient} -${stage} `;
+                const key = `${floor}-${room}-${type}-${orient}-${stage}`;
 
                 // Calculate Confidence
                 let confidence = 0;
@@ -542,7 +542,7 @@
                     results.push({
                         source: item,
                         key: key,
-                        logic: `F:${floor} R:${room} T:${type} O:${orient} `,
+                        logic: `F:${floor} R:${room} T:${type} O:${orient}`,
                         confidence: confidence
                     });
                 }
