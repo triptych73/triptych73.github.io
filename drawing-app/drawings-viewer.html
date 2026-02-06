@@ -243,20 +243,28 @@
         <!-- HUD LAYER (Widgets) -->
         <div id="hudLayer" class="absolute inset-0 z-30 pointer-events-none">
 
-            <!-- 1. ROOM CONTROLLER (Top-Left) -->
-            <div id="hud-room-controller" class="absolute top-6 left-6 pointer-events-auto">
+            <!-- 1. ROOM TOGGLE (Top-Left) -->
+            <div id="hud-room-toggle" class="absolute top-6 left-6 pointer-events-auto flex gap-2">
+                <!-- Config Button -->
+                <button id="openConfigBtn"
+                    class="glass-panel w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/80 transition-colors text-xs"
+                    title="Configure Rooms">
+                    ⚙️
+                </button>
+
+                <!-- Room Cycler -->
                 <div
-                    class="glass-panel rounded-lg shadow-lg p-4 w-72 backdrop-blur-md bg-white/70 border border-white/50">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-serif text-xs text-bronze uppercase tracking-widest">Room Selection</h3>
-                        <button id="openConfigBtn"
-                            class="text-[10px] uppercase text-gray-400 hover:text-bronze transition-colors flex items-center gap-1">
-                            <span>⚙️</span> Config
-                        </button>
+                    class="glass-panel rounded-full px-1 py-1 flex items-center backdrop-blur-md bg-white/60 border border-white/50 shadow-sm">
+                    <button id="prevRoomBtn"
+                        class="w-6 h-6 rounded-full hover:bg-white/50 flex items-center justify-center text-[10px] text-midnight transition-colors">◀</button>
+                    <div id="roomDisplay" class="px-3 min-w-[80px] text-center">
+                        <span class="block text-[10px] uppercase text-bronze tracking-wider font-bold"
+                            id="currentRoomLabel">Room 1</span>
+                        <span class="block text-[9px] text-gray-500 truncate max-w-[100px]"
+                            id="currentRoomName">Reception</span>
                     </div>
-                    <div id="roomList" class="space-y-4 max-h-[60vh] overflow-y-auto hide-scrollbar">
-                        <!-- Injected via JS -->
-                    </div>
+                    <button id="nextRoomBtn"
+                        class="w-6 h-6 rounded-full hover:bg-white/50 flex items-center justify-center text-[10px] text-midnight transition-colors">▶</button>
                 </div>
             </div>
 
@@ -315,9 +323,18 @@
                 </div>
             </div>
 
-            <!-- 4. STAGE TOGGLE (Bottom-Center) -->
-            <div id="hud-stage" class="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto">
-                <div class="glass-panel rounded-full shadow-lg p-1 backdrop-blur-md bg-white/80 border border-white/50 flex gap-1"
+            <!-- 4. CENTER CONTROLS (Bottom-Center) -->
+            <div
+                class="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-3">
+
+                <!-- View Type Pill -->
+                <div id="hud-view-selector"
+                    class="glass-panel rounded-full p-1 backdrop-blur-md bg-white/80 border border-white/50 flex gap-1 shadow-lg">
+                    <!-- Injected via JS -->
+                </div>
+
+                <!-- Stage Toggle -->
+                <div class="glass-panel rounded-full px-1 py-0.5 backdrop-blur-md bg-white/50 border border-white/30 flex gap-1 scale-90"
                     id="stageToggleContainer">
                     <!-- Injected via JS -->
                 </div>
@@ -635,6 +652,12 @@
             openConfigBtn.addEventListener('click', openConfigurator);
             closeConfigBtn.addEventListener('click', () => configModal.classList.add('hidden'));
             saveConfigBtn.addEventListener('click', saveConfigurator);
+
+            // Toggle Logic
+            const prev = document.getElementById('prevRoomBtn');
+            const next = document.getElementById('nextRoomBtn');
+            if (prev) prev.addEventListener('click', () => cycleRoom(-1));
+            if (next) next.addEventListener('click', () => cycleRoom(1));
         }
 
 
@@ -717,94 +740,95 @@
         }
 
         function updateUI() {
-            renderRoomList();
+            renderRoomToggle();
+            renderViewSelector(); // Configured as a pill
             updateCompassWidget();
             renderStageToggle();
             updateDrawingView();
         }
 
-        // Render Room List with Icons
-        function renderRoomList() {
-            roomList.innerHTML = '';
+        // --- ROOM TOGGLE (Top-Left) ---
+        function cycleRoom(idx) {
+            // Determine active room count
+            let numRooms = 3;
+            const config = roomConfig[activeFloor];
+            if (typeof config === 'number') numRooms = config;
+            else if (config && typeof config === 'object') numRooms = config.count || 3;
 
+            let current = parseInt(activeRoom);
+            let next = current + idx;
+
+            if (next > numRooms) next = 1;
+            if (next < 1) next = numRooms;
+
+            activeRoom = next.toString();
+            updateUI();
+        }
+
+        function renderRoomToggle() {
+            // Get Config
             let numRooms = 3;
             let roomNames = {};
-
             const config = roomConfig[activeFloor];
-            if (typeof config === 'number') {
-                numRooms = config;
-            } else if (config && typeof config === 'object') {
+            if (typeof config === 'number') numRooms = config;
+            else if (config && typeof config === 'object') {
                 numRooms = config.count || 3;
                 roomNames = config.names || {};
             }
 
-            // Icon Definitions
-            const icons = {
-                'G': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
-                'I': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="15.5" r="1.5"/><circle cx="8.5" cy="15.5" r="1.5"/></svg>`, // RCP (Grid dots)
-                'E': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M13 11h4"/><path d="M13 15h4"/></svg>`,
-                'S': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M3 21h18"/></svg>` // Section (Cut/Profile) - Using user icon or generic? Let's use a "Section" look.
-                // Better Section: Cut plane
-            };
-            // Override Section to simpler cut
-            icons['S'] = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="21" y1="3" x2="3" y2="21"/></svg>`;
+            // Validate ACTIVE ROOM (in case floor changed and activeRoom > numRooms)
+            if (parseInt(activeRoom) > numRooms) activeRoom = '1';
 
-            for (let i = 1; i <= numRooms; i++) {
-                const room = i.toString();
-                const customName = roomNames[i] || '';
-                const displayName = customName ? `${customName} <span class="text-[10px] text-gray-400 font-normal ml-1">(R${i})</span>` : `Room ${i}`;
+            // Update UI Elements
+            const label = document.getElementById('currentRoomLabel');
+            const name = document.getElementById('currentRoomName');
 
-                const roomGroup = document.createElement('div');
-
-                const header = document.createElement('h3');
-                header.className = "font-serif text-sm text-bronze uppercase tracking-widest pl-1 mb-2";
-                header.innerHTML = displayName;
-
-                const grid = document.createElement('div');
-                grid.className = "grid grid-cols-4 gap-2";
-
-                // Render 4 Icons
-                const viewTypes = [
-                    { code: 'G', label: 'GA' },
-                    { code: 'I', label: 'RCP' },
-                    { code: 'E', label: 'Elev' },
-                    { code: 'S', label: 'Sect' }
-                ];
-
-                viewTypes.forEach(vt => {
-                    const hasDrawing = hasAnyDrawingForRoomType(activeFloor, room, vt.code);
-                    const isActive = activeRoom === room && activeType === vt.code;
-                    const btn = document.createElement('button');
-
-                    let classes = "flex flex-col items-center justify-center p-2 rounded border transition-all duration-200 ";
-                    if (isActive) {
-                        classes += "bg-bronze text-white border-bronze shadow-md ring-1 ring-bronze ring-offset-1";
-                    } else if (!hasDrawing) {
-                        classes += "bg-gray-50 text-gray-200 border-gray-100 cursor-not-allowed";
-                    } else {
-                        classes += "bg-white text-gray-500 border-gray-200 hover:border-bronze hover:text-bronze hover:bg-white";
-                    }
-
-                    btn.className = classes;
-                    btn.innerHTML = `
-                        ${icons[vt.code]}
-                        <span class="text-[9px] uppercase mt-1 font-medium tracking-wider">${vt.label}</span>
-                    `;
-                    btn.title = `${vt.label} - Room ${room}`;
-
-                    if (hasDrawing || isActive) {
-                        btn.addEventListener('click', () => {
-                            setActiveRoomType(room, vt.code);
-                        });
-                    }
-
-                    grid.appendChild(btn);
-                });
-
-                roomGroup.appendChild(header);
-                roomGroup.appendChild(grid);
-                roomList.appendChild(roomGroup);
+            if (label) label.textContent = `Room ${activeRoom}`;
+            if (name) {
+                const custom = roomNames[activeRoom];
+                name.textContent = custom || "No Name Set";
+                name.className = custom ? "block text-[9px] text-midnight truncate max-w-[100px] font-medium" : "block text-[9px] text-gray-400 italic truncate max-w-[100px]";
             }
+        }
+
+        // --- VIEW TYPE PILL (Bottom-Center) ---
+        function renderViewSelector() {
+            const container = document.getElementById('hud-view-selector');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // Icon Definitions (Simplified for Pill)
+            const icons = {
+                'G': 'GA', 'I': 'RCP', 'E': 'Elev', 'S': 'Sect'
+            };
+
+            types.forEach(type => {
+                const hasDrawing = hasAnyDrawingForRoomType(activeFloor, activeRoom, type.code);
+                const isActive = activeType === type.code;
+
+                const btn = document.createElement('button');
+                // Pill style
+                let classes = "w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold transition-all duration-200 ";
+
+                if (isActive) {
+                    classes += "bg-bronze text-white shadow-sm scale-110";
+                } else if (!hasDrawing) {
+                    classes += "text-gray-300 cursor-not-allowed";
+                } else {
+                    classes += "text-gray-500 hover:text-bronze hover:bg-white/50";
+                }
+
+                btn.className = classes;
+                btn.textContent = icons[type.code] || type.code;
+
+                if (hasDrawing || isActive) {
+                    btn.onclick = () => {
+                        setActiveRoomType(activeRoom, type.code);
+                    };
+                }
+
+                container.appendChild(btn);
+            });
         }
 
         function setActiveRoomType(room, type) {
