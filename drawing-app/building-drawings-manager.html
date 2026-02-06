@@ -272,6 +272,8 @@
         // --- STATE ---
         let csvData = {}; // Map: "key" -> 1/0
         let assignmentDetails = {}; // Map: "key" -> { sourceFile: "...", logic: "..." }
+        let urlData = []; // Preserved from Viewer
+        let roomConfig = {}; // Preserved from Viewer
         let metadata = null; // Loaded JSON
 
         // --- DOM ---
@@ -295,6 +297,10 @@
                         if (parsed.assignmentDetails && typeof parsed.assignmentDetails === 'object') {
                             assignmentDetails = parsed.assignmentDetails;
                         }
+                        // PRESERVE VIEWER DATA
+                        if (parsed.urlData) urlData = parsed.urlData;
+                        if (parsed.roomConfig) roomConfig = parsed.roomConfig;
+
                     } catch (e) {
                         console.error("Error parsing saved data", e);
                         // If data is corrupt, maybe we should clear it or warn?
@@ -583,7 +589,9 @@
             const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
             const data = {
                 csvData: exportData,
-                assignmentDetails: assignmentDetails // Persist meta
+                assignmentDetails: assignmentDetails, // Persist meta
+                urlData: urlData, // Persist Viewer Links
+                roomConfig: roomConfig // Persist Viewer Config
             };
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
         }
