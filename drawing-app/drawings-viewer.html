@@ -692,7 +692,7 @@
                 // Using flex-grow based on the height ratio to proportional scaling.
                 const rawHeight = floorHeights[floor] || 30;
 
-                floorDiv.className = `floor-region w-full flex items-center justify-center cursor-pointer text-transparent hover:text-white transition-all duration-300 hover:bg-bronze/40 ${floor === activeFloor ? 'active bg-bronze/60' : ''}`;
+                floorDiv.className = `floor-region w-full flex items-center justify-center cursor-pointer transition-all duration-300 hover:bg-bronze/40 group ${floor === activeFloor ? 'active bg-bronze/60 text-white' : 'text-transparent'}`;
                 // Flex grow based on height
                 floorDiv.style.flex = `${rawHeight} 1 0%`; // flex-grow, flex-shrink, flex-basis
                 floorDiv.dataset.floor = floor;
