@@ -399,20 +399,21 @@
                 document.getElementById('autoAssignBtn').addEventListener('click', openAutoAssign);
                 document.getElementById('modalCancelBtn').addEventListener('click', () => modalOverlay.classList.add('hidden'));
                 document.getElementById('modalApplyBtn').addEventListener('click', applyAutoAssignments);
-                document.querySelectorAll('.modal-check').forEach(c => c.checked = e.target.checked);
-            });
+                document.getElementById('selectAllModal').addEventListener('change', (e) => {
+                    document.querySelectorAll('.modal-check').forEach(c => c.checked = e.target.checked);
+                });
 
-            // Bulk Upload Events
-            document.getElementById('bulkUploadBtn').addEventListener('click', () => uploadModal.classList.remove('hidden'));
-            document.getElementById('closeUploadBtn').addEventListener('click', () => uploadModal.classList.add('hidden'));
+                // Bulk Upload Events
+                document.getElementById('bulkUploadBtn').addEventListener('click', () => uploadModal.classList.remove('hidden'));
+                document.getElementById('closeUploadBtn').addEventListener('click', () => uploadModal.classList.add('hidden'));
 
-            // Drag and Drop
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-bronze', 'bg-bronze/5'); });
-            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-bronze', 'bg-bronze/5'); });
-            dropZone.addEventListener('drop', handleDrop);
-            document.getElementById('fileInput').addEventListener('change', (e) => handleFiles(Array.from(e.target.files)));
+                // Drag and Drop
+                dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-bronze', 'bg-bronze/5'); });
+                dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-bronze', 'bg-bronze/5'); });
+                dropZone.addEventListener('drop', handleDrop);
+                document.getElementById('fileInput').addEventListener('change', (e) => handleFiles(Array.from(e.target.files)));
 
-            startUploadBtn.addEventListener('click', startBulkUpload);
+                startUploadBtn.addEventListener('click', startBulkUpload);
             }
 
             function handleDrop(e) {
