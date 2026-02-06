@@ -11,6 +11,7 @@
     <!-- Firebase SDKs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-storage-compat.min.js"></script>
     <script src="firebase-config.js"></script>
 
     <!-- Auth Guard -->
@@ -131,6 +132,10 @@
         </div>
 
         <div class="flex items-center gap-3">
+            <button id="bulkUploadBtn"
+                class="flex items-center gap-2 bg-bronze/10 hover:bg-bronze/20 text-bronze text-[10px] uppercase tracking-widest px-4 py-2 transition-colors rounded-sm border border-transparent hover:border-bronze/20">
+                <span>📁 Bulk Upload</span>
+            </button>
             <button id="autoAssignBtn"
                 class="flex items-center gap-2 bg-midnight/5 hover:bg-midnight/10 text-midnight text-[10px] uppercase tracking-widest px-4 py-2 transition-colors rounded-sm border border-transparent hover:border-bronze/20">
                 <span>🪄 Auto-Assign</span>
@@ -235,224 +240,281 @@
                 <span>Unchecked items will be ignored.</span>
             </div>
         </div>
-    </div>
 
-    <!-- TOAST -->
-    <div id="message"
-        class="fixed bottom-10 right-10 opacity-0 bg-midnight text-white px-6 py-3 shadow-xl z-50 transition-all duration-300 pointer-events-none rounded-sm translate-y-10">
-        <span class="text-xs tracking-wide font-medium"></span>
-    </div>
+        <!-- BULK UPLOAD MODAL -->
+        <div id="uploadModal"
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-10">
+            <div class="bg-white w-full max-w-4xl h-[70vh] flex flex-col rounded shadow-2xl overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <div>
+                        <h2 class="font-serif text-xl text-midnight">Bulk Upload Drawings</h2>
+                        <p class="text-xs text-gray-500 mt-1">Drag files here to match with AI Metadata and Upload.</p>
+                    </div>
+                    <button id="closeUploadBtn" class="text-gray-400 hover:text-midnight">✕</button>
+                </div>
 
-    <script>
-        // --- CONSTANTS ---
-        const floors = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
-        const rooms = ['1']; // Simplified to just Room 1 for now as per CSV pattern obs, but code supports scaling
-        // Inspecting the original CSV, it seems to have Room 1, 2, 3.
-        // We will focus on showing Room 1 primarily in the main view, OR expanding rows.
-        // Let's iterate all rooms in the row generation.
-        const allRooms = ['1', '2', '3'];
+                <div class="flex-1 flex flex-col p-6 overflow-hidden">
+                    <!-- Dropzone -->
+                    <div id="dropZone"
+                        class="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex-1 flex flex-col items-center justify-center transition-colors hover:border-bronze hover:bg-bronze/5 relative">
+                        <input type="file" id="fileInput" multiple class="absolute inset-0 opacity-0 cursor-pointer">
+                        <div class="text-center pointer-events-none">
+                            <div class="text-4xl mb-3">📂</div>
+                            <p class="text-sm font-medium text-gray-600">Drag & Drop PDF/Images here</p>
+                            <p class="text-xs text-gray-400 mt-1">or click to browse</p>
+                        </div>
+                    </div>
 
-        const types = [
-            { code: 'G', name: 'GA', cols: ['Default'] }, // GA usually just 1
-            // Checking CSV: GA has Default. E has N,E,S,W. S has N,E,S,W. I has Default.
-            { code: 'E', name: 'Elevation', cols: ['N', 'E', 'S', 'W'] },
-            { code: 'S', name: 'Section', cols: ['N', 'E', 'S', 'W'] },
-            { code: 'I', name: 'Detail', cols: ['Default'] }
-        ];
+                    <!-- Preview List (Hidden initially) -->
+                    <div id="uploadPreview" class="hidden flex-1 overflow-auto border border-gray-200 rounded mt-4">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-gray-50 sticky top-0 text-gray-500">
+                                <tr>
+                                    <th class="p-3">File</th>
+                                    <th class="p-3">Matched Metadata</th>
+                                    <th class="p-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="uploadListBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
 
-        // Flattened Columns for Matrix
-        // [ {type: 'G', orient: 'Default'}, {type: 'E', orient: 'N'} ... ]
-        const matrixColumns = [];
-        types.forEach(t => {
-            t.cols.forEach(o => {
-                matrixColumns.push({ type: t.code, orient: o, label: o === 'Default' ? t.code : o });
-            });
-        });
+                <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <span id="uploadStats" class="text-xs text-gray-400">Waiting for files...</span>
+                    <button id="startUploadBtn" disabled
+                        class="bg-gray-300 text-white text-xs uppercase tracking-widest px-6 py-3 rounded-sm transition-colors shadow-sm">
+                        Start Upload
+                    </button>
+                </div>
+            </div>
+        </div>
 
-        // --- STATE ---
-        let csvData = {}; // Map: "key" -> 1/0
-        let assignmentDetails = {}; // Map: "key" -> { sourceFile: "...", logic: "..." }
-        let urlData = []; // Preserved from Viewer
-        let roomConfig = {}; // Preserved from Viewer
-        let metadata = null; // Loaded JSON
+        <!-- TOAST -->
+        <div id="message"
+            class="fixed bottom-10 right-10 opacity-0 bg-midnight text-white px-6 py-3 shadow-xl z-50 transition-all duration-300 pointer-events-none rounded-sm translate-y-10">
+            <span class="text-xs tracking-wide font-medium"></span>
+        </div>
 
-        // --- DOM ---
-        const matrixBody = document.getElementById('matrixBody');
-        const subHeaderRow = document.getElementById('subHeaderRow');
-        const modalOverlay = document.getElementById('modalOverlay');
-        const modalBody = document.getElementById('modalBody');
+        <script>
+            // --- CONSTANTS ---
+            const floors = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+            const rooms = ['1']; // Simplified to just Room 1 for now as per CSV pattern obs, but code supports scaling
+            // Inspecting the original CSV, it seems to have Room 1, 2, 3.
+            // We will focus on showing Room 1 primarily in the main view, OR expanding rows.
+            // Let's iterate all rooms in the row generation.
+            const allRooms = ['1', '2', '3'];
 
-        // --- INIT ---
-        async function init() {
-            try {
-                // Load CSV Data & Meta
-                const savedData = localStorage.getItem('buildingDrawingsData');
-                if (savedData) {
-                    try {
-                        const parsed = JSON.parse(savedData);
-                        if (parsed.csvData && Array.isArray(parsed.csvData)) {
-                            // Convert Array to Map for O(1) lookup
-                            parsed.csvData.forEach(row => csvData[row[0]] = parseInt(row[1]));
-                        }
-                        if (parsed.assignmentDetails && typeof parsed.assignmentDetails === 'object') {
-                            assignmentDetails = parsed.assignmentDetails;
-                        }
-                        // PRESERVE VIEWER DATA
-                        if (parsed.urlData) urlData = parsed.urlData;
-                        if (parsed.roomConfig) roomConfig = parsed.roomConfig;
+            const types = [
+                { code: 'G', name: 'GA', cols: ['Default'] }, // GA usually just 1
+                // Checking CSV: GA has Default. E has N,E,S,W. S has N,E,S,W. I has Default.
+                { code: 'E', name: 'Elevation', cols: ['N', 'E', 'S', 'W'] },
+                { code: 'S', name: 'Section', cols: ['N', 'E', 'S', 'W'] },
+                { code: 'I', name: 'Detail', cols: ['Default'] }
+            ];
 
-                    } catch (e) {
-                        console.error("Error parsing saved data", e);
-                        // If data is corrupt, maybe we should clear it or warn?
-                        // For now, simple console error, fallback to defaults.
-                    }
-                }
-
-                renderHeaders();
-                renderMatrix();
-            } catch (err) {
-                console.error("Critical Init Error:", err);
-                alert("Error loading drawing manager. See console.");
-            } finally {
-                // ALWAYS remove loading screen
-                const loader = document.getElementById('loadingState');
-                if (loader) loader.remove();
-            }
-
-            // Load Metadata in background
-            try {
-                const res = await fetch('../assets/data/drawings.json');
-                if (!res.ok) throw new Error(res.statusText + " " + res.url);
-                metadata = await res.json();
-            } catch (e) {
-                console.warn('Could not load drawings.json', e);
-                // Fallback for local testing if needed, or just let user know
-            }
-
-            // Events
-            document.getElementById('saveBtn').addEventListener('click', saveAndExport);
-            document.getElementById('importInput').addEventListener('change', importCsv);
-            document.getElementById('viewerBtn').addEventListener('click', () => window.location.href =
-                'drawings-viewer.html');
-            document.getElementById('autoAssignBtn').addEventListener('click', openAutoAssign);
-            document.getElementById('modalCancelBtn').addEventListener('click', () => modalOverlay.classList.add('hidden'));
-            document.getElementById('modalApplyBtn').addEventListener('click', applyAutoAssignments);
-            document.getElementById('selectAllModal').addEventListener('change', (e) => {
-                document.querySelectorAll('.modal-check').forEach(c => c.checked = e.target.checked);
-            });
-        }
-
-        function renderHeaders() {
-            // Subheader: Type/Orient labels
-            let html = '<th class="sticky-col p-2 bg-portland border-b border-r border-bronze/10"></th>'; // Corner under corner
-
-            matrixColumns.forEach(col => {
-                html += `<th class="p-2 border-b border-bronze/10 bg-gray-50 text-[10px] text-gray-400 font-normal border-r border-dashed border-gray-200 text-center w-10">${col.label}</th>`;
-            });
-            subHeaderRow.innerHTML = html;
-        }
-
-        function renderMatrix() {
-            matrixBody.innerHTML = '';
-
-            // We iterate Floors x Rooms in rows
-            floors.forEach(floor => {
-                allRooms.forEach(room => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-white transition-colors group";
-
-                    // Sticky Row Label
-                    const label = document.createElement('td');
-                    label.className = "sticky-col p-3 border-b border-r border-bronze/10 text-xs font-medium text-midnight bg-portland group-hover:bg-white transition-colors";
-                    label.innerHTML = `Lvl ${floor} <span class="text-gray-400 font-normal ml-1">R${room}</span>`;
-                    tr.appendChild(label);
-
-                    // Columns
-                    matrixColumns.forEach(col => {
-                        const td = document.createElement('td');
-                        td.className = "border-b border-r border-dashed border-gray-200 text-center p-1";
-
-                        // Check Status
-                        // Logic: If ANY stage is active? Or particular stage?
-                        // Let's check Proposed (P) and As-Built (A)
-                        const keyP = `${floor}-${room}-${col.type}-${col.orient}-P`;
-                        const keyA = `${floor}-${room}-${col.type}-${col.orient}-A`;
-
-                        const hasP = csvData[keyP] === 1;
-                        const hasA = csvData[keyA] === 1;
-
-                        // Tooltip Info
-                        const details = assignmentDetails[keyP] || {};
-                        const title = hasP
-                            ? `File: ${details.sourceFile || 'Manual Entry'}\nLogic: ${details.logic || 'User'}`
-                            : 'Click to Add';
-
-                        // Visual
-                        const div = document.createElement('button');
-                        div.className = `w-full h-8 rounded-sm flex items-center justify-center transition-all text-[10px] font-bold ${hasP ? 'bg-bronze text-white shadow-sm' :
-                            hasA ? 'bg-gray-300 text-gray-600' :
-                                'bg-transparent hover:bg-gray-100 text-transparent hover:text-gray-300'
-                            }`;
-                        div.textContent = hasP ? 'P' : (hasA ? 'A' : '+');
-                        div.title = title; // Add Tooltip
-
-                        // Click Handler - Toggle P
-                        div.addEventListener('click', () => {
-                            const newStatus = !hasP;
-                            csvData[keyP] = newStatus ? 1 : 0;
-                            if (!newStatus) delete assignmentDetails[keyP]; // Cleanup logic on delete
-                            else if (!assignmentDetails[keyP]) assignmentDetails[keyP] = { logic: 'Manual' };
-
-                            // Simple visual update (or re-render)
-                            renderMatrix(); // Re-render to update tooltip
-                            saveToLocalStorage(); // Auto-save on click
-                        });
-
-                        // Right Click - Toggle As-Built (A)
-                        div.addEventListener('contextmenu', (e) => {
-                            e.preventDefault();
-                            const newStatusA = !hasA;
-                            csvData[keyA] = newStatusA ? 1 : 0;
-                            renderMatrix();
-                            saveToLocalStorage();
-                        });
-
-                        td.appendChild(div);
-                        tr.appendChild(td);
-                    });
-
-                    matrixBody.appendChild(tr);
+            // Flattened Columns for Matrix
+            // [ {type: 'G', orient: 'Default'}, {type: 'E', orient: 'N'} ... ]
+            const matrixColumns = [];
+            types.forEach(t => {
+                t.cols.forEach(o => {
+                    matrixColumns.push({ type: t.code, orient: o, label: o === 'Default' ? t.code : o });
                 });
             });
-        }
 
-        // --- AUTO ASSIGN LOGIC ---
+            // --- STATE ---
+            let csvData = {}; // Map: "key" -> 1/0
+            let assignmentDetails = {}; // Map: "key" -> { sourceFile: "...", logic: "..." }
+            let urlData = []; // Preserved from Viewer
+            let roomConfig = {}; // Preserved from Viewer
+            let metadata = null; // Loaded JSON
+            let aiMetadata = []; // Loaded JSON for bulk upload
 
-        let pendingMatches = []; // Store calculated matches for Apply step
+            // --- DOM ---
+            const matrixBody = document.getElementById('matrixBody');
+            const subHeaderRow = document.getElementById('subHeaderRow');
+            const modalOverlay = document.getElementById('modalOverlay');
+            const modalBody = document.getElementById('modalBody');
 
-        function openAutoAssign() {
-            if (!metadata) {
-                showMessage('Metadata loading/error. Check console.');
-                return;
+            // Upload DOM
+            const uploadModal = document.getElementById('uploadModal');
+            const dropZone = document.getElementById('dropZone');
+            const uploadPreview = document.getElementById('uploadPreview');
+            const uploadListBody = document.getElementById('uploadListBody');
+            const startUploadBtn = document.getElementById('startUploadBtn');
+            let filesToUpload = []; // Array of { file, meta }
+
+            // --- INIT ---
+            async function init() {
+                try {
+                    // Load CSV Data & Meta
+                    const savedData = localStorage.getItem('buildingDrawingsData');
+                    if (savedData) {
+                        try {
+                            const parsed = JSON.parse(savedData);
+                            if (parsed.csvData && Array.isArray(parsed.csvData)) {
+                                // Convert Array to Map for O(1) lookup
+                                parsed.csvData.forEach(row => csvData[row[0]] = parseInt(row[1]));
+                            }
+                            if (parsed.assignmentDetails && typeof parsed.assignmentDetails === 'object') {
+                                assignmentDetails = parsed.assignmentDetails;
+                            }
+                            // PRESERVE VIEWER DATA
+                            if (parsed.urlData) urlData = parsed.urlData;
+                            if (parsed.roomConfig) roomConfig = parsed.roomConfig;
+
+                        } catch (e) {
+                            console.error("Error parsing saved data", e);
+                            // If data is corrupt, maybe we should clear it or warn?
+                            // For now, simple console error, fallback to defaults.
+                        }
+                    }
+
+                    renderHeaders();
+                    renderMatrix();
+                } catch (err) {
+                    console.error("Critical Init Error:", err);
+                    alert("Error loading drawing manager. See console.");
+                } finally {
+                    // ALWAYS remove loading screen
+                    const loader = document.getElementById('loadingState');
+                    if (loader) loader.remove();
+                }
+
+                // Load Metadata in background
+                try {
+                    const res = await fetch('../assets/data/drawings.json');
+                    if (!res.ok) throw new Error(res.statusText + " " + res.url);
+                    metadata = await res.json();
+                } catch (e) {
+                    console.warn('Could not load drawings.json', e);
+                    // Fallback for local testing if needed, or just let user know
+                }
+
+                // Events
+                document.getElementById('saveBtn').addEventListener('click', saveAndExport);
+                document.getElementById('importInput').addEventListener('change', importCsv);
+                document.getElementById('viewerBtn').addEventListener('click', () => window.location.href =
+                    'drawings-viewer.html');
+                document.getElementById('autoAssignBtn').addEventListener('click', openAutoAssign);
+                document.getElementById('modalCancelBtn').addEventListener('click', () => modalOverlay.classList.add('hidden'));
+                document.getElementById('modalApplyBtn').addEventListener('click', applyAutoAssignments);
+                document.getElementById('selectAllModal').addEventListener('change', (e) => {
+                    document.querySelectorAll('.modal-check').forEach(c => c.checked = e.target.checked);
+                });
             }
 
-            modalOverlay.classList.remove('hidden');
-            modalBody.innerHTML = '';
+            function renderHeaders() {
+                // Subheader: Type/Orient labels
+                let html = '<th class="sticky-col p-2 bg-portland border-b border-r border-bronze/10"></th>'; // Corner under corner
 
-            pendingMatches = findMatches(); // Store for later
-
-            document.getElementById('matchStats').textContent = `Found ${pendingMatches.length} potential matches`;
-
-            if (pendingMatches.length === 0) {
-                modalBody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-400">No matches found.</td></tr>';
-                return;
+                matrixColumns.forEach(col => {
+                    html += `<th class="p-2 border-b border-bronze/10 bg-gray-50 text-[10px] text-gray-400 font-normal border-r border-dashed border-gray-200 text-center w-10">${col.label}</th>`;
+                });
+                subHeaderRow.innerHTML = html;
             }
 
-            pendingMatches.forEach((m, idx) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition-colors border-b border-gray-50";
+            function renderMatrix() {
+                matrixBody.innerHTML = '';
 
-                tr.innerHTML = `
+                // We iterate Floors x Rooms in rows
+                floors.forEach(floor => {
+                    allRooms.forEach(room => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-white transition-colors group";
+
+                        // Sticky Row Label
+                        const label = document.createElement('td');
+                        label.className = "sticky-col p-3 border-b border-r border-bronze/10 text-xs font-medium text-midnight bg-portland group-hover:bg-white transition-colors";
+                        label.innerHTML = `Lvl ${floor} <span class="text-gray-400 font-normal ml-1">R${room}</span>`;
+                        tr.appendChild(label);
+
+                        // Columns
+                        matrixColumns.forEach(col => {
+                            const td = document.createElement('td');
+                            td.className = "border-b border-r border-dashed border-gray-200 text-center p-1";
+
+                            // Check Status
+                            // Logic: If ANY stage is active? Or particular stage?
+                            // Let's check Proposed (P) and As-Built (A)
+                            const keyP = `${floor}-${room}-${col.type}-${col.orient}-P`;
+                            const keyA = `${floor}-${room}-${col.type}-${col.orient}-A`;
+
+                            const hasP = csvData[keyP] === 1;
+                            const hasA = csvData[keyA] === 1;
+
+                            // Tooltip Info
+                            const details = assignmentDetails[keyP] || {};
+                            const title = hasP
+                                ? `File: ${details.sourceFile || 'Manual Entry'}\nLogic: ${details.logic || 'User'}`
+                                : 'Click to Add';
+
+                            // Visual
+                            const div = document.createElement('button');
+                            div.className = `w-full h-8 rounded-sm flex items-center justify-center transition-all text-[10px] font-bold ${hasP ? 'bg-bronze text-white shadow-sm' :
+                                hasA ? 'bg-gray-300 text-gray-600' :
+                                    'bg-transparent hover:bg-gray-100 text-transparent hover:text-gray-300'
+                                }`;
+                            div.textContent = hasP ? 'P' : (hasA ? 'A' : '+');
+                            div.title = title; // Add Tooltip
+
+                            // Click Handler - Toggle P
+                            div.addEventListener('click', () => {
+                                const newStatus = !hasP;
+                                csvData[keyP] = newStatus ? 1 : 0;
+                                if (!newStatus) delete assignmentDetails[keyP]; // Cleanup logic on delete
+                                else if (!assignmentDetails[keyP]) assignmentDetails[keyP] = { logic: 'Manual' };
+
+                                // Simple visual update (or re-render)
+                                renderMatrix(); // Re-render to update tooltip
+                                saveToLocalStorage(); // Auto-save on click
+                            });
+
+                            // Right Click - Toggle As-Built (A)
+                            div.addEventListener('contextmenu', (e) => {
+                                e.preventDefault();
+                                const newStatusA = !hasA;
+                                csvData[keyA] = newStatusA ? 1 : 0;
+                                renderMatrix();
+                                saveToLocalStorage();
+                            });
+
+                            td.appendChild(div);
+                            tr.appendChild(td);
+                        });
+
+                        matrixBody.appendChild(tr);
+                    });
+                });
+            }
+
+            // --- AUTO ASSIGN LOGIC ---
+
+            let pendingMatches = []; // Store calculated matches for Apply step
+
+            function openAutoAssign() {
+                if (!metadata) {
+                    showMessage('Metadata loading/error. Check console.');
+                    return;
+                }
+
+                modalOverlay.classList.remove('hidden');
+                modalBody.innerHTML = '';
+
+                pendingMatches = findMatches(); // Store for later
+
+                document.getElementById('matchStats').textContent = `Found ${pendingMatches.length} potential matches`;
+
+                if (pendingMatches.length === 0) {
+                    modalBody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-400">No matches found.</td></tr>';
+                    return;
+                }
+
+                pendingMatches.forEach((m, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 transition-colors border-b border-gray-50";
+
+                    tr.innerHTML = `
         <td class="p-4"><input type="checkbox" class="modal-check" checked data-idx="${idx}"></td>
         <td class="p-4">
             <div class="font-medium text-midnight">${m.source.number || 'No Number'}</div>
@@ -475,174 +537,174 @@
         </td>
                     `;
 
-                modalBody.appendChild(tr);
-            });
-        }
+                    modalBody.appendChild(tr);
+                });
+            }
 
-        function findMatches() {
-            const results = [];
-            // Iterate known lists in metadata
-            // drawings.json structure: { "ARCH": [...], "APPR. D": [...], "ENGINEERING": [...] }
+            function findMatches() {
+                const results = [];
+                // Iterate known lists in metadata
+                // drawings.json structure: { "ARCH": [...], "APPR. D": [...], "ENGINEERING": [...] }
 
-            const allItems = [...(metadata["ARCH"] || []), ...(metadata["APPR. D"] || [])];
+                const allItems = [...(metadata["ARCH"] || []), ...(metadata["APPR. D"] || [])];
 
-            allItems.forEach(item => {
-                const text = ((item.number || '') + ' ' + (item.title || '')).toLowerCase();
+                allItems.forEach(item => {
+                    const text = ((item.number || '') + ' ' + (item.title || '')).toLowerCase();
 
-                // --- HEURISTICS ---
+                    // --- HEURISTICS ---
 
-                // 1. Floor
-                // Matches: "Level 1", "Lvl 01", "Level 10", "First Floor"(maybe?)
-                let floor = null;
-                const floorMatch = text.match(/(?:level|lvl|floor)\s*0?(\d+)/);
-                if (floorMatch) {
-                    floor = floorMatch[1].padStart(2, '0');
-                } else if (text.includes('ground floor') || text.includes('level G')) {
-                    floor = '01'; // Assuming G = 01 based on US/UK mix, or strictly UK G=00?
-                    // CSV shows Floor 01-12. Let's assume 01 is lowest.
-                    // Wait, previous file had floorHeights '01': 32 // Ground floor. So 01 is Ground.
-                }
+                    // 1. Floor
+                    // Matches: "Level 1", "Lvl 01", "Level 10", "First Floor"(maybe?)
+                    let floor = null;
+                    const floorMatch = text.match(/(?:level|lvl|floor)\s*0?(\d+)/);
+                    if (floorMatch) {
+                        floor = floorMatch[1].padStart(2, '0');
+                    } else if (text.includes('ground floor') || text.includes('level G')) {
+                        floor = '01'; // Assuming G = 01 based on US/UK mix, or strictly UK G=00?
+                        // CSV shows Floor 01-12. Let's assume 01 is lowest.
+                        // Wait, previous file had floorHeights '01': 32 // Ground floor. So 01 is Ground.
+                    }
 
-                if (!floor || !floors.includes(floor)) return; // Skip if no floor found
+                    if (!floor || !floors.includes(floor)) return; // Skip if no floor found
 
-                // 2. Type
-                let type = 'G'; // Default GA
-                if (text.includes('elevation')) type = 'E';
-                if (text.includes('section')) type = 'S';
-                if (text.includes('detail') || text.includes('schedule')) type = 'I';
-                if (text.includes('plan') && !text.includes('site plan')) type = 'G'; // "GA Plan"
+                    // 2. Type
+                    let type = 'G'; // Default GA
+                    if (text.includes('elevation')) type = 'E';
+                    if (text.includes('section')) type = 'S';
+                    if (text.includes('detail') || text.includes('schedule')) type = 'I';
+                    if (text.includes('plan') && !text.includes('site plan')) type = 'G'; // "GA Plan"
 
-                // 3. Orientation
-                let orient = 'Default';
-                if (type === 'E' || type === 'S') {
-                    if (text.includes('north')) orient = 'N';
-                    else if (text.includes('south')) orient = 'S';
-                    else if (text.includes('east')) orient = 'E';
-                    else if (text.includes('west')) orient = 'W';
-                    else orient = 'N'; // Fallback for elevations without direction? or Default?
-                    // Matrix columns for E/S are N,E,S,W. If we can't find one, maybe we shouldn't assign?
-                    // Or default to N? Let's use N for now with lower confidence.
-                }
+                    // 3. Orientation
+                    let orient = 'Default';
+                    if (type === 'E' || type === 'S') {
+                        if (text.includes('north')) orient = 'N';
+                        else if (text.includes('south')) orient = 'S';
+                        else if (text.includes('east')) orient = 'E';
+                        else if (text.includes('west')) orient = 'W';
+                        else orient = 'N'; // Fallback for elevations without direction? or Default?
+                        // Matrix columns for E/S are N,E,S,W. If we can't find one, maybe we shouldn't assign?
+                        // Or default to N? Let's use N for now with lower confidence.
+                    }
 
-                // 4. Room (Hardest)
-                // Default to Room 1 unless specified
-                let room = '1';
-                // If text says "Room 2", etc.
-                const roomMatch = text.match(/room\s*(\d)/);
-                if (roomMatch) room = roomMatch[1];
+                    // 4. Room (Hardest)
+                    // Default to Room 1 unless specified
+                    let room = '1';
+                    // If text says "Room 2", etc.
+                    const roomMatch = text.match(/room\s*(\d)/);
+                    if (roomMatch) room = roomMatch[1];
 
-                // 5. Stage
-                // Default to 'P' (Proposed)
-                let stage = 'P';
+                    // 5. Stage
+                    // Default to 'P' (Proposed)
+                    let stage = 'P';
 
-                const key = `${floor}-${room}-${type}-${orient}-${stage}`;
+                    const key = `${floor}-${room}-${type}-${orient}-${stage}`;
 
-                // Calculate Confidence
-                let confidence = 0;
-                if (floorMatch) confidence += 40;
-                if (text.includes('elevation') || text.includes('section') || text.includes('plan')) confidence += 30;
-                if (orient !== 'Default' || type === 'G') confidence += 20; // If we found specific orient or it's generic
-                if (type === 'I') confidence += 10;
+                    // Calculate Confidence
+                    let confidence = 0;
+                    if (floorMatch) confidence += 40;
+                    if (text.includes('elevation') || text.includes('section') || text.includes('plan')) confidence += 30;
+                    if (orient !== 'Default' || type === 'G') confidence += 20; // If we found specific orient or it's generic
+                    if (type === 'I') confidence += 10;
 
-                if (confidence >= 60) {
-                    results.push({
-                        source: item,
-                        key: key,
-                        logic: `F:${floor} R:${room} T:${type} O:${orient}`,
-                        confidence: confidence
-                    });
-                }
-            });
+                    if (confidence >= 60) {
+                        results.push({
+                            source: item,
+                            key: key,
+                            logic: `F:${floor} R:${room} T:${type} O:${orient}`,
+                            confidence: confidence
+                        });
+                    }
+                });
 
-            // Dedupe by Key? Or show multiple?
-            // For now, let user see all. Last one wins in apply loop.
-            return results;
-        }
+                // Dedupe by Key? Or show multiple?
+                // For now, let user see all. Last one wins in apply loop.
+                return results;
+            }
 
-        function applyAutoAssignments() {
-            const checks = document.querySelectorAll('.modal-check:checked');
-            let count = 0;
-            checks.forEach(chk => {
-                const idx = chk.dataset.idx;
-                const match = pendingMatches[idx];
+            function applyAutoAssignments() {
+                const checks = document.querySelectorAll('.modal-check:checked');
+                let count = 0;
+                checks.forEach(chk => {
+                    const idx = chk.dataset.idx;
+                    const match = pendingMatches[idx];
 
-                if (match) {
-                    csvData[match.key] = 1;
-                    // SAVE INFO
-                    assignmentDetails[match.key] = {
-                        sourceFile: (match.source.number || '') + ' ' + (match.source.title || ''),
-                        logic: match.logic
-                    };
-                    count++;
-                }
-            });
+                    if (match) {
+                        csvData[match.key] = 1;
+                        // SAVE INFO
+                        assignmentDetails[match.key] = {
+                            sourceFile: (match.source.number || '') + ' ' + (match.source.title || ''),
+                            logic: match.logic
+                        };
+                        count++;
+                    }
+                });
 
-            modalOverlay.classList.add('hidden');
-            showMessage(`Applied ${count} assignments`);
-            saveToLocalStorage();
-            renderMatrix();
-        }
+                modalOverlay.classList.add('hidden');
+                showMessage(`Applied ${count} assignments`);
+                saveToLocalStorage();
+                renderMatrix();
+            }
 
-        // --- EXPORT/IMPORT ---
-        function saveToLocalStorage() {
-            // Convert Map back to Array for generic storage format expected by Viewer
-            const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
-            const data = {
-                csvData: exportData,
-                assignmentDetails: assignmentDetails, // Persist meta
-                urlData: urlData, // Persist Viewer Links
-                roomConfig: roomConfig // Persist Viewer Config
-            };
-            localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
-        }
+            // --- EXPORT/IMPORT ---
+            function saveToLocalStorage() {
+                // Convert Map back to Array for generic storage format expected by Viewer
+                const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
+                const data = {
+                    csvData: exportData,
+                    assignmentDetails: assignmentDetails, // Persist meta
+                    urlData: urlData, // Persist Viewer Links
+                    roomConfig: roomConfig // Persist Viewer Config
+                };
+                localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
+            }
 
-        function saveAndExport() {
-            saveToLocalStorage();
-            const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
-            const csv = Papa.unparse({
-                fields: ['key', 'hasDrawing'],
-                data: exportData
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'building_drawings.csv';
-            link.click();
-            showMessage('Configuration Saved');
-        }
+            function saveAndExport() {
+                saveToLocalStorage();
+                const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
+                const csv = Papa.unparse({
+                    fields: ['key', 'hasDrawing'],
+                    data: exportData
+                });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'building_drawings.csv';
+                link.click();
+                showMessage('Configuration Saved');
+            }
 
-        function importCsv(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            Papa.parse(file, {
-                complete: function (results) {
-                    const data = results.data[0][0] === 'key' ? results.data.slice(1) : results.data;
-                    data.forEach(row => {
-                        if (row.length >= 2 && row[0]) {
-                            csvData[row[0]] = parseInt(row[1]);
-                        }
-                    });
-                    saveToLocalStorage();
-                    renderMatrix();
-                    showMessage('CSV Imported');
-                }
-            })
-        }
+            function importCsv(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                Papa.parse(file, {
+                    complete: function (results) {
+                        const data = results.data[0][0] === 'key' ? results.data.slice(1) : results.data;
+                        data.forEach(row => {
+                            if (row.length >= 2 && row[0]) {
+                                csvData[row[0]] = parseInt(row[1]);
+                            }
+                        });
+                        saveToLocalStorage();
+                        renderMatrix();
+                        showMessage('CSV Imported');
+                    }
+                })
+            }
 
-        function showMessage(msg) {
-            const el = document.getElementById('message');
-            el.querySelector('span').textContent = msg;
-            el.classList.remove('opacity-0', 'translate-y-10');
-            setTimeout(() => {
-                el.classList.add('opacity-0', 'translate-y-10');
-            }, 3000);
-        }
+            function showMessage(msg) {
+                const el = document.getElementById('message');
+                el.querySelector('span').textContent = msg;
+                el.classList.remove('opacity-0', 'translate-y-10');
+                setTimeout(() => {
+                    el.classList.add('opacity-0', 'translate-y-10');
+                }, 3000);
+            }
 
-        // Run
-        init();
+            // Run
+            init();
 
-    </script>
+        </script>
 </body>
 
 </html>
