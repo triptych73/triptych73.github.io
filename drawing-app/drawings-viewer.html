@@ -171,7 +171,7 @@
             <h1 class="font-serif text-xl tracking-widest uppercase text-midnight">St Mary Somerset</h1>
             <span class="h-4 w-px bg-bronze/30"></span>
             <span class="text-xs tracking-[0.2em] text-bronze uppercase">Drawings Archive</span>
-            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.2.4</span>
+            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.3.0</span>
         </div>
 
         <div class="flex items-center gap-4">
@@ -191,189 +191,227 @@
         </div>
     </header>
 
-    <!-- MAIN CONTENT -->
-    <div class="flex mt-16 h-[calc(100vh-64px)] relative overflow-hidden">
+    <!-- MAIN CONTENT (FULL SCREEN HUD) -->
+    <div class="relative w-full h-[calc(100vh-64px)] mt-16 overflow-hidden bg-[#F5F5F0]">
 
-        <!-- SIDEBAR NAV -->
-        <div id="navPane"
-            class="w-[380px] bg-white/40 border-r border-bronze/10 h-full flex flex-col relative transition-all duration-500 ease-in-out z-30 shadow-[4px_0_20px_rgba(0,0,0,0.02)]">
+        <!-- Grid Background -->
+        <div class="absolute inset-0 opacity-[0.03] z-0 pointer-events-none"
+            style="background-image: linear-gradient(#0F1115 1px, transparent 1px), linear-gradient(90deg, #0F1115 1px, transparent 1px); background-size: 40px 40px;">
+        </div>
 
-            <!-- Toggle Button -->
-            <div id="navToggle"
-                class="absolute -right-6 top-1/2 -translate-y-1/2 w-6 h-12 bg-white/80 backdrop-blur flex items-center justify-center cursor-pointer border border-l-0 border-bronze/20 rounded-r-md hover:text-bronze transition-colors z-50">
-                <span id="navToggleIcon" class="text-[10px]">◀</span>
+        <!-- DRAWING CANVAS LAYER -->
+        <div id="drawingLayer" class="absolute inset-0 z-10 flex items-center justify-center p-8">
+            <div id="drawingContainer" class="hidden w-full h-full flex flex-col animate-fade-in relative">
+                <!-- Drawing Title (Floating Top Center, optional or keep in HUD) -->
+                <div
+                    class="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-white/80 backdrop-blur px-4 py-2 rounded-full border border-bronze/10 shadow-sm">
+                    <h2 id="drawingTitle" class="text-xs font-serif text-midnight uppercase tracking-widest">Select a
+                        Drawing</h2>
+                </div>
+
+                <!-- Pan/Zoom Container -->
+                <div class="flex-1 relative border border-bronze/10 bg-white shadow-sm overflow-hidden cursor-move rounded-lg"
+                    id="imageWrapper">
+                    <img id="drawingImage" src="" alt="Drawing"
+                        class="absolute left-0 top-0 origin-top-left transition-transform duration-75 select-none"
+                        draggable="false">
+                </div>
             </div>
 
-            <div class="overflow-y-auto h-full hide-scrollbar p-6 space-y-8">
+            <!-- URL FORM Fallback (Keep centered) -->
+            <div id="urlForm"
+                class="hidden flex-col items-center justify-center space-y-4 bg-white p-8 rounded shadow-sm border border-bronze/10 z-20">
+                <div class="text-bronze mb-2">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                </div>
+                <h3 class="font-serif text-lg text-midnight">No Drawing Linked</h3>
+                <p class="text-xs text-gray-500 max-w-xs text-center">Enter a URL to link a drawing to this location.
+                </p>
+                <div class="flex gap-2 w-full max-w-sm">
+                    <input type="text" id="urlInput" placeholder="https://..."
+                        class="flex-1 border border-gray-200 p-2 text-xs focus:outline-none focus:border-bronze rounded-sm">
+                    <button id="saveUrlBtn"
+                        class="bg-midnight text-white text-xs px-4 py-2 hover:bg-bronze transition-colors uppercase tracking-wider rounded-sm">Link</button>
+                </div>
+            </div>
+        </div>
 
-                <!-- Building Visualizer -->
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center bg-white/50 p-2 rounded-sm border border-bronze/5">
-                        <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Select Level</h2>
-                        <div class="flex gap-2 items-center">
-                            <button id="openConfigBtn"
-                                class="text-[10px] uppercase text-midnight hover:text-bronze border border-gray-200 hover:border-bronze px-2 py-0.5 rounded transition-all bg-white shadow-sm"
-                                title="Configure Rooms per Floor">
-                                ⚙️ Rooms
-                            </button>
-                            <span class="w-px h-3 bg-gray-300 mx-1"></span>
-                            <button id="toggleMeasureBtn"
-                                class="text-[10px] uppercase text-gray-400 hover:text-bronze border border-transparent hover:border-bronze px-2 py-0.5 rounded transition-all"
-                                title="Measure floor heights">
-                                📏 Measure
-                            </button>
-                            <button id="clearMeasureBtn"
-                                class="hidden text-[10px] uppercase text-red-400 hover:text-red-600 border border-transparent hover:border-red-200 px-2 py-0.5 rounded transition-all"
-                                title="Clear measurements">
-                                ✕
-                            </button>
-                        </div>
+        <!-- HUD LAYER (Widgets) -->
+        <div id="hudLayer" class="absolute inset-0 z-30 pointer-events-none">
+
+            <!-- 1. ROOM CONTROLLER (Top-Left) -->
+            <div id="hud-room-controller" class="absolute top-6 left-6 pointer-events-auto">
+                <div
+                    class="glass-panel rounded-lg shadow-lg p-4 w-72 backdrop-blur-md bg-white/70 border border-white/50">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-serif text-xs text-bronze uppercase tracking-widest">Room Selection</h3>
+                        <button id="openConfigBtn"
+                            class="text-[10px] uppercase text-gray-400 hover:text-bronze transition-colors flex items-center gap-1">
+                            <span>⚙️</span> Config
+                        </button>
                     </div>
+                    <div id="roomList" class="space-y-4 max-h-[60vh] overflow-y-auto hide-scrollbar">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+            </div>
 
-                    <!-- Centered Container -->
+            <!-- 2. COMPASS (Top-Right) -->
+            <div id="hud-compass" class="absolute top-6 right-6 pointer-events-auto">
+                <div class="glass-panel rounded-full shadow-lg p-2 w-24 h-24 flex items-center justify-center backdrop-blur-md bg-white/70 border border-white/50 relative group cursor-pointer transition-transform duration-500"
+                    id="compassWidget" onclick="rotateOrientation()">
+
+                    <!-- Compass Graphic -->
+                    <div class="absolute inset-0 rounded-full border border-bronze/20"></div>
                     <div
-                        class="w-full flex justify-center bg-white border border-bronze/10 rounded-sm py-4 shadow-inner">
-                        <!-- Wrapper to fit image size exactly -->
-                        <div class="relative w-fit overflow-hidden">
-                            <img src="images/tower.png" alt="St Mary Somerset Tower"
-                                class="max-h-[60vh] w-auto block opacity-90 shadow-sm -ml-3">
-
-                            <!-- Floor Overlay Grid -->
-                            <div class="absolute inset-0 flex flex-col pt-[36px]" id="floorOverlay">
-                                <!-- Injected via JS -->
-                            </div>
-                            <div id="measureOverlay" class="absolute inset-0 z-[60] hidden cursor-crosshair">
-                                <!-- Measurement lines injected via JS -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filters -->
-                <div class="space-y-6">
-                    <!-- Room -->
-                    <div class="space-y-3">
-                        <div id="roomList" class="space-y-6">
-                            <!-- Injected via JS -->
-                        </div>
+                        class="w-16 h-16 rounded-full bg-midnight/5 flex items-center justify-center text-xs font-serif font-bold text-bronze uppercase relative">
+                        <span id="compassLabel">N</span>
+                        <div class="absolute -top-1 w-1 h-2 bg-bronze"></div>
                     </div>
 
-                    <!-- Orientation -->
-                    <div class="space-y-3">
-                        <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Orientation</h2>
-                        <div id="orientationTabs" class="flex gap-1 bg-white/50 p-1 rounded-sm border border-bronze/5">
-                            <!-- Injected via JS -->
-                        </div>
-                    </div>
-
-                    <!-- Stage -->
-                    <div class="space-y-3">
-                        <h2 class="font-serif text-sm text-bronze uppercase tracking-widest">Stage</h2>
-                        <div id="stageTabs" class="flex flex-wrap gap-2">
-                            <!-- Injected via JS -->
-                        </div>
+                    <!-- Hover Controls (N/E/S/W) -->
+                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                            class="absolute top-0 left-1/2 -translate-x-1/2 -mt-1 text-[8px] font-bold text-midnight hover:text-bronze"
+                            onclick="setOrientation('Default'); event.stopPropagation();">N</button>
+                        <button
+                            class="absolute bottom-0 left-1/2 -translate-x-1/2 -mb-1 text-[8px] font-bold text-midnight hover:text-bronze"
+                            onclick="setOrientation('S'); event.stopPropagation();">S</button>
+                        <button
+                            class="absolute right-0 top-1/2 -translate-y-1/2 -mr-1 text-[8px] font-bold text-midnight hover:text-bronze"
+                            onclick="setOrientation('E'); event.stopPropagation();">E</button>
+                        <button
+                            class="absolute left-0 top-1/2 -translate-y-1/2 -ml-1 text-[8px] font-bold text-midnight hover:text-bronze"
+                            onclick="setOrientation('W'); event.stopPropagation();">W</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Footer Actions -->
-            <div class="p-6 border-t border-bronze/10 bg-white/30 backdrop-blur-sm">
-                <button id="saveBtn"
-                    class="w-full border border-bronze text-bronze hover:bg-bronze hover:text-white text-xs uppercase tracking-widest py-3 transition-colors duration-300">
-                    Save Changes
+            <!-- 3. TOWER WIDGET (Bottom-Left) -->
+            <div id="hud-tower" class="absolute bottom-6 left-6 pointer-events-auto flex items-end gap-4">
+                <div
+                    class="glass-panel rounded-lg shadow-lg p-2 backdrop-blur-md bg-white/70 border border-white/50 flex flex-col items-center">
+                    <div class="relative w-24 h-64 overflow-hidden rounded mb-2 bg-gray-50/50">
+                        <img src="images/tower.png" class="absolute bottom-0 w-full opacity-80 mix-blend-multiply">
+                        <div id="floorOverlay" class="absolute inset-0 flex flex-col-reverse h-full w-full">
+                            <!-- Injected JS (Floors) -->
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-serif text-bronze tracking-widest uppercase">Level Select</span>
+                </div>
+
+                <!-- Measure Tools (Moved here) -->
+                <div class="flex flex-col gap-2">
+                    <button id="toggleMeasureBtn"
+                        class="w-8 h-8 rounded-full bg-white shadow flex items-center justify-center text-gray-500 hover:text-bronze transition-colors"
+                        title="Measure">📏</button>
+                    <button id="clearMeasureBtn"
+                        class="hidden w-8 h-8 rounded-full bg-red-50 shadow flex items-center justify-center text-red-400 hover:text-red-600 transition-colors"
+                        title="Clear">✕</button>
+                </div>
+            </div>
+
+            <!-- 4. STAGE TOGGLE (Bottom-Center) -->
+            <div id="hud-stage" class="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto">
+                <div class="glass-panel rounded-full shadow-lg p-1 backdrop-blur-md bg-white/80 border border-white/50 flex gap-1"
+                    id="stageToggleContainer">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <!-- 5. ZOOM CONTROLS (Bottom-Right) -->
+            <div id="hud-zoom" class="absolute bottom-8 right-8 pointer-events-auto flex flex-col gap-2">
+                <button id="zoomInBtn"
+                    class="w-10 h-10 rounded bg-white shadow text-gray-600 hover:text-bronze text-xl flex items-center justify-center transition-colors">+</button>
+                <button id="zoomOutBtn"
+                    class="w-10 h-10 rounded bg-white shadow text-gray-600 hover:text-bronze text-xl flex items-center justify-center transition-colors">-</button>
+                <button id="panBtn"
+                    class="w-10 h-10 rounded bg-white shadow text-gray-600 hover:text-bronze p-2 flex items-center justify-center transition-colors"
+                    title="Pan Mode">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M19 9l3 3-3 3M9 19l3 3 3-3M2 12h20M12 2v20" />
+                    </svg>
                 </button>
             </div>
         </div>
 
-        <!-- VIEWER AREA -->
-        <div class="flex-1 bg-[#F5F5F0] relative flex items-center justify-center overflow-hidden">
+        <!-- Toolbar -->
+        <div class="flex justify-between items-center mb-4">
+            <div id="drawingTitle" class="font-serif text-lg text-midnight tracking-wide"></div>
 
-            <!-- Grid Background (Subtle) -->
-            <div class="absolute inset-0 opacity-[0.03]"
-                style="background-image: linear-gradient(#0F1115 1px, transparent 1px), linear-gradient(90deg, #0F1115 1px, transparent 1px); background-size: 40px 40px;">
-            </div>
-
-            <!-- Content -->
-            <div class="relative z-10 w-full h-full p-8 flex flex-col">
-
-                <!-- Drawing Container -->
-                <div id="drawingContainer" class="hidden w-full h-full flex flex-col animate-fade-in">
-
-                    <!-- Toolbar -->
-                    <div class="flex justify-between items-center mb-4">
-                        <div id="drawingTitle" class="font-serif text-lg text-midnight tracking-wide"></div>
-
-                        <div
-                            class="flex items-center gap-2 bg-white px-2 py-1 rounded shadow-sm border border-bronze/10">
-                            <button id="zoomOutBtn"
-                                class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight">-</button>
-                            <span class="w-px h-4 bg-gray-200"></span>
-                            <button id="zoomInBtn"
-                                class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight">+</button>
-                            <span class="w-px h-4 bg-gray-200"></span>
-                            <button id="panBtn"
-                                class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight group"
-                                title="Pan Tool">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" class="group-hover:text-bronze">
-                                    <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
-                                    <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
-                                    <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
-                                    <path
-                                        d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15">
-                                    </path>
-                                </svg>
-                            </button>
-                            <button id="changeUrlBtn"
-                                class="ml-2 text-[10px] uppercase font-bold tracking-wider text-bronze hover:text-midnight px-2">Edit
-                                URL</button>
-                        </div>
-                    </div>
-
-                    <!-- Viewport -->
-                    <div
-                        class="flex-1 bg-white shadow-lg border border-bronze/10 relative overflow-hidden flex items-center justify-center">
-                        <img id="drawingImage"
-                            class="max-w-full max-h-full transition-transform duration-200 ease-out origin-center"
-                            alt="Select a drawing">
-                    </div>
-                </div>
-
-                <!-- URL Config Form (Empty State / Edit) -->
-                <div id="urlForm" class="max-w-md w-full bg-white p-8 shadow-xl border border-bronze/10 m-auto hidden">
-                    <h3 class="font-serif text-xl mb-6 text-midnight">Configure Drawing</h3>
-
-                    <div class="space-y-4">
-                        <div>
-                            <span class="text-[10px] uppercase tracking-widest text-gray-400 block mb-1">ID Code</span>
-                            <div id="drawingKey" class="font-mono text-sm text-bronze"></div>
-                        </div>
-
-                        <div>
-                            <span
-                                class="text-[10px] uppercase tracking-widest text-gray-400 block mb-1">Description</span>
-                            <div id="drawingDescription" class="font-sans text-sm"></div>
-                        </div>
-
-                        <div class="pt-4">
-                            <label for="urlInput"
-                                class="text-[10px] uppercase tracking-widest text-midnight block mb-2">Image URL</label>
-                            <input type="text" id="urlInput"
-                                class="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-bronze transition-colors placeholder-gray-300 font-light"
-                                placeholder="https://...">
-                        </div>
-
-                        <div class="pt-6 flex justify-end">
-                            <button id="saveUrlBtn"
-                                class="bg-midnight text-white text-xs uppercase tracking-widest px-6 py-3 hover:bg-bronze transition-colors">
-                                Save Configuration
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
+            <div class="flex items-center gap-2 bg-white px-2 py-1 rounded shadow-sm border border-bronze/10">
+                <button id="zoomOutBtn"
+                    class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight">-</button>
+                <span class="w-px h-4 bg-gray-200"></span>
+                <button id="zoomInBtn"
+                    class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight">+</button>
+                <span class="w-px h-4 bg-gray-200"></span>
+                <button id="panBtn"
+                    class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-midnight group"
+                    title="Pan Tool">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        class="group-hover:text-bronze">
+                        <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+                        <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+                        <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+                        <path
+                            d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15">
+                        </path>
+                    </svg>
+                </button>
+                <button id="changeUrlBtn"
+                    class="ml-2 text-[10px] uppercase font-bold tracking-wider text-bronze hover:text-midnight px-2">Edit
+                    URL</button>
             </div>
         </div>
+
+        <!-- Viewport -->
+        <div
+            class="flex-1 bg-white shadow-lg border border-bronze/10 relative overflow-hidden flex items-center justify-center">
+            <img id="drawingImage"
+                class="max-w-full max-h-full transition-transform duration-200 ease-out origin-center"
+                alt="Select a drawing">
+        </div>
+    </div>
+
+    <!-- URL Config Form (Empty State / Edit) -->
+    <div id="urlForm" class="max-w-md w-full bg-white p-8 shadow-xl border border-bronze/10 m-auto hidden">
+        <h3 class="font-serif text-xl mb-6 text-midnight">Configure Drawing</h3>
+
+        <div class="space-y-4">
+            <div>
+                <span class="text-[10px] uppercase tracking-widest text-gray-400 block mb-1">ID Code</span>
+                <div id="drawingKey" class="font-mono text-sm text-bronze"></div>
+            </div>
+
+            <div>
+                <span class="text-[10px] uppercase tracking-widest text-gray-400 block mb-1">Description</span>
+                <div id="drawingDescription" class="font-sans text-sm"></div>
+            </div>
+
+            <div class="pt-4">
+                <label for="urlInput" class="text-[10px] uppercase tracking-widest text-midnight block mb-2">Image
+                    URL</label>
+                <input type="text" id="urlInput"
+                    class="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-bronze transition-colors placeholder-gray-300 font-light"
+                    placeholder="https://...">
+            </div>
+
+            <div class="pt-6 flex justify-end">
+                <button id="saveUrlBtn"
+                    class="bg-midnight text-white text-xs uppercase tracking-widest px-6 py-3 hover:bg-bronze transition-colors">
+                    Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+
+    </div>
+    </div>
     </div>
 
     <!-- Loading Overlay -->
@@ -458,17 +496,18 @@
         let translateY = 0;
 
         // DOM Elements
-        const navPane = document.getElementById('navPane');
-        const navToggle = document.getElementById('navToggle');
-        const navToggleIcon = document.getElementById('navToggleIcon');
-        const floorOverlay = document.getElementById('floorOverlay');
-        const roomList = document.getElementById('roomList');
-        const orientationTabs = document.getElementById('orientationTabs');
-        const stageTabs = document.getElementById('stageTabs');
+        // DOM Elements - HUD & Viewport
         const drawingContainer = document.getElementById('drawingContainer');
         const drawingTitle = document.getElementById('drawingTitle');
         const drawingImage = document.getElementById('drawingImage');
         const urlForm = document.getElementById('urlForm');
+
+        // HUD Widgets
+        const floorOverlay = document.getElementById('floorOverlay');
+        const roomList = document.getElementById('roomList');
+        const compassWidget = document.getElementById('compassWidget');
+        const compassLabel = document.getElementById('compassLabel');
+        const stageToggleContainer = document.getElementById('stageToggleContainer');
         const drawingKey = document.getElementById('drawingKey');
         const drawingDescription = document.getElementById('drawingDescription');
         const urlInput = document.getElementById('urlInput');
@@ -566,8 +605,8 @@
 
         // Setup event listeners
         function setupEventListeners() {
-            // Navigation toggle
-            navToggle.addEventListener('click', toggleNavPane);
+            // Navigation toggle - REMOVED for HUD Layout
+            // navToggle.addEventListener('click', toggleNavPane);
 
             // Zoom and pan controls
             zoomInBtn.addEventListener('click', () => zoom(0.2));
@@ -663,8 +702,8 @@
 
         function updateUI() {
             renderRoomList();
-            renderOrientationTabs();
-            renderStageTabs();
+            updateCompassWidget();
+            renderStageToggle();
             updateDrawingView();
         }
 
@@ -768,84 +807,77 @@
         }
 
         // Render Orientation Tabs
-        function renderOrientationTabs() {
-            orientationTabs.innerHTML = '';
+        // --- COMPASS WIDGET (Orientation) ---
+        function updateCompassWidget() {
+            const type = types.find(t => t.code === activeType);
 
-            // Only show if type supports it
-            const currentType = types.find(t => t.code === activeType);
-            const showOrientations = currentType && currentType.hasOrientations;
+            // Check elements exist
+            if (!compassWidget || !compassLabel) return;
 
-            if (!showOrientations) {
-                const msg = document.createElement('div');
-                msg.className = "w-full text-center text-[10px] text-gray-400 py-1 uppercase tracking-widest italic";
-                msg.textContent = "No Orientation Required";
-                orientationTabs.appendChild(msg);
-                return;
+            if (!type.hasOrientations) {
+                compassWidget.classList.add('opacity-50', 'pointer-events-none');
+                compassLabel.textContent = '-';
+            } else {
+                compassWidget.classList.remove('opacity-50', 'pointer-events-none');
+
+                // Map code to visual rotation or label
+                const map = { 'N': 0, 'E': 90, 'S': 180, 'W': 270, 'Default': 0 };
+                const rotation = map[activeOrientation] || 0;
+                // Rotate the widget
+                compassWidget.style.transform = `rotate(${rotation}deg)`;
+                // Counter-rotate label so it stays upright
+                compassLabel.style.transform = `rotate(-${rotation}deg)`;
+
+                if (activeOrientation === 'Default') compassLabel.textContent = 'N'; // Treat default as North visually
+                else compassLabel.textContent = activeOrientation;
             }
+        }
 
-            orientations.slice(0, 4).forEach(orient => {
-                const key = `${activeFloor}-${activeRoom}-${activeType}-${orient.code}`; // Partial key check?
-                // Actually need to check if ANY stage has this orientation
-                const hasDrawing = hasAnyDrawingForOrientation(activeFloor, activeRoom, activeType, orient.code);
+        // Global function for onclick
+        function rotateOrientation() {
+            const type = types.find(t => t.code === activeType);
+            if (!type.hasOrientations) return;
 
-                const tabBtn = document.createElement('div');
-                const isActive = activeOrientation === orient.code;
+            const sequence = ['N', 'E', 'S', 'W'];
+            let currentIdx = sequence.indexOf(activeOrientation);
+            if (currentIdx === -1) currentIdx = 0; // Start at N if Default
 
-                let classes = "flex-1 text-center py-1 text-xs cursor-pointer rounded-sm transition-all ";
+            const nextIdx = (currentIdx + 1) % sequence.length;
+            setOrientation(sequence[nextIdx]);
+        }
+        window.rotateOrientation = rotateOrientation;
+
+        function setOrientation(o) {
+            activeOrientation = o;
+            updateUI();
+        }
+        window.setOrientation = setOrientation;
+
+        // Render Stage Tabs
+        // --- STAGE TOGGLE (Pill) ---
+        function renderStageToggle() {
+            if (!stageToggleContainer) return;
+            stageToggleContainer.innerHTML = '';
+
+            stages.forEach(stage => {
+                const isActive = activeStage === stage.code;
+                const btn = document.createElement('button');
+
+                let classes = "px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-300 pointer-events-auto ";
                 if (isActive) {
-                    classes += "bg-white text-bronze shadow-sm font-medium";
-                } else if (!hasDrawing) {
-                    classes += "text-gray-300 cursor-not-allowed";
+                    classes += "bg-bronze text-white shadow-md";
                 } else {
                     classes += "text-gray-500 hover:text-bronze hover:bg-white/50";
                 }
 
-                tabBtn.className = classes;
-                tabBtn.textContent = orient.code;
-
-                if (hasDrawing || isActive) {
-                    tabBtn.addEventListener('click', () => {
-                        activeOrientation = orient.code;
-                        updateUI();
-                    });
-                }
-
-                orientationTabs.appendChild(tabBtn);
-            });
-        }
-
-        // Render Stage Tabs
-        function renderStageTabs() {
-            stageTabs.innerHTML = '';
-
-            stages.forEach(stage => {
-                const key = getCurrentKey(stage.code);
-                const hasDrawing = checkDrawingExists(key);
-
-                const tabBtn = document.createElement('button');
-                const isActive = activeStage === stage.code;
-
-                let classes = "px-3 py-1 text-[10px] uppercase tracking-wider border rounded-full transition-all ";
-                if (isActive) {
-                    classes += "bg-midnight text-white border-midnight";
-                } else if (!hasDrawing) {
-                    classes += "text-gray-300 border-gray-100 bg-transparent"; // Keep clickable to allow uploading?
-                    // If we want to allow uploading to empty slots, don't disable. 
-                    // But visually show it's empty.
-                    classes += " decoration-dashed";
-                } else {
-                    classes += "text-midnight border-gray-300 hover:border-bronze hover:text-bronze";
-                }
-
-                tabBtn.className = classes;
-                tabBtn.textContent = stage.name;
-
-                tabBtn.addEventListener('click', () => {
+                btn.className = classes;
+                btn.textContent = stage.name;
+                btn.onclick = () => {
                     activeStage = stage.code;
                     updateUI();
-                });
+                };
 
-                stageTabs.appendChild(tabBtn);
+                stageToggleContainer.appendChild(btn);
             });
         }
 
