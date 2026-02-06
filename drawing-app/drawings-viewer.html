@@ -1202,7 +1202,8 @@
         function saveToLocalStorage() {
             const data = {
                 urlData: urlData,
-                csvData: csvData
+                csvData: csvData,
+                roomConfig: roomConfig
             };
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
         }
