@@ -527,7 +527,18 @@
             saveToLocalStorage();
             renderMatrix();
             document.getElementById('uploadStats').textContent = `Upload Complete. ${successCount} files processed.`;
-            startUploadBtn.textContent = "Finished";
+
+            // Replace button to become a "Close" button
+            const newBtn = startUploadBtn.cloneNode(true);
+            newBtn.textContent = "Finished (Close)";
+            newBtn.disabled = false;
+            newBtn.classList.remove('bg-bronze', 'hover:bg-bronze-dark');
+            newBtn.classList.add('bg-success', 'hover:bg-green-700');
+            newBtn.addEventListener('click', () => {
+                uploadModal.classList.add('hidden');
+                window.location.reload();
+            });
+            startUploadBtn.parentNode.replaceChild(newBtn, startUploadBtn);
         }
 
 
