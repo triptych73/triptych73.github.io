@@ -441,22 +441,39 @@
             filesToUpload = [];
             uploadListBody.innerHTML = '';
 
-            files.forEach(file => {
-                const match = aiMetadata.find(m => m.filename === file.name);
-                filesToUpload.push({
-                    file: file,
-                    meta: match || null,
-                    status: 'pending'
-                });
-            });
+            function handleFiles(files) {
+                filesToUpload = [];
+                uploadListBody.innerHTML = '';
 
-            if (filesToUpload.length > 0) {
-                dropZone.classList.add('hidden');
-                uploadPreview.classList.remove('hidden');
-                renderUploadList();
-                startUploadBtn.disabled = false;
-                startUploadBtn.classList.remove('bg-gray-300');
-                startUploadBtn.classList.add('bg-bronze', 'hover:bg-bronze-dark');
+                files.forEach(file => {
+                    // Fuzzy Matcher: Normalize file name vs metadata name
+                    // 1. Remove .pdf extension
+                    // 2. Remove " A3", " A1", " v1" suffixes
+                    // 3. Trim whitespace
+                    const normalize = (n) => n.replace(/\.pdf$/i, '').replace(/ (A3|A1|A0|v\d+)$/i, '').trim().toLowerCase();
+
+                    const fileNorm = normalize(file.name);
+
+                    const match = aiMetadata.find(m => {
+                        const metaNorm = normalize(m.filename);
+                        return fileNorm === metaNorm || fileNorm.includes(metaNorm) || metaNorm.includes(fileNorm);
+                    });
+
+                    filesToUpload.push({
+                        file: file,
+                        meta: match || null,
+                        status: 'pending'
+                    });
+                });
+
+                if (filesToUpload.length > 0) {
+                    dropZone.classList.add('hidden');
+                    uploadPreview.classList.remove('hidden');
+                    renderUploadList();
+                    startUploadBtn.disabled = false;
+                    startUploadBtn.classList.remove('bg-gray-300');
+                    startUploadBtn.classList.add('bg-bronze', 'hover:bg-bronze-dark');
+                }
             }
         }
 
