@@ -388,8 +388,21 @@
                     metadata = await res.json();
                 } catch (e) {
                     console.warn('Could not load drawings.json', e);
-                    // Fallback for local testing if needed, or just let user know
                 }
+
+                // Load AI Metadata
+                try {
+                    console.log("Fetching AI Metadata...");
+                    const res = await fetch('assets/data/ai_metadata.json');
+                    if (res.ok) {
+                        aiMetadata = await res.json();
+                        console.log("AI Metadata Loaded:", aiMetadata.length);
+                    } else {
+                        console.warn("AI Metadata missing/error:", res.status);
+                    }
+                } catch (e) { console.warn('Could not load ai_metadata.json', e); }
+
+                console.log("Attaching Event Listeners...");
 
                 // Events
                 document.getElementById('saveBtn').addEventListener('click', saveAndExport);
