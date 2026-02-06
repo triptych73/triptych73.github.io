@@ -733,7 +733,15 @@
             // Try to keep active stage, or default to O
 
             document.querySelectorAll('.floor-region').forEach(el => {
-                el.classList.toggle('active', el.dataset.floor === floor);
+                const isActive = el.dataset.floor === floor;
+                el.classList.toggle('active', isActive);
+                if (isActive) {
+                    el.classList.add('bg-bronze/60', 'text-white');
+                    el.classList.remove('text-transparent');
+                } else {
+                    el.classList.remove('bg-bronze/60', 'text-white');
+                    el.classList.add('text-transparent');
+                }
             });
 
             updateUI();
