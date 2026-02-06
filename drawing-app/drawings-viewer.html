@@ -496,6 +496,7 @@
         // State
         let csvData = [];
         let urlData = [];
+        let assignmentDetails = {}; // Preserved from Manager
         let activeFloor = '01';
         let activeRoom = '1';
         let activeType = 'G';
@@ -564,6 +565,10 @@
                     console.log("Loaded CSV Data:", csvData);
                     if (savedData.urlData && savedData.urlData.length > 0) urlData = savedData.urlData;
                     console.log("Loaded URL Data:", urlData);
+
+                    if (savedData.assignmentDetails && typeof savedData.assignmentDetails === 'object') {
+                        assignmentDetails = savedData.assignmentDetails;
+                    }
 
                     // Robust check for roomConfig
                     if (savedData.roomConfig && typeof savedData.roomConfig === 'object') {
@@ -1088,7 +1093,8 @@
             const data = {
                 csvData: csvData,
                 urlData: urlData,
-                roomConfig: roomConfig
+                roomConfig: roomConfig,
+                assignmentDetails: assignmentDetails
             };
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
 
@@ -1203,7 +1209,8 @@
             const data = {
                 urlData: urlData,
                 csvData: csvData,
-                roomConfig: roomConfig
+                roomConfig: roomConfig,
+                assignmentDetails: assignmentDetails
             };
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
         }
