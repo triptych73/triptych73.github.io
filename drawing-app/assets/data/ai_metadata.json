@@ -1,0 +1,146 @@
+[
+    {
+        "filename": "A100 GA PLANS_A001.pdf",
+        "floor": "01",
+        "room": "1",
+        "type": "G",
+        "orientation": "Default",
+        "title": "Plans - Proposed Level 1",
+        "number": "A001",
+        "revision": "01",
+        "date": "2021-09-16",
+        "confidence": "High (OCR)"
+    },
+    {
+        "filename": "A100 GA PLANS_A002.pdf",
+        "floor": "02",
+        "room": "1",
+        "type": "G",
+        "orientation": "Default",
+        "title": "Plans - Proposed Level 2",
+        "number": "A002",
+        "revision": "01",
+        "date": "2021-09-16",
+        "confidence": "Medium (Inferred Pattern)"
+    },
+    {
+        "filename": "A100 GA PLANS_A003.pdf",
+        "floor": "03",
+        "room": "1",
+        "type": "G",
+        "orientation": "Default",
+        "title": "Plans - Proposed Level 3",
+        "number": "A003",
+        "revision": "01",
+        "date": "2021-09-16",
+        "confidence": "Medium (Inferred Pattern)"
+    },
+    {
+        "filename": "A100 GA PLANS_A004.pdf",
+        "floor": "04",
+        "room": "1",
+        "type": "G",
+        "orientation": "Default",
+        "title": "Plans - Proposed Level 4",
+        "number": "A004",
+        "revision": "01",
+        "date": "2021-09-16",
+        "confidence": "Medium (Inferred Pattern)"
+    },
+    {
+        "filename": "A100 GA PLANS_A005.pdf",
+        "floor": "05",
+        "room": "1",
+        "type": "G",
+        "orientation": "Default",
+        "title": "Plans - Proposed Level 5",
+        "number": "A005",
+        "revision": "01",
+        "date": "2021-09-16",
+        "confidence": "Medium (Inferred Pattern)"
+    },
+    {
+        "filename": "A100 GA PLANS_A006.pdf",
+        "floor": "06",
+        "room": "1",
+        "type": "G",
+        "orientation": "Default",
+        "title": "Plans - Proposed Level 6",
+        "number": "A006",
+        "revision": "01",
+        "date": "2021-09-16",
+        "confidence": "High (OCR)"
+    },
+    {
+        "filename": "A100 GA PLANS_A121.pdf",
+        "floor": "07-11",
+        "room": "1",
+        "type": "G",
+        "orientation": "Default",
+        "title": "Plans - Proposed Levels 7-11",
+        "number": "A121",
+        "revision": "01",
+        "date": "2021-09-16",
+        "confidence": "High (OCR)"
+    },
+    {
+        "filename": "A100 GA PLANS_A122.pdf",
+        "floor": "12",
+        "room": "1",
+        "type": "G",
+        "orientation": "Default",
+        "title": "Plans - Proposed Level 12",
+        "number": "A122",
+        "confidence": "Medium (Inferred Pattern - Seq)"
+    },
+    {
+        "filename": "A250 v10_EW 1-3.pdf",
+        "floor": "01-03",
+        "room": "1",
+        "type": "E",
+        "orientation": "Default",
+        "title": "External Wall Details Levels 1-3",
+        "number": "A250",
+        "confidence": "Low (Filename Only - OCR Failed)"
+    },
+    {
+        "filename": "A250 v10_EW EXT 1-3.pdf",
+        "floor": "01-03",
+        "room": "1",
+        "type": "E",
+        "orientation": "Default",
+        "title": "External Wall Details (EXT) Levels 1-3",
+        "number": "A250",
+        "confidence": "Low (Filename Only - OCR Failed)"
+    },
+    {
+        "filename": "A250 v10_DOOR DETAILS.pdf",
+        "floor": "All",
+        "room": "1",
+        "type": "I",
+        "orientation": "Default",
+        "title": "Door Details",
+        "number": "A250",
+        "confidence": "Low (Filename Only - OCR Failed)"
+    },
+    {
+        "filename": "A250 v10_A249.pdf",
+        "floor": "Unknown",
+        "room": "1",
+        "type": "I",
+        "orientation": "Default",
+        "title": "Detail A249",
+        "number": "A249",
+        "confidence": "Low (Filename Only - OCR Failed)"
+    },
+    {
+        "filename": "A250 v10_A250.pdf",
+        "floor": "Unknown",
+        "room": "1",
+        "type": "I",
+        "orientation": "Default",
+        "title": "Detail A250",
+        "number": "A250",
+        "confidence": "Low (Filename Only - OCR Failed)"
+    }
+]
