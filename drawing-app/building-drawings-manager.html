@@ -399,10 +399,122 @@
                 document.getElementById('autoAssignBtn').addEventListener('click', openAutoAssign);
                 document.getElementById('modalCancelBtn').addEventListener('click', () => modalOverlay.classList.add('hidden'));
                 document.getElementById('modalApplyBtn').addEventListener('click', applyAutoAssignments);
-                document.getElementById('selectAllModal').addEventListener('change', (e) => {
-                    document.querySelectorAll('.modal-check').forEach(c => c.checked = e.target.checked);
-                });
+                document.querySelectorAll('.modal-check').forEach(c => c.checked = e.target.checked);
+            });
+
+            // Bulk Upload Events
+            document.getElementById('bulkUploadBtn').addEventListener('click', () => uploadModal.classList.remove('hidden'));
+            document.getElementById('closeUploadBtn').addEventListener('click', () => uploadModal.classList.add('hidden'));
+
+            // Drag and Drop
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-bronze', 'bg-bronze/5'); });
+            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-bronze', 'bg-bronze/5'); });
+            dropZone.addEventListener('drop', handleDrop);
+            document.getElementById('fileInput').addEventListener('change', (e) => handleFiles(Array.from(e.target.files)));
+
+            startUploadBtn.addEventListener('click', startBulkUpload);
             }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                dropZone.classList.remove('border-bronze', 'bg-bronze/5');
+                const files = Array.from(e.dataTransfer.files);
+                handleFiles(files);
+            }
+
+            function handleFiles(files) {
+                filesToUpload = [];
+                uploadListBody.innerHTML = '';
+
+                files.forEach(file => {
+                    const match = aiMetadata.find(m => m.filename === file.name);
+                    filesToUpload.push({
+                        file: file,
+                        meta: match || null,
+                        status: 'pending'
+                    });
+                });
+
+                if (filesToUpload.length > 0) {
+                    dropZone.classList.add('hidden');
+                    uploadPreview.classList.remove('hidden');
+                    renderUploadList();
+                    startUploadBtn.disabled = false;
+                    startUploadBtn.classList.remove('bg-gray-300');
+                    startUploadBtn.classList.add('bg-bronze', 'hover:bg-bronze-dark');
+                }
+            }
+
+            function renderUploadList() {
+                uploadListBody.innerHTML = '';
+                filesToUpload.forEach((item, idx) => {
+                    const tr = document.createElement('tr');
+                    const metaText = item.meta
+                        ? `<span class="text-midnight font-medium">${item.meta.number}</span> <span class="text-gray-400">(${item.meta.floor}-${item.meta.room}-${item.meta.type})</span>`
+                        : '<span class="text-red-400">No Match Found</span>';
+
+                    let statusHtml = '<span class="text-gray-400">Ready</span>';
+                    if (item.status === 'uploading') statusHtml = '<span class="text-bronze animate-pulse">Uploading...</span>';
+                    if (item.status === 'success') statusHtml = '<span class="text-success">Done</span>';
+                    if (item.status === 'error') statusHtml = '<span class="text-red-500">Error</span>';
+
+                    tr.innerHTML = `
+                        <td class="p-3 border-b text-gray-600">${item.file.name}</td>
+                        <td class="p-3 border-b">${metaText}</td>
+                        <td class="p-3 border-b" id="status-${idx}">${statusHtml}</td>
+                    `;
+                    uploadListBody.appendChild(tr);
+                });
+                document.getElementById('uploadStats').textContent = `${filesToUpload.length} files queued.`;
+            }
+
+            async function startBulkUpload() {
+                startUploadBtn.disabled = true;
+                document.getElementById('uploadStats').textContent = "Uploading...";
+
+                const storageRef = firebase.storage().ref();
+                let successCount = 0;
+
+                for (let i = 0; i < filesToUpload.length; i++) {
+                    const item = filesToUpload[i];
+                    if (!item.meta) continue;
+
+                    item.status = 'uploading';
+                    renderUploadList();
+
+                    try {
+                        const path = `drawings/${item.meta.floor}/${item.file.name}`;
+                        const fileRef = storageRef.child(path);
+
+                        const snapshot = await fileRef.put(item.file);
+                        const downloadURL = await snapshot.ref.getDownloadURL();
+
+                        const key1 = `${item.meta.floor}-${item.meta.room}-${item.meta.type}-${item.meta.orientation}-P`;
+                        csvData[key1] = 1;
+                        assignmentDetails[key1] = { sourceFile: item.file.name, logic: 'Bulk Upload' };
+
+                        const existingIdx = urlData.findIndex(row => row[0] === key1);
+                        if (existingIdx > -1) {
+                            urlData[existingIdx][1] = downloadURL;
+                        } else {
+                            urlData.push([key1, downloadURL]);
+                        }
+
+                        item.status = 'success';
+                        successCount++;
+                    } catch (err) {
+                        console.error("Upload failed", err);
+                        item.status = 'error';
+                    }
+                    renderUploadList();
+                }
+
+                saveToLocalStorage();
+                renderMatrix();
+                document.getElementById('uploadStats').textContent = `Upload Complete. ${successCount} files processed.`;
+                startUploadBtn.textContent = "Finished";
+            }
+
 
             function renderHeaders() {
                 // Subheader: Type/Orient labels
