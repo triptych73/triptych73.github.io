@@ -171,7 +171,7 @@
             <h1 class="font-serif text-xl tracking-widest uppercase text-midnight">St Mary Somerset</h1>
             <span class="h-4 w-px bg-bronze/30"></span>
             <span class="text-xs tracking-[0.2em] text-bronze uppercase">Drawings Archive</span>
-            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.2.3</span>
+            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.2.4</span>
         </div>
 
         <div class="flex items-center gap-4">
@@ -672,7 +672,16 @@
         function renderRoomList() {
             roomList.innerHTML = '';
 
-            const numRooms = roomConfig[activeFloor] || 3;
+            let numRooms = 3;
+            let roomNames = {};
+
+            const config = roomConfig[activeFloor];
+            if (typeof config === 'number') {
+                numRooms = config;
+            } else if (config && typeof config === 'object') {
+                numRooms = config.count || 3;
+                roomNames = config.names || {};
+            }
 
             // Icon Definitions
             const icons = {
@@ -687,12 +696,14 @@
 
             for (let i = 1; i <= numRooms; i++) {
                 const room = i.toString();
+                const customName = roomNames[i] || '';
+                const displayName = customName ? `${customName} <span class="text-[10px] text-gray-400 font-normal ml-1">(R${i})</span>` : `Room ${i}`;
 
                 const roomGroup = document.createElement('div');
 
                 const header = document.createElement('h3');
                 header.className = "font-serif text-sm text-bronze uppercase tracking-widest pl-1 mb-2";
-                header.textContent = `Room ${room}`;
+                header.innerHTML = displayName;
 
                 const grid = document.createElement('div');
                 grid.className = "grid grid-cols-4 gap-2";
@@ -879,27 +890,59 @@
         function openConfigurator() {
             configList.innerHTML = '';
 
-            // Ensure defaults
+            // Ensure defaults and migrate logic
             floors.forEach(f => {
-                if (!roomConfig[f]) roomConfig[f] = 3; // Default to 3 rooms
+                if (!roomConfig[f]) {
+                    roomConfig[f] = { count: 3, names: {} }; // Default
+                } else if (typeof roomConfig[f] === 'number') {
+                    // Migration from old schema
+                    roomConfig[f] = { count: roomConfig[f], names: {} };
+                }
+                // Ensure names object exists
+                if (!roomConfig[f].names) roomConfig[f].names = {};
             });
 
             floors.forEach(floor => {
-                const current = roomConfig[floor] || 3;
+                const config = roomConfig[floor];
+                const current = config.count;
 
                 const row = document.createElement('div');
-                row.className = "flex items-center justify-between py-2";
-                row.innerHTML = `
-                    <span class="font-serif text-sm w-16 text-midnight">Lvel ${floor}</span>
-                    <div class="flex gap-2">
-                        ${[1, 2, 3].map(n => `
-                            <button class="room-count-btn w-8 h-8 text-xs font-medium rounded-full border ${current === n ? 'bg-bronze text-white border-bronze' : 'bg-white text-gray-400 border-gray-200 hover:border-bronze'}"
-                                data-floor="${floor}" data-count="${n}" onclick="selectRoomCount('${floor}', ${n})">
-                                ${n}
-                            </button>
-                        `).join('')}
+                row.className = "py-4";
+
+                // Count Selector
+                let html = `
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-serif text-sm w-16 text-midnight">Lvel ${floor}</span>
+                        <div class="flex gap-2">
+                            ${[1, 2, 3].map(n => `
+                                <button class="room-count-btn w-8 h-8 text-xs font-medium rounded-full border ${current === n ? 'bg-bronze text-white border-bronze' : 'bg-white text-gray-400 border-gray-200 hover:border-bronze'}"
+                                    data-floor="${floor}" data-count="${n}" onclick="selectRoomCount('${floor}', ${n})">
+                                    ${n}
+                                </button>
+                            `).join('')}
+                        </div>
                     </div>
                  `;
+
+                // Name Inputs
+                html += `<div id="names-${floor}" class="space-y-2 pl-16">`;
+                for (let i = 1; i <= 3; i++) {
+                    const isVisible = i <= current;
+                    const name = config.names[i] || '';
+                    html += `
+                        <div class="room-name-input flex items-center gap-2 ${isVisible ? '' : 'hidden'}" data-floor="${floor}" data-room="${i}">
+                            <span class="text-[10px] text-gray-400 w-4">R${i}</span>
+                            <input type="text" 
+                                class="flex-1 border-b border-gray-200 text-xs py-1 px-2 focus:outline-none focus:border-bronze transition-colors"
+                                placeholder="Room ${i} Name"
+                                value="${name}"
+                                onchange="updateRoomName('${floor}', ${i}, this.value)">
+                        </div>
+                     `;
+                }
+                html += `</div>`;
+
+                row.innerHTML = html;
                 configList.appendChild(row);
             });
 
@@ -907,9 +950,9 @@
         }
 
         function selectRoomCount(floor, count) {
-            // Update local state temporarily? Or direct update?
-            // VISUAL UPDATE
-            const btns = configList.querySelectorAll(`button[data-floor="${floor}"]`);
+            // VISUAL UPDATE - Buttons
+            const row = configList.querySelector(`button[data-floor="${floor}"]`).parentElement;
+            const btns = row.querySelectorAll('button');
             btns.forEach(b => {
                 if (parseInt(b.dataset.count) === count) {
                     b.className = "room-count-btn w-8 h-8 text-xs font-medium rounded-full border bg-bronze text-white border-bronze transition-all scale-110";
@@ -917,11 +960,31 @@
                     b.className = "room-count-btn w-8 h-8 text-xs font-medium rounded-full border bg-white text-gray-400 border-gray-200 hover:border-bronze transition-all";
                 }
             });
+
+            // VISUAL UPDATE - Inputs
+            const inputContainer = document.getElementById(`names-${floor}`);
+            const inputs = inputContainer.querySelectorAll('.room-name-input');
+            inputs.forEach(div => {
+                const r = parseInt(div.dataset.room);
+                if (r <= count) div.classList.remove('hidden');
+                else div.classList.add('hidden');
+            });
+
             // STORE
-            roomConfig[floor] = count;
+            if (typeof roomConfig[floor] === 'number') {
+                roomConfig[floor] = { count: count, names: {} };
+            }
+            roomConfig[floor].count = count;
         }
+
+        function updateRoomName(floor, room, name) {
+            if (!roomConfig[floor].names) roomConfig[floor].names = {};
+            roomConfig[floor].names[room] = name;
+        }
+
         // Expose to window for onclick
         window.selectRoomCount = selectRoomCount;
+        window.updateRoomName = updateRoomName;
 
         function saveConfigurator() {
             // Persist
