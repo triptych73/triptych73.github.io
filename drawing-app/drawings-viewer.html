@@ -561,9 +561,26 @@
                     // Minimal merge logic or overwrite
                     // For simplicity, we trust the saved data if it exists
                     if (savedData.csvData && savedData.csvData.length > 0) csvData = savedData.csvData;
+                    console.log("Loaded CSV Data:", csvData);
                     if (savedData.urlData && savedData.urlData.length > 0) urlData = savedData.urlData;
-                    if (savedData.roomConfig) roomConfig = savedData.roomConfig;
+                    console.log("Loaded URL Data:", urlData);
 
+                    // Robust check for roomConfig
+                    if (savedData.roomConfig && typeof savedData.roomConfig === 'object') {
+                        roomConfig = savedData.roomConfig;
+                        console.log("Loaded Room Config:", roomConfig);
+                    } else {
+                        console.warn("No valid roomConfig found in saved data. Using defaults.");
+                    }
+
+                    // Verify keys
+                    Object.keys(roomConfig).forEach(k => {
+                        if (typeof roomConfig[k] === 'number') {
+                            // Migrate on the fly?
+                            console.log(`Migrating legacy config for floor ${k}`);
+                            roomConfig[k] = { count: roomConfig[k], names: {} };
+                        }
+                    });
 
                     showNotification('Project Cache Loaded');
                 } catch (e) {
