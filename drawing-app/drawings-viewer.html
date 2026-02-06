@@ -171,7 +171,7 @@
             <h1 class="font-serif text-xl tracking-widest uppercase text-midnight">St Mary Somerset</h1>
             <span class="h-4 w-px bg-bronze/30"></span>
             <span class="text-xs tracking-[0.2em] text-bronze uppercase">Drawings Archive</span>
-            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.3.0</span>
+            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.3.1</span>
         </div>
 
         <div class="flex items-center gap-4">
@@ -294,9 +294,9 @@
             <!-- 3. TOWER WIDGET (Bottom-Left) -->
             <div id="hud-tower" class="absolute bottom-6 left-6 pointer-events-auto flex items-end gap-4">
                 <div
-                    class="glass-panel rounded-lg shadow-lg p-2 backdrop-blur-md bg-white/70 border border-white/50 flex flex-col items-center">
-                    <div class="relative w-24 h-64 overflow-hidden rounded mb-2 bg-gray-50/50">
-                        <img src="images/tower.png" class="absolute bottom-0 w-full opacity-80 mix-blend-multiply">
+                    class="glass-panel rounded-lg shadow-lg p-2 backdrop-blur-md bg-white/30 border border-white/50 flex flex-col items-center">
+                    <div class="relative w-24 h-64 overflow-hidden rounded mb-2 bg-transparent">
+                        <img src="images/tower.png" class="absolute bottom-0 w-full opacity-90 mix-blend-multiply">
                         <div id="floorOverlay" class="absolute inset-0 flex flex-col-reverse h-full w-full">
                             <!-- Injected JS (Floors) -->
                         </div>
@@ -658,25 +658,41 @@
         function renderFloorRegions() {
             floorOverlay.innerHTML = '';
 
-            // Floors rendered top-to-bottom (reversed)
-            floors.slice().reverse().forEach(floor => {
-                const floorDiv = document.createElement('div');
-                const height = floorHeights[floor] || 30; // Fallback height
+            // For flex-col-reverse, we append from Bottom (Floor 01) to Top.
+            // So we iterate floors normally: 01, 02, ... 12.
+            // 01 is first child -> Bottom.
+            // 12 is last child -> Top.
 
-                // Use fixed pixel height instead of flex-1
-                floorDiv.className = `floor-region flex items-center justify-center cursor-pointer text-transparent hover:text-white transition-all duration-300 ${floor === activeFloor ? 'active' : ''}`;
-                floorDiv.style.height = `${height}px`;
+            floors.forEach(floor => {
+                const floorDiv = document.createElement('div');
+                // Calculate relative height logic or pure flex?
+                // Using flex-grow based on the height ratio to proportional scaling.
+                const rawHeight = floorHeights[floor] || 30;
+
+                floorDiv.className = `floor-region w-full flex items-center justify-center cursor-pointer text-transparent hover:text-white transition-all duration-300 hover:bg-bronze/40 ${floor === activeFloor ? 'active bg-bronze/60' : ''}`;
+                // Flex grow based on height
+                floorDiv.style.flex = `${rawHeight} 1 0%`; // flex-grow, flex-shrink, flex-basis
                 floorDiv.dataset.floor = floor;
 
                 // Content inside the floor (visible on hover/active)
                 const content = document.createElement('span');
-                content.className = "font-serif text-lg font-medium drop-shadow-md z-20 pointer-events-none";
+                content.className = "font-serif text-xs font-medium drop-shadow-md z-20 pointer-events-none opacity-0 hover:opacity-100 transition-opacity";
+                // Show floor number on hover or active? 
+                // Let's make it more subtle for HUD
+                if (floor === activeFloor) content.classList.remove('opacity-0');
+
                 content.textContent = floor;
 
                 floorDiv.appendChild(content);
 
                 floorDiv.addEventListener('click', () => {
                     setActiveFloor(floor);
+                });
+
+                // Mouseover to show content
+                floorDiv.addEventListener('mouseenter', () => content.classList.remove('opacity-0'));
+                floorDiv.addEventListener('mouseleave', () => {
+                    if (floor !== activeFloor) content.classList.add('opacity-0');
                 });
 
                 floorOverlay.appendChild(floorDiv);
