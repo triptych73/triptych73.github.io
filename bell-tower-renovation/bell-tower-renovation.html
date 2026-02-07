@@ -103,6 +103,19 @@
             opacity: 0;
             float: right;
         }
+
+        /* Context Menu hint */
+        .tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: #333;
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            display: none;
+            z-index: 100;
+        }
     </style>
     <script type="importmap">
         {
@@ -118,7 +131,10 @@
 
     <div id="ui-panel">
         <h2>Renovation Controls <span id="saved-indicator" class="saved-status">Saved ✓</span></h2>
-        <div class="instructions">Click tiles to toggle: Brick -> Insulated -> Flush Render.</div>
+        <div class="instructions">
+            Left-Click: Toggle Tile<br>
+            Right-Click: Select Start -> End (Rect Fill)
+        </div>
 
         <div class="control-group">
             <button id="btn-reset" class="primary">Reset to Exposed Brick</button>
@@ -149,6 +165,7 @@
     </div>
 
     <div id="canvas-container"></div>
+    <div id="tooltip" class="tooltip"></div>
 
     <script type="module">
         import * as THREE from 'three';
@@ -197,7 +214,8 @@
                 render: 0xffffff,    // White
                 flushRender: 0xeeeeee, // Slightly off-white
                 wireframe: 0x333333,
-                background: 0x202020
+                background: 0x202020,
+                selection: 0x00ff00 // Green selection glow
             }
         };
 
@@ -205,7 +223,8 @@
         const state = {
             tiles: [], // Array of Tile objects
             isWireframe: false,
-            remoteUpdateInProgress: false
+            remoteUpdateInProgress: false,
+            selectedTile: null // For range selection
         };
 
         // --- Scene Setup ---
@@ -299,11 +318,15 @@
         // --- Helper Classes ---
 
         class Tile {
-            constructor(position, normal, width, height, type = 'wall') {
+            constructor(position, normal, width, height, type = 'wall', wallId, gx, gy) {
                 this.state = 0; // 0: Brick, 1: Insulated, 2: Flush Render
                 this.originalPosition = position.clone();
                 this.normal = normal.clone();
                 this.type = type; // 'wall', 'reveal'
+                this.wallId = wallId; // ID of the wall/plane this belongs to
+                this.gridX = gx;
+                this.gridY = gy;
+                this.isSelected = false;
 
                 // Create geometry
                 const geometry = new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02);
@@ -311,7 +334,8 @@
                 this.material = new THREE.MeshStandardMaterial({
                     color: CONFIG.colors.brick,
                     roughness: 0.9,
-                    metalness: 0.1
+                    metalness: 0.1,
+                    emissive: 0x000000
                 });
 
                 this.mesh = new THREE.Mesh(geometry, this.material);
@@ -334,7 +358,14 @@
                 this.updateVisuals();
             }
 
+            setSelection(selected) {
+                this.isSelected = selected;
+                this.material.emissive.setHex(selected ? 0x00ff00 : 0x000000);
+                this.material.emissiveIntensity = selected ? 0.5 : 0;
+            }
+
             updateVisuals() {
+                // Defer stats update to avoid layout thrashing if mass updating
                 requestAnimationFrame(updateStats);
 
                 if (this.state === 1) { // Insulated
@@ -377,7 +408,7 @@
             return false;
         }
 
-        function createWall(p1, p2, type = 'solid') {
+        function createWall(p1, p2, type = 'solid', wallId) {
             const length = p1.distanceTo(p2);
             const height = CONFIG.wallHeight;
 
@@ -428,7 +459,7 @@
                             .add(wallDir.clone().multiplyScalar(localX))
                             .add(upDir.clone().multiplyScalar(localY));
 
-                        const tile = new Tile(pos, normal, realTileW, realTileH);
+                        const tile = new Tile(pos, normal, realTileW, realTileH, 'wall', wallId, ix, iy);
                         state.tiles.push(tile);
                     }
                 }
@@ -436,11 +467,11 @@
 
             if (type === 'window') {
                 const holeCenterPos = p1.clone().add(wallDir.clone().multiplyScalar(holeCenterX));
-                createReveal(holeCenterPos, normal, wallDir);
+                createReveal(holeCenterPos, normal, wallDir, wallId);
             }
         }
 
-        function createReveal(centerPos, wallNormal, wallDir) {
+        function createReveal(centerPos, wallNormal, wallDir, parentWallId) {
             const halfW = CONFIG.window.width / 2;
             const depth = CONFIG.window.depth;
 
@@ -451,6 +482,7 @@
             const tileD = depth / stepsD;
 
             // 1. Left Reveal
+            const leftId = parentWallId + '_reveal_left';
             for (let iy = 0; iy < stepsY; iy++) {
                 for (let id = 0; id < stepsD; id++) {
                     const ly = (iy + 0.5) * tileH;
@@ -461,12 +493,13 @@
                         .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
                         .sub(wallNormal.clone().multiplyScalar(ld));
 
-                    const tile = new Tile(pos, wallDir, tileD, tileH, 'reveal');
+                    const tile = new Tile(pos, wallDir, tileD, tileH, 'reveal', leftId, id, iy); // x=depth, y=height
                     state.tiles.push(tile);
                 }
             }
 
             // 2. Right Reveal 
+            const rightId = parentWallId + '_reveal_right';
             for (let iy = 0; iy < stepsY; iy++) {
                 for (let id = 0; id < stepsD; id++) {
                     const ly = (iy + 0.5) * tileH;
@@ -477,12 +510,13 @@
                         .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
                         .sub(wallNormal.clone().multiplyScalar(ld));
 
-                    const tile = new Tile(pos, wallDir.clone().negate(), tileD, tileH, 'reveal');
+                    const tile = new Tile(pos, wallDir.clone().negate(), tileD, tileH, 'reveal', rightId, id, iy);
                     state.tiles.push(tile);
                 }
             }
 
             // 3. Arch Reveal
+            const archId = parentWallId + '_reveal_arch';
             const archCenter = centerPos.clone().add(new THREE.Vector3(0, 1, 0).multiplyScalar(CONFIG.window.heightRect));
             const arcSteps = 12;
             const arcLen = Math.PI * CONFIG.window.archRadius;
@@ -505,7 +539,7 @@
                         .negate()
                         .normalize();
 
-                    const tile = new Tile(pos, tileNormal, tileD, tileArcLen, 'reveal');
+                    const tile = new Tile(pos, tileNormal, tileD, tileArcLen, 'reveal', archId, id, i); // x=depth, y=angle
                     state.tiles.push(tile);
                 }
             }
@@ -518,34 +552,111 @@
         const NorthCut = new THREE.Vector3(0.75, 0, -2);
         const EastCut = new THREE.Vector3(2, 0, -0.75);
 
-        createWall(SE, SW, 'window');
-        createWall(SW, NW, 'window');
-        createWall(NW, NorthCut, 'window');
-        createWall(EastCut, SE, 'window');
-        createWall(NorthCut, EastCut, 'chamfer');
+        createWall(SE, SW, 'window', 'south_wall');
+        createWall(SW, NW, 'window', 'west_wall');
+        createWall(NW, NorthCut, 'window', 'north_wall');
+        createWall(EastCut, SE, 'window', 'east_wall');
+        createWall(NorthCut, EastCut, 'chamfer', 'chamfer_wall');
 
         // --- Raycasting & Interaction Setup ---
         const rc = new THREE.Raycaster();
         const ptr = new THREE.Vector2();
 
         function onPointerDown(event) {
+            // Only handle pointer interactions on canvas
+            if (event.target !== renderer.domElement) return;
+
             ptr.x = (event.clientX / window.innerWidth) * 2 - 1;
             ptr.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
             rc.setFromCamera(ptr, camera);
-
             const intersects = rc.intersectObjects(scene.children);
 
-            for (let i = 0; i < intersects.length; i++) {
-                const obj = intersects[i].object;
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
                 if (obj.userData && obj.userData.tile) {
-                    obj.userData.tile.toggle();
-                    break;
+                    const tile = obj.userData.tile;
+
+                    if (event.button === 0) { // Left Click
+                        tile.toggle();
+                    } else if (event.button === 2) { // Right Click
+                        handleRightClick(tile);
+                    }
                 }
             }
         }
+
+        // Prevent context menu
+        window.addEventListener('contextmenu', e => e.preventDefault());
         window.addEventListener('pointerdown', onPointerDown);
 
+        function handleRightClick(tile) {
+            if (!state.selectedTile) {
+                // Select Start
+                state.selectedTile = tile;
+                tile.setSelection(true);
+            } else {
+                // If clicking same tile, deselect
+                if (state.selectedTile === tile) {
+                    state.selectedTile = null;
+                    tile.setSelection(false);
+                    return;
+                }
+
+                // If clicking different tile, check wall Match
+                if (state.selectedTile.wallId === tile.wallId) {
+                    // Perform Block Fill
+                    performBlockFill(state.selectedTile, tile);
+
+                    // Deselect
+                    state.selectedTile.setSelection(false);
+                    state.selectedTile = null;
+                } else {
+                    // Different wall -> New Selection
+                    state.selectedTile.setSelection(false);
+                    state.selectedTile = tile;
+                    tile.setSelection(true);
+                }
+            }
+        }
+
+        function performBlockFill(t1, t2) {
+            const wallId = t1.wallId;
+            const minX = Math.min(t1.gridX, t2.gridX);
+            const maxX = Math.max(t1.gridX, t2.gridX);
+            const minY = Math.min(t1.gridY, t2.gridY);
+            const maxY = Math.max(t1.gridY, t2.gridY);
+
+            // Find tiles in range
+            const tilesInRange = state.tiles.filter(t =>
+                t.wallId === wallId &&
+                t.gridX >= minX && t.gridX <= maxX &&
+                t.gridY >= minY && t.gridY <= maxY
+            );
+
+            if (tilesInRange.length === 0) return;
+
+            // Find most common type
+            const counts = { 0: 0, 1: 0, 2: 0 };
+            tilesInRange.forEach(t => counts[t.state]++);
+
+            let commonState = 0;
+            let maxCount = -1;
+            for (let s = 0; s <= 2; s++) {
+                if (counts[s] > maxCount) {
+                    maxCount = counts[s];
+                    commonState = s;
+                }
+            }
+
+            const nextState = (commonState + 1) % 3;
+
+            // Apply
+            tilesInRange.forEach(t => t.setState(nextState));
+
+            // Save
+            scheduleSave();
+        }
 
         // --- UI Listeners Setup ---
         document.getElementById('btn-reset').onclick = () => {
