@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bell Tower Renovation Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            width: 250px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.2em;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: #444;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        button.primary {
+            background: #0078d4;
+        }
+
+        button.primary:hover {
+            background: #106ebe;
+        }
+
+        .stats {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+            font-size: 0.85em;
+            color: #aaa;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .instructions {
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+
+    <div id="ui-panel">
+        <h2>Renovation Controls</h2>
+        <div class="instructions">Click tiles to toggle insulation.</div>
+
+        <div class="control-group">
+            <button id="btn-reset" class="primary">Reset to Exposed Brick</button>
+            <button id="btn-render-all">Set All to Insulated</button>
+            <button id="btn-wireframe">Toggle Wireframe</button>
+            <button id="btn-export">Export Configuration</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-row">
+                <span>Total Tiles:</span>
+                <span id="stat-total">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Insulated:</span>
+                <span id="stat-insulated">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Coverage:</span>
+                <span id="stat-percent">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Configuration ---
+        const CONFIG = {
+            roomSize: 4.0,           // 4x4m footprint
+            wallHeight: 6.0,         // Default 6m height
+            chamferStart: 0.75,      // Distance from center where chamfer starts (at window edge)
+            window: {
+                width: 1.5,
+                heightRect: 3.1,
+                archRadius: 0.75,
+                heightTotal: 3.85
+            },
+            door: {
+                width: 0.7,
+                height: 1.5
+            },
+            tileSize: 0.25,          // 25cm grid
+            insulationDepth: 0.06,   // 60mm offset
+            colors: {
+                brick: 0x8b4513,     // SaddleBrown
+                render: 0xffffff,    // White
+                wireframe: 0x333333,
+                background: 0x202020
+            }
+        };
+
+        // --- State ---
+        const state = {
+            tiles: [], // Array of Tile objects
+            isWireframe: false
+        };
+
+        // --- Scene Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(CONFIG.colors.background);
+
+        // Add some fog for depth
+        scene.fog = new THREE.Fog(CONFIG.colors.background, 5, 20);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 4, 0); // Start inside/above looking down
+        camera.lookAt(0, 2, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 2, 0);
+
+        // --- Lighting ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 5);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const pointLight = new THREE.PointLight(0xffaa00, 0.5, 10);
+        pointLight.position.set(0, 4, 0);
+        scene.add(pointLight);
+
+        // --- Helper Classes ---
+
+        class Tile {
+            constructor(position, normal, width, height) {
+                this.isInsulated = false;
+                this.originalPosition = position.clone();
+                this.normal = normal.clone();
+
+                // Create geometry
+                const geometry = new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02); // Slightly smaller for grid effect
+
+                // Create materials logic handled in updateVisuals
+                this.material = new THREE.MeshStandardMaterial({
+                    color: CONFIG.colors.brick,
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+
+                this.mesh = new THREE.Mesh(geometry, this.material);
+                this.mesh.position.copy(this.originalPosition);
+                this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+
+                this.mesh.userData = { tile: this }; // Link back to class
+
+                scene.add(this.mesh);
+            }
+
+            toggle() {
+                this.isInsulated = !this.isInsulated;
+                this.updateVisuals();
+            }
+
+            setInsulated(active) {
+                this.isInsulated = active;
+                this.updateVisuals();
+            }
+
+            updateVisuals() {
+                // Need to update global stats whenever visuals change
+                requestAnimationFrame(updateStats);
+
+                if (this.isInsulated) {
+                    this.material.color.setHex(CONFIG.colors.render);
+                    this.material.roughness = 0.5;
+                    // Move inwards along normal
+                    const offset = this.normal.clone().multiplyScalar(CONFIG.insulationDepth);
+                    this.mesh.position.copy(this.originalPosition.clone().add(offset));
+                } else {
+                    this.material.color.setHex(CONFIG.colors.brick);
+                    this.material.roughness = 0.9;
+                    this.mesh.position.copy(this.originalPosition);
+                }
+            }
+        }
+
+        // --- Wall Generation Logic ---
+
+        // Helper to check if a point is within a window or door
+        function isHole(localX, localY, type) {
+            if (type === 'window') {
+                // Check Rectangular part
+                const halfW = CONFIG.window.width / 2;
+                if (localX > -halfW && localX < halfW && localY < CONFIG.window.heightRect) {
+                    return true;
+                }
+                // Check Arch part
+                if (localY >= CONFIG.window.heightRect) {
+                    const dy = localY - CONFIG.window.heightRect;
+                    // Circle equation: x^2 + dy^2 < r^2
+                    if (localX * localX + dy * dy < CONFIG.window.archRadius * CONFIG.window.archRadius) {
+                        return true;
+                    }
+                }
+            } else if (type === 'door') {
+                const halfW = CONFIG.door.width / 2;
+                // Door is 1.5m tall
+                if (localX > -halfW && localX < halfW && localY < CONFIG.door.height) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function createWall(p1, p2, type = 'solid') {
+            const length = p1.distanceTo(p2);
+            const height = CONFIG.wallHeight;
+
+            // Calculate basis vectors
+            const wallDir = new THREE.Vector3().subVectors(p2, p1).normalize();
+            const upDir = new THREE.Vector3(0, 1, 0);
+
+            // Normal calculation:
+            // We want the normal to point INWARDS to the room center (Wait. 0,0,0 is center).
+            // Let's compute a candidate normal via cross product.
+            let normal = new THREE.Vector3().crossVectors(wallDir, upDir).normalize();
+
+            // Check if this points to the origin or away.
+            // Take the midpoint of the wall.
+            const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+            // Vector from midpoint to origin is (0,0,0) - midPoint = -midPoint.
+            // If normal . (-midPoint) > 0, then it points inwards.
+            // Or simply: normal . midPoint < 0 means it points inwards (towards origin).
+            if (normal.dot(midPoint) > 0) {
+                normal.negate();
+            }
+
+            const stepsX = Math.ceil(length / CONFIG.tileSize);
+            const stepsY = Math.ceil(height / CONFIG.tileSize);
+
+            const realTileW = length / stepsX;
+            const realTileH = height / stepsY;
+
+            // Determine hole center X offset based on wall type
+            // For standard walls, window is in middle -> center at length/2.
+            // For Chamfer wall, door is in middle -> center at length/2.
+            // BUT: North Wall (from NW to Cut) is NOT symmetric around 0.
+            // NW is (-2, -2). Cut is (0.75, -2). Length = 2.75.
+            // Window center is at x=0.
+            // Distance from NW (-2) to Window Center (0) is 2.0.
+            // So the hole center relative to P1 (NW) is 2.0.
+
+            let holeCenterX = length / 2; // Default to middle
+
+            if (type === 'window' || type === 'door') {
+                // For standard South/West walls, they are 4m long, window at center (2m). Correct.
+
+                // North Wall: p1=(-2, -2), p2=(0.75, -2). Dir=(1, 0, 0).
+                // Window at (0, -2).
+                // Dist from p1 to Window = 2.0.
+                if (Math.abs(p1.z + 2) < 0.01 && p1.x < 0) { // North Wall detection
+                    holeCenterX = 2.0;
+                }
+
+                // East Wall: p1=(2, -0.75), p2=(2, 2). Dir=(0, 0, 1). // Wait.
+                // Earlier I said createWall(EastCut, SE). 
+                // EastCut=(2, -0.75). SE=(2, 2).
+                // Window at (2, 0).
+                // Dist from p1 (2, -0.75) to Window (2, 0) is 0.75.
+                if (Math.abs(p1.x - 2) < 0.01 && p1.z < 0) { // East Wall detection
+                    holeCenterX = 0.75;
+                }
+            }
+
+            if (type === 'chamfer') {
+                type = 'door'; // Reuse door logic
+                // Chamfer: NorthCut(0.75, -2) to EastCut(2, -0.75).
+                // Midpoint is ((0.75+2)/2, (-2-0.75)/2) = (1.375, -1.375).
+                // Door should be centered on the wall.
+                holeCenterX = length / 2;
+            }
+
+
+            for (let ix = 0; ix < stepsX; ix++) {
+                for (let iy = 0; iy < stepsY; iy++) {
+                    // Calculate center of tile in 2D Wall Space (Start at P1)
+                    const localX = (ix + 0.5) * realTileW;
+                    const localY = (iy + 0.5) * realTileH;
+
+                    // Center the coords relative to the Hole Center
+                    const relativeX = localX - holeCenterX;
+
+                    // Check holes
+                    let skip = false;
+                    if (type === 'window') {
+                        if (isHole(relativeX, localY, 'window')) skip = true;
+                    } else if (type === 'door') {
+                        if (isHole(relativeX, localY, 'door')) skip = true;
+                    }
+
+                    if (!skip) {
+                        // Position in 3D
+                        // P1 + wallDir * localX + upDir * localY
+                        const pos = p1.clone()
+                            .add(wallDir.clone().multiplyScalar(localX))
+                            .add(upDir.clone().multiplyScalar(localY));
+
+                        const tile = new Tile(pos, normal, realTileW, realTileH);
+                        state.tiles.push(tile);
+                    }
+                }
+            }
+        }
+
+        // --- Build Geometry ---
+        // Room: 4x4m centered at 0,0. Corners: +/- 2.
+
+        // Corners:
+        const SW = new THREE.Vector3(-2, 0, 2);
+        const SE = new THREE.Vector3(2, 0, 2);
+        const NW = new THREE.Vector3(-2, 0, -2);
+        const NE = new THREE.Vector3(2, 0, -2); // Virtual NE corner
+
+        // Cut points for Chamfer (45 degrees at window edges)
+        // North Window edge: x = 0.75.
+        const NorthCut = new THREE.Vector3(0.75, 0, -2);
+        // East Window edge: z = -0.75.
+        const EastCut = new THREE.Vector3(2, 0, -0.75);
+
+        // 1. South Wall (Full)
+        // SE to SW so Normal points North (inward)?
+        // Dir = (-4, 0, 0). Up = (0, 1, 0). Cross = (0, 0, -1). Points North (inward). Correct.
+        createWall(SE, SW, 'window');
+
+        // 2. West Wall (Full)
+        // SW to NW. Dir = (0, 0, -4). Cross = (-1, 0, 0). Points East (inward). Correct.
+        createWall(SW, NW, 'window');
+
+        // 3. North Wall (Partial)
+        // NW (-2, -2) to NorthCut (0.75, -2). 
+        // Dir = (2.75, 0, 0). Cross = (0, 0, 1). Points South (inward). Correct.
+        createWall(NW, NorthCut, 'window');
+
+        // 4. East Wall (Partial)
+        // EastCut (2, -0.75) to SE (2, 2).
+        // Dir = (0, 0, 2.75). Cross = (-1, 0, 0). Points West (inward). Correct.
+        createWall(EastCut, SE, 'window');
+
+        // 5. Chamfer Wall
+        // NorthCut (0.75, -2) to EastCut (2, -0.75).
+        // This connects the gaps.
+        createWall(NorthCut, EastCut, 'chamfer');
+
+
+        // --- Raycasting & Interaction Setup ---
+        // Move raycaster setup inside module scope
+        const rc = new THREE.Raycaster();
+        const ptr = new THREE.Vector2();
+
+        function onPointerDown(event) {
+            // Calculate pointer position in normalized device coordinates (-1 to +1) for both components
+            ptr.x = (event.clientX / window.innerWidth) * 2 - 1;
+            ptr.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+            rc.setFromCamera(ptr, camera);
+
+            // Intersect tiles
+            // We only care about objects that are meshes and have userData.tile
+            const intersects = rc.intersectObjects(scene.children);
+
+            // Find the first valid tile
+            for (let i = 0; i < intersects.length; i++) {
+                const obj = intersects[i].object;
+                if (obj.userData && obj.userData.tile) {
+                    // If the panel isn't blocking the click? 
+                    // The UI panel is just an HTML overlay, pointer-events on it will block canvas clicks naturally if not set to 'none'.
+                    // Default div blocks clicks. So we are good.
+                    obj.userData.tile.toggle();
+                    break;
+                }
+            }
+        }
+        window.addEventListener('pointerdown', onPointerDown);
+
+
+        // --- UI Listeners Setup ---
+        // Handled above in script body but safely re-ensure
+        document.getElementById('btn-reset').onclick = () => {
+            state.tiles.forEach(t => t.setInsulated(false));
+            updateStats();
+        };
+        document.getElementById('btn-render-all').onclick = () => {
+            state.tiles.forEach(t => t.setInsulated(true));
+            updateStats();
+        };
+        document.getElementById('btn-wireframe').onclick = () => {
+            state.isWireframe = !state.isWireframe;
+            scene.traverse(obj => {
+                if (obj.isMesh && obj.userData.tile) {
+                    obj.material.wireframe = state.isWireframe;
+                    obj.material.needsUpdate = true;
+                }
+            });
+        };
+        document.getElementById('btn-export').onclick = () => {
+            const total = state.tiles.length;
+            const insulated = state.tiles.filter(t => t.isInsulated).length;
+            const percent = ((insulated / total) * 100).toFixed(1);
+            alert(`Configuration Export:\nTotal Surface Area: ~${(total * CONFIG.tileSize * CONFIG.tileSize).toFixed(1)}m²\nInsulated: ${insulated} tiles (${percent}%)`);
+        };
+
+        // --- Render Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+
+</html>
