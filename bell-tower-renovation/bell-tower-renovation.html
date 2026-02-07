@@ -30,6 +30,7 @@
             width: 250px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(5px);
+            z-index: 10;
         }
 
         h2 {
@@ -109,11 +110,12 @@
 
     <div id="ui-panel">
         <h2>Renovation Controls</h2>
-        <div class="instructions">Click tiles to toggle insulation.</div>
+        <div class="instructions">Click tiles to toggle: Brick -> Insulated -> Flush Render.</div>
 
         <div class="control-group">
             <button id="btn-reset" class="primary">Reset to Exposed Brick</button>
             <button id="btn-render-all">Set All to Insulated</button>
+            <button id="btn-flush-all">Set All to Flush Render</button>
             <button id="btn-wireframe">Toggle Wireframe</button>
             <button id="btn-export">Export Configuration</button>
         </div>
@@ -124,8 +126,12 @@
                 <span id="stat-total">0</span>
             </div>
             <div class="stat-row">
-                <span>Insulated:</span>
+                <span>Insulated (60mm):</span>
                 <span id="stat-insulated">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Flush Render:</span>
+                <span id="stat-flush">0</span>
             </div>
             <div class="stat-row">
                 <span>Coverage:</span>
@@ -149,7 +155,8 @@
                 width: 1.5,
                 heightRect: 3.1,
                 archRadius: 0.75,
-                heightTotal: 3.85
+                heightTotal: 3.85,
+                depth: 0.45 // Reveal depth
             },
             door: {
                 width: 0.7,
@@ -160,6 +167,7 @@
             colors: {
                 brick: 0x8b4513,     // SaddleBrown
                 render: 0xffffff,    // White
+                flushRender: 0xeeeeee, // Slightly off-white to distinguish? Or stick to white. user said "same finish... negligable thickness"
                 wireframe: 0x333333,
                 background: 0x202020
             }
@@ -206,16 +214,31 @@
         pointLight.position.set(0, 4, 0);
         scene.add(pointLight);
 
+        // --- Helper Functions (Hoisted) ---
+        function updateStats() {
+            const total = state.tiles.length;
+            const insulated = state.tiles.filter(t => t.state === 1).length;
+            const flush = state.tiles.filter(t => t.state === 2).length;
+            const percent = Math.round(((insulated + flush) / total) * 100);
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-insulated').innerText = insulated;
+            document.getElementById('stat-flush').innerText = flush;
+            document.getElementById('stat-percent').innerText = percent + '%';
+        }
+
         // --- Helper Classes ---
 
         class Tile {
-            constructor(position, normal, width, height) {
-                this.isInsulated = false;
+            constructor(position, normal, width, height, type = 'wall') {
+                this.state = 0; // 0: Brick, 1: Insulated, 2: Flush Render
                 this.originalPosition = position.clone();
                 this.normal = normal.clone();
+                this.type = type; // 'wall', 'reveal'
 
                 // Create geometry
-                const geometry = new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02); // Slightly smaller for grid effect
+                // Use user data width/height for box
+                const geometry = new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02);
 
                 // Create materials logic handled in updateVisuals
                 this.material = new THREE.MeshStandardMaterial({
@@ -226,6 +249,9 @@
 
                 this.mesh = new THREE.Mesh(geometry, this.material);
                 this.mesh.position.copy(this.originalPosition);
+
+                // Orient functionality: Look at position + normal
+                // Box default faces Z. So lookAt(pos + normal) aligns Z axis with normal. Correct.
                 this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
 
                 this.mesh.userData = { tile: this }; // Link back to class
@@ -234,26 +260,30 @@
             }
 
             toggle() {
-                this.isInsulated = !this.isInsulated;
+                this.state = (this.state + 1) % 3;
                 this.updateVisuals();
             }
 
-            setInsulated(active) {
-                this.isInsulated = active;
+            setState(newState) {
+                this.state = newState;
                 this.updateVisuals();
             }
 
             updateVisuals() {
-                // Need to update global stats whenever visuals change
+                // Defer stats update to avoid layout thrashing if mass updating
                 requestAnimationFrame(updateStats);
 
-                if (this.isInsulated) {
+                if (this.state === 1) { // Insulated
                     this.material.color.setHex(CONFIG.colors.render);
                     this.material.roughness = 0.5;
                     // Move inwards along normal
                     const offset = this.normal.clone().multiplyScalar(CONFIG.insulationDepth);
                     this.mesh.position.copy(this.originalPosition.clone().add(offset));
-                } else {
+                } else if (this.state === 2) { // Flush Render
+                    this.material.color.setHex(CONFIG.colors.flushRender); // Same white basically
+                    this.material.roughness = 0.5; // Smooth plaster
+                    this.mesh.position.copy(this.originalPosition); // No offset
+                } else { // Brick
                     this.material.color.setHex(CONFIG.colors.brick);
                     this.material.roughness = 0.9;
                     this.mesh.position.copy(this.originalPosition);
@@ -281,7 +311,6 @@
                 }
             } else if (type === 'door') {
                 const halfW = CONFIG.door.width / 2;
-                // Door is 1.5m tall
                 if (localX > -halfW && localX < halfW && localY < CONFIG.door.height) {
                     return true;
                 }
@@ -298,16 +327,10 @@
             const upDir = new THREE.Vector3(0, 1, 0);
 
             // Normal calculation:
-            // We want the normal to point INWARDS to the room center (Wait. 0,0,0 is center).
-            // Let's compute a candidate normal via cross product.
             let normal = new THREE.Vector3().crossVectors(wallDir, upDir).normalize();
 
-            // Check if this points to the origin or away.
-            // Take the midpoint of the wall.
+            // Check inward facing
             const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-            // Vector from midpoint to origin is (0,0,0) - midPoint = -midPoint.
-            // If normal . (-midPoint) > 0, then it points inwards.
-            // Or simply: normal . midPoint < 0 means it points inwards (towards origin).
             if (normal.dot(midPoint) > 0) {
                 normal.negate();
             }
@@ -319,44 +342,17 @@
             const realTileH = height / stepsY;
 
             // Determine hole center X offset based on wall type
-            // For standard walls, window is in middle -> center at length/2.
-            // For Chamfer wall, door is in middle -> center at length/2.
-            // BUT: North Wall (from NW to Cut) is NOT symmetric around 0.
-            // NW is (-2, -2). Cut is (0.75, -2). Length = 2.75.
-            // Window center is at x=0.
-            // Distance from NW (-2) to Window Center (0) is 2.0.
-            // So the hole center relative to P1 (NW) is 2.0.
-
-            let holeCenterX = length / 2; // Default to middle
+            let holeCenterX = length / 2;
 
             if (type === 'window' || type === 'door') {
-                // For standard South/West walls, they are 4m long, window at center (2m). Correct.
-
-                // North Wall: p1=(-2, -2), p2=(0.75, -2). Dir=(1, 0, 0).
-                // Window at (0, -2).
-                // Dist from p1 to Window = 2.0.
-                if (Math.abs(p1.z + 2) < 0.01 && p1.x < 0) { // North Wall detection
-                    holeCenterX = 2.0;
-                }
-
-                // East Wall: p1=(2, -0.75), p2=(2, 2). Dir=(0, 0, 1). // Wait.
-                // Earlier I said createWall(EastCut, SE). 
-                // EastCut=(2, -0.75). SE=(2, 2).
-                // Window at (2, 0).
-                // Dist from p1 (2, -0.75) to Window (2, 0) is 0.75.
-                if (Math.abs(p1.x - 2) < 0.01 && p1.z < 0) { // East Wall detection
-                    holeCenterX = 0.75;
-                }
+                if (Math.abs(p1.z + 2) < 0.01 && p1.x < 0) { holeCenterX = 2.0; } // North Wall detection
+                if (Math.abs(p1.x - 2) < 0.01 && p1.z < 0) { holeCenterX = 0.75; } // East Wall detection
             }
 
             if (type === 'chamfer') {
-                type = 'door'; // Reuse door logic
-                // Chamfer: NorthCut(0.75, -2) to EastCut(2, -0.75).
-                // Midpoint is ((0.75+2)/2, (-2-0.75)/2) = (1.375, -1.375).
-                // Door should be centered on the wall.
+                type = 'door';
                 holeCenterX = length / 2;
             }
-
 
             for (let ix = 0; ix < stepsX; ix++) {
                 for (let iy = 0; iy < stepsY; iy++) {
@@ -376,8 +372,6 @@
                     }
 
                     if (!skip) {
-                        // Position in 3D
-                        // P1 + wallDir * localX + upDir * localY
                         const pos = p1.clone()
                             .add(wallDir.clone().multiplyScalar(localX))
                             .add(upDir.clone().multiplyScalar(localY));
@@ -387,6 +381,118 @@
                     }
                 }
             }
+
+            // If it's a window wall, generate Reveal Tiles
+            if (type === 'window') {
+                // Find world position of hole center
+                const holeCenterPos = p1.clone().add(wallDir.clone().multiplyScalar(holeCenterX));
+                createReveal(holeCenterPos, normal, wallDir);
+            }
+        }
+
+        function createReveal(centerPos, wallNormal, wallDir) {
+            // centerPos is at Y=0 (bottom center of window)
+            // wallNormal points INWARDS (towards room center)
+            // wallDir points along wall length (Right)
+
+            // We want reveal tiles to face perpendicular to wall normal.
+            // Depth goes OUTWARDS (opposite to wallNormal).
+            // BUT wait, if wallNormal points IN, then -wallNormal points OUT.
+            // Reveal tiles are surfaces.
+            // Left Reveal (on -X side) faces +X (Right).
+            // Right Reveal (on +X side) faces -X (Left).
+            // Arch Reveal faces Center.
+
+            const halfW = CONFIG.window.width / 2;
+            const depth = CONFIG.window.depth;
+
+            // Calculate verticals
+            const stepsY = Math.ceil(CONFIG.window.heightRect / CONFIG.tileSize);
+            const stepsD = Math.ceil(depth / CONFIG.tileSize);
+
+            const tileH = CONFIG.window.heightRect / stepsY;
+            const tileD = depth / stepsD;
+
+            // 1. Left Reveal (on the -X side relative to window center)
+            // Its position starts at centerPos - halfW*wallDir.
+            // It extends backwards along -wallNormal.
+            // Its Normal points towards +wallDir (Right).
+
+            for (let iy = 0; iy < stepsY; iy++) {
+                for (let id = 0; id < stepsD; id++) {
+                    const ly = (iy + 0.5) * tileH;
+                    const ld = (id + 0.5) * tileD; // depth from inner face
+
+                    const pos = centerPos.clone()
+                        .sub(wallDir.clone().multiplyScalar(halfW)) // Left Edge
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly)) // Up
+                        .sub(wallNormal.clone().multiplyScalar(ld)); // Back
+
+                    const tile = new Tile(pos, wallDir, tileD, tileH, 'reveal');
+                    state.tiles.push(tile);
+                }
+            }
+
+            // 2. Right Reveal (on the +X side)
+            // Normal points -wallDir (Left).
+            for (let iy = 0; iy < stepsY; iy++) {
+                for (let id = 0; id < stepsD; id++) {
+                    const ly = (iy + 0.5) * tileH;
+                    const ld = (id + 0.5) * tileD;
+
+                    const pos = centerPos.clone()
+                        .add(wallDir.clone().multiplyScalar(halfW)) // Right Edge
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
+                        .sub(wallNormal.clone().multiplyScalar(ld));
+
+                    const tile = new Tile(pos, wallDir.clone().negate(), tileD, tileH, 'reveal');
+                    state.tiles.push(tile);
+                }
+            }
+
+            // 3. Arch Reveal
+            // Curved surface. Center is at Top of Rect.
+            const archCenter = centerPos.clone().add(new THREE.Vector3(0, 1, 0).multiplyScalar(CONFIG.window.heightRect));
+            const arcSteps = 12;
+            const arcLen = Math.PI * CONFIG.window.archRadius; // Half circumference
+            const tileArcLen = arcLen / arcSteps;
+
+            for (let i = 0; i < arcSteps; i++) {
+                // Angle goes from 0 to PI.
+                // 0 corresponds to Right side (+wallDir).
+                // PI corresponds to Left side (-wallDir).
+                const theta = (i + 0.5) * (Math.PI / arcSteps);
+
+                // Calc local pos on arc
+                // X along wallDir = cos(theta) * R
+                // Y along Up = sin(theta) * R
+                const localX = Math.cos(theta) * CONFIG.window.archRadius;
+                const localY = Math.sin(theta) * CONFIG.window.archRadius;
+
+                // Loop Depth
+                for (let id = 0; id < stepsD; id++) {
+                    const ld = (id + 0.5) * tileD;
+
+                    // Position
+                    const pos = archCenter.clone()
+                        .add(wallDir.clone().multiplyScalar(localX))
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(localY))
+                        .sub(wallNormal.clone().multiplyScalar(ld));
+
+                    // Normal points towards center (inwards).
+                    // Vector from Pos to Center (projected on plane).
+                    // Normal = -(cos(theta)*wallDir + sin(theta)*Up)
+                    const tileNormal = wallDir.clone().multiplyScalar(Math.cos(theta))
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.sin(theta)))
+                        .negate()
+                        .normalize();
+
+                    // For Arch tiles, width is tileD, height is ArcLen
+                    const tile = new Tile(pos, tileNormal, tileD, tileArcLen, 'reveal');
+                    state.tiles.push(tile);
+                }
+            }
+
         }
 
         // --- Build Geometry ---
@@ -396,62 +502,40 @@
         const SW = new THREE.Vector3(-2, 0, 2);
         const SE = new THREE.Vector3(2, 0, 2);
         const NW = new THREE.Vector3(-2, 0, -2);
-        const NE = new THREE.Vector3(2, 0, -2); // Virtual NE corner
-
-        // Cut points for Chamfer (45 degrees at window edges)
-        // North Window edge: x = 0.75.
         const NorthCut = new THREE.Vector3(0.75, 0, -2);
-        // East Window edge: z = -0.75.
         const EastCut = new THREE.Vector3(2, 0, -0.75);
 
         // 1. South Wall (Full)
-        // SE to SW so Normal points North (inward)?
-        // Dir = (-4, 0, 0). Up = (0, 1, 0). Cross = (0, 0, -1). Points North (inward). Correct.
         createWall(SE, SW, 'window');
 
         // 2. West Wall (Full)
-        // SW to NW. Dir = (0, 0, -4). Cross = (-1, 0, 0). Points East (inward). Correct.
         createWall(SW, NW, 'window');
 
         // 3. North Wall (Partial)
-        // NW (-2, -2) to NorthCut (0.75, -2). 
-        // Dir = (2.75, 0, 0). Cross = (0, 0, 1). Points South (inward). Correct.
         createWall(NW, NorthCut, 'window');
 
         // 4. East Wall (Partial)
-        // EastCut (2, -0.75) to SE (2, 2).
-        // Dir = (0, 0, 2.75). Cross = (-1, 0, 0). Points West (inward). Correct.
         createWall(EastCut, SE, 'window');
 
         // 5. Chamfer Wall
-        // NorthCut (0.75, -2) to EastCut (2, -0.75).
-        // This connects the gaps.
         createWall(NorthCut, EastCut, 'chamfer');
 
 
         // --- Raycasting & Interaction Setup ---
-        // Move raycaster setup inside module scope
         const rc = new THREE.Raycaster();
         const ptr = new THREE.Vector2();
 
         function onPointerDown(event) {
-            // Calculate pointer position in normalized device coordinates (-1 to +1) for both components
             ptr.x = (event.clientX / window.innerWidth) * 2 - 1;
             ptr.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
             rc.setFromCamera(ptr, camera);
 
-            // Intersect tiles
-            // We only care about objects that are meshes and have userData.tile
             const intersects = rc.intersectObjects(scene.children);
 
-            // Find the first valid tile
             for (let i = 0; i < intersects.length; i++) {
                 const obj = intersects[i].object;
                 if (obj.userData && obj.userData.tile) {
-                    // If the panel isn't blocking the click? 
-                    // The UI panel is just an HTML overlay, pointer-events on it will block canvas clicks naturally if not set to 'none'.
-                    // Default div blocks clicks. So we are good.
                     obj.userData.tile.toggle();
                     break;
                 }
@@ -461,14 +545,14 @@
 
 
         // --- UI Listeners Setup ---
-        // Handled above in script body but safely re-ensure
         document.getElementById('btn-reset').onclick = () => {
-            state.tiles.forEach(t => t.setInsulated(false));
-            updateStats();
+            state.tiles.forEach(t => t.setState(0)); // Brick
         };
         document.getElementById('btn-render-all').onclick = () => {
-            state.tiles.forEach(t => t.setInsulated(true));
-            updateStats();
+            state.tiles.forEach(t => t.setState(1)); // Insulated
+        };
+        document.getElementById('btn-flush-all').onclick = () => {
+            state.tiles.forEach(t => t.setState(2)); // Flush
         };
         document.getElementById('btn-wireframe').onclick = () => {
             state.isWireframe = !state.isWireframe;
@@ -481,10 +565,15 @@
         };
         document.getElementById('btn-export').onclick = () => {
             const total = state.tiles.length;
-            const insulated = state.tiles.filter(t => t.isInsulated).length;
-            const percent = ((insulated / total) * 100).toFixed(1);
-            alert(`Configuration Export:\nTotal Surface Area: ~${(total * CONFIG.tileSize * CONFIG.tileSize).toFixed(1)}m²\nInsulated: ${insulated} tiles (${percent}%)`);
+            const insulated = state.tiles.filter(t => t.state === 1).length;
+            const flush = state.tiles.filter(t => t.state === 2).length;
+            const percent = Math.round(((insulated + flush) / total) * 100);
+
+            alert(`Export:\nAdjusted Area: ${(total * CONFIG.tileSize * CONFIG.tileSize).toFixed(1)}m²\nInsulated: ${insulated}\nFlush Render: ${flush}\nTotal Covered: ${percent}%`);
         };
+
+        // Initial stats
+        updateStats();
 
         // --- Render Loop ---
         function animate() {
