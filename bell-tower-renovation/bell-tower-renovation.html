@@ -362,13 +362,15 @@
                 this.gridY = gy;
                 this.isSelected = false;
 
-                // Create geometry
-                let geometry;
-                if (existingGeometry) {
-                    geometry = existingGeometry;
-                } else {
-                    geometry = new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02);
-                }
+                // Initial Geometry (Thin)
+                // State 0 and 2 use this.
+                this.geoThin = existingGeometry ? existingGeometry : new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02);
+
+                // Create Thick Geometry for Insulation (if standard box)
+                // If custom CSG geometry, we can't easily "extrude" it without regenerating CSG or scaling.
+                // Scaling is the easiest and most robust approximation for "solid extrusion".
+                // Scaling along Z axis (local) will thicken it.
+                // Base depth 0.02. Target 0.08. Scale factor 4.
 
                 this.material = new THREE.MeshStandardMaterial({
                     color: CONFIG.colors.brick,
@@ -377,11 +379,15 @@
                     emissive: 0x000000
                 });
 
-                this.mesh = new THREE.Mesh(geometry, this.material);
+                this.mesh = new THREE.Mesh(this.geoThin, this.material);
                 this.mesh.position.copy(this.originalPosition);
 
                 if (!existingGeometry) {
                     this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+                    // Standard Box is centered.
+                    // When we scale Z, it grows both ways. 
+                    // We want back face to stay put.
+                    // We'll handle that in updateVisuals by shifting position.
                 } else {
                     this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
                 }
@@ -413,11 +419,23 @@
                 // Defer stats update 
                 requestAnimationFrame(updateStats);
 
-                if (this.state === 1) { // Insulated
+                // Reset Scale first
+                this.mesh.scale.set(1, 1, 1);
+
+                if (this.state === 1) { // Insulated (Solid Extrusion)
+                    // Color
                     this.material.color.setHex(CONFIG.colors.render);
                     this.material.roughness = 0.5;
-                    const offset = this.normal.clone().multiplyScalar(CONFIG.insulationDepth);
-                    this.mesh.position.copy(this.originalPosition.clone().add(offset));
+
+                    // Scale Thickness
+                    // Standard 0.02 -> Target 0.08 (0.02 + 0.06)
+                    this.mesh.scale.z = 4.0;
+
+                    // Position Shift
+                    // Center moves out by (NewDepth - OldDepth)/2 = (0.08 - 0.02)/2 = 0.03
+                    const shift = this.normal.clone().multiplyScalar(0.03);
+                    this.mesh.position.copy(this.originalPosition.clone().add(shift));
+
                 } else if (this.state === 2) { // Flush Render
                     this.material.color.setHex(CONFIG.colors.flushRender);
                     this.material.roughness = 0.5;
@@ -682,7 +700,6 @@
             westShape.moveTo(0, 2.35); // Start Top (Z=0 in local shape)
 
             for (let i = 0; i < numWestSteps; i++) {
-                const hTop = 2.35 - i * stepH;
                 const hBot = 2.35 - (i + 1) * stepH;
                 const zNear = -i * tread;
                 const zFar = -(i + 1) * tread;
@@ -705,58 +722,38 @@
             const extrudeSettings = { depth: 0.6, bevelEnabled: false };
             const westGeo = new THREE.ExtrudeGeometry(westShape, extrudeSettings);
 
-            // Rotate so Shape X -> World Z. Shape Y -> World Y. Extrude Z -> World X.
-            // Geometry default: Extrude along Z. Shape in XY.
-            // We want Extrude to be along World X (Width).
-            // Rotate Y 90 deg -> Z becomes X. X becomes Z (actually -Z depending on direction).
-            // Let's verify:
-            // rotateY(PI/2): (x,y,z) -> (z, y, -x).
-            // Shape X (Run, e.g. -2.25) -> World Z (-2.25). 
-            // THIS IS SOUTH. Negative World Z is North.
-            // We want -2.25 Shape X to map to -2.25 World Z.
-            // So we need X -> Z mapping.
-            // rotateY(-PI/2): (x,y,z) -> (-z, y, x).
-            // Shape X -> World Z? No, World X?
-            // Let's rely on standard rotation:
-            westGeo.rotateY(Math.PI / 2);
-            // Maps X->Z. But reversed?
-            // Shape X is negative (going North in local).
-            // Result World Z is negative (North).
-            // Wait, rotateY(PI/2) takes (1,0,0) to (0,0,-1).
-            // So positive X becomes negative Z.
-            // So negative X becomes positive Z (South).
-            // So `westGeo.rotateY(Math.PI / 2)` makes it go South.
-            // We want it to go North.
-            // So use `rotateY(-Math.PI / 2)`?
-            // (1,0,0) -> (0,0,1).
-            // (-1,0,0) -> (0,0,-1) = North.
+            // Correct Rotation:
+            // Shape X -> -Z World (North). Shape Y -> Y World.
+            // Extrude (depth) -> X World.
+            // Rotate Y by -90: X->Z, Z->-X. No.
 
-            westGeo.rotateY(-Math.PI / 2);
+            // Let's just rotate Y 90.
+            // Mesh X basis vector -> (0,0,-1) [North].
+            // Mesh Y basis vector -> (0,1,0) [Up].
+            // Mesh Z basis vector -> (1,0,0) [East].
+            // If Shape X is along Mesh X. 
+            // Shape X (0 to -2.25) -> World Z (0 to -2.25)? No, World Z goes North (-2.25).
+            // Yes, 0 to -2.25 (North).
+            // If Extrude is along Mesh Z.
+            // Extrude (0 to 0.6) -> World X (0 to 0.6) [East].
+            // We want Extrude range [-1.94, -1.34].
+            // Position Mesh at X=-1.94. Z=1.0.
+
+            westGeo.rotateY(Math.PI / 2); // Rotate +90 around Y.
+            // (1,0,0) -> (0,0,-1).
+            // (0,0,1) -> (1,0,0).
 
             const westMesh = new THREE.Mesh(westGeo, stairMat);
 
-            // Position:
-            // Top start point (0, 2.35) of shape.
-            // With rotateY(-PI/2), X=0 -> Z=0.
-            // We want Start Z = 1.0.
-            // Extrude (0..0.6) along Z original -> Maps to World -X ?
-            // rotateY(-PI/2): Z -> X?
-            // (0,0,1) -> (1,0,0). Yes.
-            // So Extrude is Positive X.
-            // We want Extrude to cover [-1.94, -1.34].
-            // Pos X = -1.94.
+            // Position adjustment:
+            // Origin of Mesh is at (-1.94, 0, 1.0).
+            // Shape origin (0,0) -> Mesh Origin.
+            // Extrude Z (0) -> Mesh Origin.
 
             westMesh.position.set(-1.94, 0, 1.0);
             registerArch(westMesh);
 
             // --- 2. Corner Winder (Steps 3, 4) ---
-            // Step 4 (Higher): North-West half.
-            // Step 3 (Lower): South-East half?
-            // We are at Corner Z = -1.34.
-            // West Run ends at Z = 1.0 + (-2.25) = -1.25.
-            // So transition happens at Z ~ -1.25.
-            // Winder Box Center (-1.64, -1.64).
-
             const step4Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
             const step4 = new THREE.Mesh(step4Geo, stairMat);
             step4.position.set(-1.64, 3.5 * stepH, -1.64);
@@ -768,39 +765,25 @@
             registerArch(step3);
 
             // --- 3. North Run (Steps 1, 2) ---
-            // Going East from Corner.
-            // Starts X = -1.34. Go East (+X).
-
             const northShape = new THREE.Shape();
             northShape.moveTo(0, 2 * stepH);
-
-            // Step 2
             northShape.lineTo(tread, 2 * stepH);
             northShape.lineTo(tread, stepH);
-            // Step 1
             northShape.lineTo(tread * 2, stepH);
             northShape.lineTo(tread * 2, 0);
 
-            // Soffit
             const nDx = 0.3 * Math.sin(angle);
             const nDy = 0.3 * Math.cos(angle);
-
             northShape.lineTo(tread * 2 - nDx, 0 - nDy);
             northShape.lineTo(0 - nDx, 2 * stepH - nDy);
             northShape.lineTo(0, 2 * stepH);
 
             const northGeo = new THREE.ExtrudeGeometry(northShape, extrudeSettings);
-            // Extrude along Z (0.6).
-            // North Wall is at Z=-2. Gap 60mm -> Z=-1.94.
-            // Shape X -> World X. Shape Y -> World Y.
-            // Extrude Z -> World Z.
-            // Shape X goes Positive (East).
-            // Extrude goes Positive Z.
-            // We want Extrude to fill [-1.94, -1.34] in Z.
-            // So translate Z to -1.94.
+            const northMesh = new THREE.Mesh(northGeo, stairMat);
+            // Default Extrude Z (0..0.6). World Z we want [-1.94, -1.34].
+            // Translate Z to -1.94.
             // Position X at -1.34.
 
-            const northMesh = new THREE.Mesh(northGeo, stairMat);
             northMesh.position.set(-1.34, 0, -1.94);
             registerArch(northMesh);
 
@@ -956,8 +939,7 @@
             scene.traverse(obj => {
                 if (obj.userData && obj.userData.isArchitecture) {
                     obj.material.opacity = val;
-                    // If opacity is near zero, make invisible to allow click-through
-                    obj.visible = (val > 0.05);
+                    obj.visible = (val > 0.05); // Hide if transparent
                 }
             });
         };
