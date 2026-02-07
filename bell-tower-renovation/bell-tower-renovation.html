@@ -95,6 +95,14 @@
             margin-bottom: 15px;
             font-style: italic;
         }
+
+        .saved-status {
+            color: #4caf50;
+            font-weight: bold;
+            transition: opacity 0.5s;
+            opacity: 0;
+            float: right;
+        }
     </style>
     <script type="importmap">
         {
@@ -109,7 +117,7 @@
 <body>
 
     <div id="ui-panel">
-        <h2>Renovation Controls</h2>
+        <h2>Renovation Controls <span id="saved-indicator" class="saved-status">Saved ✓</span></h2>
         <div class="instructions">Click tiles to toggle: Brick -> Insulated -> Flush Render.</div>
 
         <div class="control-group">
@@ -117,7 +125,7 @@
             <button id="btn-render-all">Set All to Insulated</button>
             <button id="btn-flush-all">Set All to Flush Render</button>
             <button id="btn-wireframe">Toggle Wireframe</button>
-            <button id="btn-export">Export Configuration</button>
+            <button id="btn-export">Force Save</button>
         </div>
 
         <div class="stats">
@@ -145,6 +153,26 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcezJRuEx8vsThQKhi8Az_XdL_XSM6u8g",
+            authDomain: "st-mary-somerset.firebaseapp.com",
+            projectId: "st-mary-somerset",
+            storageBucket: "st-mary-somerset.firebasestorage.app",
+            messagingSenderId: "924281338278",
+            appId: "1:924281338278:web:83affbb1aff93ba797f767"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const APP_ID = 'bell-tower';
+        const DOC_ID = 'visualizer_state';
 
         // --- Configuration ---
         const CONFIG = {
@@ -167,7 +195,7 @@
             colors: {
                 brick: 0x8b4513,     // SaddleBrown
                 render: 0xffffff,    // White
-                flushRender: 0xeeeeee, // Slightly off-white to distinguish? Or stick to white. user said "same finish... negligable thickness"
+                flushRender: 0xeeeeee, // Slightly off-white
                 wireframe: 0x333333,
                 background: 0x202020
             }
@@ -176,7 +204,8 @@
         // --- State ---
         const state = {
             tiles: [], // Array of Tile objects
-            isWireframe: false
+            isWireframe: false,
+            remoteUpdateInProgress: false
         };
 
         // --- Scene Setup ---
@@ -216,15 +245,55 @@
 
         // --- Helper Functions (Hoisted) ---
         function updateStats() {
+            if (!state.tiles.length) return;
             const total = state.tiles.length;
             const insulated = state.tiles.filter(t => t.state === 1).length;
             const flush = state.tiles.filter(t => t.state === 2).length;
             const percent = Math.round(((insulated + flush) / total) * 100);
 
-            document.getElementById('stat-total').innerText = total;
-            document.getElementById('stat-insulated').innerText = insulated;
-            document.getElementById('stat-flush').innerText = flush;
-            document.getElementById('stat-percent').innerText = percent + '%';
+            const elTotal = document.getElementById('stat-total');
+            if (elTotal) elTotal.innerText = total;
+
+            const elIns = document.getElementById('stat-insulated');
+            if (elIns) elIns.innerText = insulated;
+
+            const elFlush = document.getElementById('stat-flush');
+            if (elFlush) elFlush.innerText = flush;
+
+            const elPerc = document.getElementById('stat-percent');
+            if (elPerc) elPerc.innerText = percent + '%';
+        }
+
+        // --- Persistence Logic ---
+        let saveTimeout = null;
+
+        function scheduleSave() {
+            if (state.remoteUpdateInProgress) return;
+
+            const indicator = document.getElementById('saved-indicator');
+            if (indicator) indicator.style.opacity = '0';
+
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(saveToFirebase, 1000);
+        }
+
+        async function saveToFirebase() {
+            if (!auth.currentUser) return;
+
+            const tileStates = state.tiles.map(t => t.state);
+
+            try {
+                await setDoc(doc(db, 'artifacts', APP_ID, 'configurations', DOC_ID), {
+                    tiles: tileStates,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: auth.currentUser.uid
+                }, { merge: true });
+
+                const indicator = document.getElementById('saved-indicator');
+                if (indicator) indicator.style.opacity = '1';
+            } catch (e) {
+                console.error("Save failed", e);
+            }
         }
 
         // --- Helper Classes ---
@@ -237,10 +306,8 @@
                 this.type = type; // 'wall', 'reveal'
 
                 // Create geometry
-                // Use user data width/height for box
                 const geometry = new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02);
 
-                // Create materials logic handled in updateVisuals
                 this.material = new THREE.MeshStandardMaterial({
                     color: CONFIG.colors.brick,
                     roughness: 0.9,
@@ -249,12 +316,8 @@
 
                 this.mesh = new THREE.Mesh(geometry, this.material);
                 this.mesh.position.copy(this.originalPosition);
-
-                // Orient functionality: Look at position + normal
-                // Box default faces Z. So lookAt(pos + normal) aligns Z axis with normal. Correct.
                 this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
-
-                this.mesh.userData = { tile: this }; // Link back to class
+                this.mesh.userData = { tile: this };
 
                 scene.add(this.mesh);
             }
@@ -262,27 +325,27 @@
             toggle() {
                 this.state = (this.state + 1) % 3;
                 this.updateVisuals();
+                scheduleSave();
             }
 
             setState(newState) {
+                if (this.state === newState) return;
                 this.state = newState;
                 this.updateVisuals();
             }
 
             updateVisuals() {
-                // Defer stats update to avoid layout thrashing if mass updating
                 requestAnimationFrame(updateStats);
 
                 if (this.state === 1) { // Insulated
                     this.material.color.setHex(CONFIG.colors.render);
                     this.material.roughness = 0.5;
-                    // Move inwards along normal
                     const offset = this.normal.clone().multiplyScalar(CONFIG.insulationDepth);
                     this.mesh.position.copy(this.originalPosition.clone().add(offset));
                 } else if (this.state === 2) { // Flush Render
-                    this.material.color.setHex(CONFIG.colors.flushRender); // Same white basically
-                    this.material.roughness = 0.5; // Smooth plaster
-                    this.mesh.position.copy(this.originalPosition); // No offset
+                    this.material.color.setHex(CONFIG.colors.flushRender);
+                    this.material.roughness = 0.5;
+                    this.mesh.position.copy(this.originalPosition);
                 } else { // Brick
                     this.material.color.setHex(CONFIG.colors.brick);
                     this.material.roughness = 0.9;
@@ -293,18 +356,14 @@
 
         // --- Wall Generation Logic ---
 
-        // Helper to check if a point is within a window or door
         function isHole(localX, localY, type) {
             if (type === 'window') {
-                // Check Rectangular part
                 const halfW = CONFIG.window.width / 2;
                 if (localX > -halfW && localX < halfW && localY < CONFIG.window.heightRect) {
                     return true;
                 }
-                // Check Arch part
                 if (localY >= CONFIG.window.heightRect) {
                     const dy = localY - CONFIG.window.heightRect;
-                    // Circle equation: x^2 + dy^2 < r^2
                     if (localX * localX + dy * dy < CONFIG.window.archRadius * CONFIG.window.archRadius) {
                         return true;
                     }
@@ -322,14 +381,11 @@
             const length = p1.distanceTo(p2);
             const height = CONFIG.wallHeight;
 
-            // Calculate basis vectors
             const wallDir = new THREE.Vector3().subVectors(p2, p1).normalize();
             const upDir = new THREE.Vector3(0, 1, 0);
 
-            // Normal calculation:
             let normal = new THREE.Vector3().crossVectors(wallDir, upDir).normalize();
 
-            // Check inward facing
             const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
             if (normal.dot(midPoint) > 0) {
                 normal.negate();
@@ -341,7 +397,6 @@
             const realTileW = length / stepsX;
             const realTileH = height / stepsY;
 
-            // Determine hole center X offset based on wall type
             let holeCenterX = length / 2;
 
             if (type === 'window' || type === 'door') {
@@ -356,14 +411,11 @@
 
             for (let ix = 0; ix < stepsX; ix++) {
                 for (let iy = 0; iy < stepsY; iy++) {
-                    // Calculate center of tile in 2D Wall Space (Start at P1)
                     const localX = (ix + 0.5) * realTileW;
                     const localY = (iy + 0.5) * realTileH;
 
-                    // Center the coords relative to the Hole Center
                     const relativeX = localX - holeCenterX;
 
-                    // Check holes
                     let skip = false;
                     if (type === 'window') {
                         if (isHole(relativeX, localY, 'window')) skip = true;
@@ -382,66 +434,46 @@
                 }
             }
 
-            // If it's a window wall, generate Reveal Tiles
             if (type === 'window') {
-                // Find world position of hole center
                 const holeCenterPos = p1.clone().add(wallDir.clone().multiplyScalar(holeCenterX));
                 createReveal(holeCenterPos, normal, wallDir);
             }
         }
 
         function createReveal(centerPos, wallNormal, wallDir) {
-            // centerPos is at Y=0 (bottom center of window)
-            // wallNormal points INWARDS (towards room center)
-            // wallDir points along wall length (Right)
-
-            // We want reveal tiles to face perpendicular to wall normal.
-            // Depth goes OUTWARDS (opposite to wallNormal).
-            // BUT wait, if wallNormal points IN, then -wallNormal points OUT.
-            // Reveal tiles are surfaces.
-            // Left Reveal (on -X side) faces +X (Right).
-            // Right Reveal (on +X side) faces -X (Left).
-            // Arch Reveal faces Center.
-
             const halfW = CONFIG.window.width / 2;
             const depth = CONFIG.window.depth;
 
-            // Calculate verticals
             const stepsY = Math.ceil(CONFIG.window.heightRect / CONFIG.tileSize);
             const stepsD = Math.ceil(depth / CONFIG.tileSize);
 
             const tileH = CONFIG.window.heightRect / stepsY;
             const tileD = depth / stepsD;
 
-            // 1. Left Reveal (on the -X side relative to window center)
-            // Its position starts at centerPos - halfW*wallDir.
-            // It extends backwards along -wallNormal.
-            // Its Normal points towards +wallDir (Right).
-
-            for (let iy = 0; iy < stepsY; iy++) {
-                for (let id = 0; id < stepsD; id++) {
-                    const ly = (iy + 0.5) * tileH;
-                    const ld = (id + 0.5) * tileD; // depth from inner face
-
-                    const pos = centerPos.clone()
-                        .sub(wallDir.clone().multiplyScalar(halfW)) // Left Edge
-                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly)) // Up
-                        .sub(wallNormal.clone().multiplyScalar(ld)); // Back
-
-                    const tile = new Tile(pos, wallDir, tileD, tileH, 'reveal');
-                    state.tiles.push(tile);
-                }
-            }
-
-            // 2. Right Reveal (on the +X side)
-            // Normal points -wallDir (Left).
+            // 1. Left Reveal
             for (let iy = 0; iy < stepsY; iy++) {
                 for (let id = 0; id < stepsD; id++) {
                     const ly = (iy + 0.5) * tileH;
                     const ld = (id + 0.5) * tileD;
 
                     const pos = centerPos.clone()
-                        .add(wallDir.clone().multiplyScalar(halfW)) // Right Edge
+                        .sub(wallDir.clone().multiplyScalar(halfW))
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
+                        .sub(wallNormal.clone().multiplyScalar(ld));
+
+                    const tile = new Tile(pos, wallDir, tileD, tileH, 'reveal');
+                    state.tiles.push(tile);
+                }
+            }
+
+            // 2. Right Reveal 
+            for (let iy = 0; iy < stepsY; iy++) {
+                for (let id = 0; id < stepsD; id++) {
+                    const ly = (iy + 0.5) * tileH;
+                    const ld = (id + 0.5) * tileD;
+
+                    const pos = centerPos.clone()
+                        .add(wallDir.clone().multiplyScalar(halfW))
                         .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
                         .sub(wallNormal.clone().multiplyScalar(ld));
 
@@ -451,75 +483,46 @@
             }
 
             // 3. Arch Reveal
-            // Curved surface. Center is at Top of Rect.
             const archCenter = centerPos.clone().add(new THREE.Vector3(0, 1, 0).multiplyScalar(CONFIG.window.heightRect));
             const arcSteps = 12;
-            const arcLen = Math.PI * CONFIG.window.archRadius; // Half circumference
+            const arcLen = Math.PI * CONFIG.window.archRadius;
             const tileArcLen = arcLen / arcSteps;
 
             for (let i = 0; i < arcSteps; i++) {
-                // Angle goes from 0 to PI.
-                // 0 corresponds to Right side (+wallDir).
-                // PI corresponds to Left side (-wallDir).
                 const theta = (i + 0.5) * (Math.PI / arcSteps);
-
-                // Calc local pos on arc
-                // X along wallDir = cos(theta) * R
-                // Y along Up = sin(theta) * R
                 const localX = Math.cos(theta) * CONFIG.window.archRadius;
                 const localY = Math.sin(theta) * CONFIG.window.archRadius;
 
-                // Loop Depth
                 for (let id = 0; id < stepsD; id++) {
                     const ld = (id + 0.5) * tileD;
-
-                    // Position
                     const pos = archCenter.clone()
                         .add(wallDir.clone().multiplyScalar(localX))
                         .add(new THREE.Vector3(0, 1, 0).multiplyScalar(localY))
                         .sub(wallNormal.clone().multiplyScalar(ld));
 
-                    // Normal points towards center (inwards).
-                    // Vector from Pos to Center (projected on plane).
-                    // Normal = -(cos(theta)*wallDir + sin(theta)*Up)
                     const tileNormal = wallDir.clone().multiplyScalar(Math.cos(theta))
                         .add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.sin(theta)))
                         .negate()
                         .normalize();
 
-                    // For Arch tiles, width is tileD, height is ArcLen
                     const tile = new Tile(pos, tileNormal, tileD, tileArcLen, 'reveal');
                     state.tiles.push(tile);
                 }
             }
-
         }
 
         // --- Build Geometry ---
-        // Room: 4x4m centered at 0,0. Corners: +/- 2.
-
-        // Corners:
         const SW = new THREE.Vector3(-2, 0, 2);
         const SE = new THREE.Vector3(2, 0, 2);
         const NW = new THREE.Vector3(-2, 0, -2);
         const NorthCut = new THREE.Vector3(0.75, 0, -2);
         const EastCut = new THREE.Vector3(2, 0, -0.75);
 
-        // 1. South Wall (Full)
         createWall(SE, SW, 'window');
-
-        // 2. West Wall (Full)
         createWall(SW, NW, 'window');
-
-        // 3. North Wall (Partial)
         createWall(NW, NorthCut, 'window');
-
-        // 4. East Wall (Partial)
         createWall(EastCut, SE, 'window');
-
-        // 5. Chamfer Wall
         createWall(NorthCut, EastCut, 'chamfer');
-
 
         // --- Raycasting & Interaction Setup ---
         const rc = new THREE.Raycaster();
@@ -547,12 +550,15 @@
         // --- UI Listeners Setup ---
         document.getElementById('btn-reset').onclick = () => {
             state.tiles.forEach(t => t.setState(0)); // Brick
+            scheduleSave();
         };
         document.getElementById('btn-render-all').onclick = () => {
             state.tiles.forEach(t => t.setState(1)); // Insulated
+            scheduleSave();
         };
         document.getElementById('btn-flush-all').onclick = () => {
             state.tiles.forEach(t => t.setState(2)); // Flush
+            scheduleSave();
         };
         document.getElementById('btn-wireframe').onclick = () => {
             state.isWireframe = !state.isWireframe;
@@ -564,18 +570,31 @@
             });
         };
         document.getElementById('btn-export').onclick = () => {
-            const total = state.tiles.length;
-            const insulated = state.tiles.filter(t => t.state === 1).length;
-            const flush = state.tiles.filter(t => t.state === 2).length;
-            const percent = Math.round(((insulated + flush) / total) * 100);
-
-            alert(`Export:\nAdjusted Area: ${(total * CONFIG.tileSize * CONFIG.tileSize).toFixed(1)}m²\nInsulated: ${insulated}\nFlush Render: ${flush}\nTotal Covered: ${percent}%`);
+            saveToFirebase();
         };
 
-        // Initial stats
+        // --- Firebase Init & Listeners ---
+        signInAnonymously(auth).then(() => {
+            console.log("Signed in anonymously");
+            onSnapshot(doc(db, 'artifacts', APP_ID, 'configurations', DOC_ID), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.tiles && Array.isArray(data.tiles)) {
+                        state.remoteUpdateInProgress = true;
+                        data.tiles.forEach((val, idx) => {
+                            if (state.tiles[idx]) {
+                                state.tiles[idx].setState(val);
+                            }
+                        });
+                        state.remoteUpdateInProgress = false;
+                        updateStats();
+                    }
+                }
+            });
+        }).catch(console.error);
+
         updateStats();
 
-        // --- Render Loop ---
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
@@ -584,7 +603,6 @@
 
         animate();
 
-        // Handle resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
