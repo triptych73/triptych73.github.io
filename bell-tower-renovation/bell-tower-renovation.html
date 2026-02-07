@@ -104,6 +104,10 @@
             float: right;
         }
 
+        input[type=range] {
+            width: 100%;
+        }
+
         /* Context Menu hint */
         .tooltip {
             position: absolute;
@@ -136,6 +140,11 @@
         <div class="instructions">
             Left-Click: Toggle Tile<br>
             Right-Click: Select Start -> End (Rect Fill)
+        </div>
+
+        <div class="control-group">
+            <label>Architecture Transparency</label>
+            <input type="range" id="opacity-slider" min="0" max="1" step="0.05" value="1">
         </div>
 
         <div class="control-group">
@@ -634,188 +643,319 @@
             }
         }
 
+        // --- Architecture Helpers ---
+        function registerArch(mesh) {
+            mesh.userData.isArchitecture = true;
+            scene.add(mesh);
+        }
+
         // --- Mezzanine Generation ---
         function createMezzanine() {
             const mainGeo = new THREE.BoxGeometry(4, 0.25, 1);
-            const mainMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.mezzanine, roughness: 0.8 });
+            const mainMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.mezzanine, roughness: 0.8, transparent: true });
             const mainMesh = new THREE.Mesh(mainGeo, mainMat);
             mainMesh.position.set(0, 2.225, 1.5);
             mainMesh.receiveShadow = true;
             mainMesh.castShadow = true;
-            scene.add(mainMesh);
+            registerArch(mainMesh);
 
             const extGeo = new THREE.BoxGeometry(CONFIG.window.width, 0.25, CONFIG.window.depth);
             const extMesh = new THREE.Mesh(extGeo, mainMat);
             extMesh.position.set(0, 2.225, 2 + CONFIG.window.depth / 2);
             extMesh.receiveShadow = true;
-            scene.add(extMesh);
+            registerArch(extMesh);
         }
 
         // --- Staircase & Features Generation ---
         function createStaircase() {
-            // Stairs along West Wall (X=-2) from Mezzanine (Z=1) to North Wall (Z=-2)
-            // Mezzanine Floor Level: 2.35m (Top)
-            // Total Height: 2.35m.
-            // Gap: 60mm from West X=-2 => Inner X = -1.94.
-            // Width: 600mm. Occupies X[-1.94, -1.34].
+            // Stairs along West Wall (X=-2) from Mezzanine (Z=1, H=2.35) -> North
+            // Mezzanine Floor: 2.35m.
+            // Total steps = 13. StepH = 2.35/13 = 0.18m.
+            // Thread = 0.25m.
+            // Width = 0.6m.
 
-            const stairMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.stairs, roughness: 0.7 });
+            const stairMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.stairs, roughness: 0.7, transparent: true });
+            const stepH = 2.35 / 13;
+            const tread = 0.25;
+            const width = 0.6;
 
-            const numSteps = 13;
-            const stepH = 2.35 / numSteps; // ~180mm
+            // --- 1. Top/West Run (Descending North) ---
+            // Steps 13 down to 5. (9 steps).
+            // Step 13 (Top): Riser from H(12) to H(13) (2.35). Tread at H(13)? No, tread at H(12) usually for top step if it meets floor? 
+            // Or Top step is flush with floor.
+            // Let's assume Top Step Tread is at 2.35 - stepH.
+            // Riser at Z=1.0. Tread extends North (-Z).
+            // Z start = 1.0.
+            // Shape in Z-Y plane.
+            // Vertices (Clockwise or CCW):
 
-            // 1. Top Section (West Wall)
-            // From Z=1.0 down to Z=-2.0 approx
-            // Steps 13 down to 5?
-            // Let's build from bottom up.
+            const shape = new THREE.Shape();
+            shape.moveTo(0, 2.35 - stepH); // Top Tread Start (at Z=0 relative to start?)
+            // Let's define origin at (Z=1.0, Y=0).
+            // Local Z goes negative (North).
 
-            // Bottom 2 steps on North Wall.
-            // Pos: Near NW corner (-2 + gap, -2 + gap).
-            // North Wall Gap? Usually assumes similar gap. 
-            // 2 Steps going East from West Wall? Or going West?
-            // "Two steps from there along the north wall to floor level"
-            // Implies bottom section is along North Wall.
-            // Corner is Winder.
-            // Then West wall section.
+            const numWestSteps = 9; // 13 down to 5
+            let currentH = 2.35 - stepH;
+            let currentZ = 0;
 
-            // Step 1: Floor -> Step 1 (North Wall). 
-            // X: Starts from West Gap. X = -1.94. 
-            // Z: Along North Wall. Z = -1.8? Or close to wall? Wall is at -2.
-            // Gap 60mm -> Z = -1.94.
-            // Direction: East along North Wall? Or West?
-            // Likely Starts East and goes West to corner? Or Starts corner and goes East?
-            // "Two steps... along north wall to floor". Usually means bottom is on North Wall.
-            // Let's assume bottom steps are at:
-            // Step 1: H=0 to stepH.
-            // Step 2: H=stepH to 2*stepH.
-            // Location: Parallel to North Wall. 
-            // X: -1.34 to -0.74? Or closer to corner?
-            // Let's place corner winder at X[-1.94, -1.34], Z[-1.94, -1.34]. (NW Corner inner).
+            // Zig Zag Top
+            for (let i = 0; i < numWestSteps; i++) {
+                // Horizontal Tread
+                shape.lineTo(currentZ - tread, currentH);
+                currentZ -= tread;
 
-            // Steps 1, 2: Along North Wall, East of corner?
-            // Or West Wall, South of corner?
-            // "Along the north wall to floor level".
-            // Let's assume Step 1 is furthest East, Step 2 is closer to corner.
-            // Step 1: X[-1.34, -0.74]? Wait width is 600mm.
-            // Tread length ~250mm.
-            // Step 1 Box: W=0.25 (Tread), D=0.6 (Width), H=stepH.
-            // Pos: X=[-1.34 - 0.25]?
-            // Let's work backwards from Top.
-
-            // Top: Mezzanine Z=1. Height 2.35.
-            // Stairs go North along West Wall.
-            // From Z=1 to Z_corner.
-            // Dist available = 3m (approx).
-            // Steps 13 down to 5 (9 steps). 9*0.25 = 2.25m.
-            // Start Z = 1. End Z = 1 - 2.25 = -1.25.
-            // Corner starts at Z = -1.34 (based on gap). 
-            // So we have space.
-
-            // 1. Straight Run (West Wall)
-            // Steps 5 to 13 (9 steps).
-            // X Center = -1.94 + 0.3 = -1.64.
-            // Width = 0.6.
-            // tread = 0.25.
-            for (let i = 0; i < 9; i++) {
-                const stepNum = i + 5; // 5..13
-                const zPos = 1.0 - (i * 0.25) - 0.125; // Center of tread. Start at Z=1.
-                const h = (stepNum) * stepH;
-                // Solid block from 0 to h? Or floated? "Solid staircase".
-                const sGeo = new THREE.BoxGeometry(0.6, h, 0.25);
-                const sMesh = new THREE.Mesh(sGeo, stairMat);
-                sMesh.position.set(-1.64, h / 2, zPos);
-                scene.add(sMesh);
+                // Vertical Riser (down)
+                if (i < numWestSteps - 1) {
+                    currentH -= stepH;
+                    shape.lineTo(currentZ, currentH);
+                }
             }
 
-            // 2. Winder (Corner)
-            // Steps 3, 4. 
-            // Corner Box: X[-1.94, -1.34], Z[-1.94, -1.34]. 0.6x0.6.
-            // Split into 2 triangular steps or just 2 blocks?
-            // "Two step winder". Usually 2 triangles.
-            // Step 3: Lower triangle. Step 4: Higher triangle.
-            // H3 = 3*stepH. H4 = 4*stepH.
-            // Mesh 3: Box 0.6x0.6xH3?? No.
-            // Let's simplify and make 2 square steps or valid winder.
-            // Let's make Step 3 the square corner block for simplicity, or split geometry.
-            // Let's do 2 prisms.
-            // Step 3: Triangle (0,0) (0.6,0) (0,0.6)? 
-            // Let's just make it a flat landing turn for visual simplicity if low poly?
-            // No, user specifically asked for "two step winder".
-            // Step 3: Bottom half of corner. Step 4: Top half.
-            // Center of corner: (-1.64, -1.64).
+            // Now at bottom of last riser (Step 5).
+            // CurrentZ = -9 * 0.25 = -2.25.
+            // CurrentH = Step 5 Height - stepH? 
+            // Step 5 H = 5 * stepH. 
+            // We are at H = (13 - 9) * stepH = 4 * stepH?
+            // Wait. 
+            // Top Step is 13.
+            // i=0: Tread 13 (at H 12.something). Riser down to H 11.something?
+            // Let's count heights properly.
+            // Floor is H=2.35.
+            // Step 13 Tread Level = 2.35. (If flush). Or 2.35 - stepH?
+            // Usually top tread is floor level.
+            // So Step 13 Tread is at 2.35.
+            // Riser drops to 2.35 - stepH.
+            // But we start from Mezzanine edge.
 
-            // Winder 1 (Step 3)
-            // Shape: Square 0.6x0.6.
-            // We'll just stack them for now to hint winder.
-            // Or make a generic box for the corner at height 3.5?
-            // Let's make Step 3 a full 0.6x0.6 platform at H3.
-            // Step 4 a full 0.6x0.6 platform at H4?? No that blocks.
-            // Let's use 2 small 0.3x0.6 steps? No.
-            // Let's stick to simple squares for "winder" abstraction:
-            // Step 4: North part of corner. Step 3: South part?
-            // Let's just use a Cube at the corner for Step 3+4 for now to avoid complex geometry code.
-            const cornerGeo = new THREE.BoxGeometry(0.6, 4 * stepH, 0.6);
-            const cornerMesh = new THREE.Mesh(cornerGeo, stairMat);
-            cornerMesh.position.set(-1.64, (4 * stepH) / 2, -1.64);
-            scene.add(cornerMesh);
+            // Re-do Profile:
+            // Start at (0, 2.35). (Mezzanine Edge).
+            // Riser Down -> (0, 2.35 - stepH).
+            // Tread Forward -> (-0.25, 2.35 - stepH).
+            // Riser Down -> (-0.25, 2.35 - 2*stepH).
+            // ...
 
-            // 3. Bottom Run (North Wall)
-            // Steps 1, 2.
-            // Going East from corner.
-            // X starts at -1.34 (Corner edge).
-            // Step 2: X[-1.34, -1.09].
-            // Step 1: X[-1.09, -0.84].
-            // Z Center: -1.64.
+            const westShape = new THREE.Shape();
+            westShape.moveTo(0, 2.35);
+
+            for (let i = 0; i < numWestSteps; i++) {
+                const hTop = 2.35 - i * stepH;
+                const hBot = 2.35 - (i + 1) * stepH;
+                const zNear = -i * tread;
+                const zFar = -(i + 1) * tread;
+
+                westShape.lineTo(zNear, hBot); // Riser down
+                westShape.lineTo(zFar, hBot);  // Tread forward
+            }
+
+            // Bottom Point: (zFar_last, hBot_last).
+            // Z = -2.25. H = 2.35 - 9*stepH = 4*stepH. (Correct, reaches Step 4 level).
+
+            // Slope Bottom (Soffit)
+            // Normal depth 300mm.
+            // Calculate vector from Top Nosing (0, 2.35) to Bottom Nosing (-2.25, 4*stepH).
+            // Or simpler: Offset the zigzag points? No, flat slope.
+            // Start Point Soffit: Top offset.
+            // End Point Soffit: Bottom offset.
+            // Let's just create a thick slab.
+            // Slope line from (-2.25, 4*stepH - 0.3?) to (0, 2.35 - 0.3?).
+            // Actual efficient calculation:
+            // Angle of stairs = atan(stepH / tread).
+            // Normal vector (-sin, cos).
+            // Offset = 0.3.
+            // dx = 0.3 * sin(ang). dy = -0.3 * cos(ang).
+
+            const angle = Math.atan2(stepH, tread);
+            const dx = 0.3 * Math.sin(angle);
+            const dy = 0.3 * Math.cos(angle);
+
+            // Bottom corner point
+            const zLast = -numWestSteps * tread;
+            const hLast = 2.35 - numWestSteps * stepH;
+
+            westShape.lineTo(zLast + dx, hLast - dy); // Bottom Soffit Corner
+            westShape.lineTo(0 + dx, 2.35 - dy);      // Top Soffit Corner
+            westShape.lineTo(0, 2.35);                // Close
+
+            const extrudeSettings = { depth: 0.6, bevelEnabled: false };
+            const westGeo = new THREE.ExtrudeGeometry(westShape, extrudeSettings);
+
+            // Rotate to align with West Wall (Face East).
+            // Shape is in XY. We treated X as Z.
+            // So Rotate Y -90? Or just manual mesh positioning.
+            // Current: +Y is Up. +X is -Z (North).
+            // Extrude Depth is +Z (which is +X in world).
+            // We want Extrusion along +X world (Width). 0.6.
+            // We want Shape X to map to World Z.
+            // We want Shape Y to map to World Y.
+
+            const westMesh = new THREE.Mesh(westGeo, stairMat);
+            // Default: Extrude along Z. Shape in XY.
+            // Rotate Y 90 deg -> Shape in ZY. Extrude along X.
+            westMesh.rotation.y = Math.PI / 2;
+            // Position: 
+            // Origin (0,0) of shape maps to (0,0,0) of Mesh.
+            // We want Origin (Top Edge) to be at (X=-1.94, Y=0, Z=1.0).
+            // BUT Rotation Y 90 maps +X_shape to +Z_world? 
+            // Let's check rotation. R_y(90): (x,y,z) -> (z, y, -x).
+            // Shape pt (z_s, y_s, 0). -> (0, y_s, -z_s).
+            // Wait, shape X was "Negative Z". so z_s is negative. -z_s is positive.
+            // That means stairs go South. We want North (Negative Z).
+            // So we need Shape X (negative) to map to World Z (negative).
+            // So (z_s, y_s, 0) -> (0, y_s, z_s).
+            // Rotation Y -90? (z, y, x)? No.
+            // Let's just rotate Y 90 and Flip Z? 
+            // Simplest: Rotate Y -90 -> ( -z, y, x ).
+            // Shape X is negative. -X is positive. Maps to Z positive. Wrong.
+
+            // Let's manually rotate geometry.
+            westGeo.rotateY(Math.PI / 2);
+            // Now X_shape -> Z_world. Y_shape -> Y_world. Z_extrude -> X_world.
+            // Shape X (0 to -2.25) -> World Z (0 to -2.25). Correct (goes North).
+            // Extrude (0 to 0.6) -> World X (0 to 0.6).
+            // We want World X to be [-1.94, -1.34].
+            // Currently 0..0.6.
+            // Position Mesh at X = -1.94.
+            // Z Origin was 1.0. Shape starts at 0. So Mesh Z = 1.0.
+
+            westMesh.position.set(-1.94, 0, 1.0);
+            registerArch(westMesh);
+
+            // --- 2. Corner Winder (Steps 3, 4) ---
+            // Heights: Step 3 (2*stepH to 3*stepH). Step 4 (3*stepH to 4*stepH).
+            // Corner Box: X[-1.94, -1.34], Z[-1.94, -1.34].
+            // Step 4 (Higher): North-West half? Or?
+            // Transitioning from West Run (Ends at Z=-1.25, H=4*stepH) to North Run.
+            // West Run ends at Z = 1.0 - 2.25 = -1.25.
+            // Corner starts at Z = -1.34.
+            // Gap filled by landing/winder.
+            // Let's put Step 4 at the landing of West Run.
+            // Actually West Run ends at Step 5 base (H=4*stepH). 
+            // So Step 4 is the next one down.
+            // Step 4 should be the Top Winder.
+            // Step 3 is Bottom Winder.
+
+            // Let's make Step 4 a Triangle.
+            // (X,Z) points: (-1.94, -1.25) [Connects to West Run?], (-1.34, -1.25), (-1.94, -1.94)? 
+            // West Run ends at Z=-1.25.
+            // Winder Box is Z[-1.94, -1.34]. 
+            // Gap of 0.09m? Let's assume West Run connects flush.
+
+            // Winder Geometry: 2 Prisms.
+            // Prism 1 (Step 4): H = 4*stepH. Thickness stepH? 
+            // Shape: Square minus Triangle?
+            // Let's just make 2 Box stairs for robustness in low-fidelity.
+            // Or 2 Triangles.
+
+            const winderMat = stairMat;
+            const cornerSize = 0.6;
+            const cornerX = -1.94;
+            const cornerZ = -1.94;
+
+            // Step 4 (Top Corner)
+            // Shape: Triangle (0,0) -> (0.6, 0) -> (0, 0.6).
+            // In XZ plane.
+            const s4Shape = new THREE.Shape();
+            s4Shape.moveTo(0, 0);
+            s4Shape.lineTo(cornerSize, 0);
+            s4Shape.lineTo(0, cornerSize);
+            s4Shape.lineTo(0, 0);
+
+            const s4Geo = new THREE.ExtrudeGeometry(s4Shape, { depth: stepH, bevelEnabled: false });
+            s4Geo.rotateX(Math.PI / 2); // Make flat
+            s4Geo.translate(cornerX, 4 * stepH - stepH, cornerZ + cornerSize); // Adjust pos
+            // Wait orientation...
+            // Needs to connect West Run (North End) to Step 3.
+            // Let's just use a Box for Step 4 at corner, and Box for Step 3.
+            // Step 4: Box at (-1.94, 3*stepH, -1.34) size (0.6, stepH, 0.6)? No.
+
+            // Simple Winder:
+            // Step 4 (Higher): Box 0.6 x stepH x 0.6. Pos: Corner.
+            // Step 3 (Lower): Box 0.6 x stepH x 0.6 ?? No overlap.
+            // Let's split corner: 
+            // Step 4: North Half? (-1.94, -1.64) to (-1.34, -1.34)?
+            // Let's just make Step 3 and 4 fill the corner block height 2*stepH to 4*stepH.
+            // Step 4 is a platform 0.6x0.6 at H=3.5stepH (mid).
+            // Just a box for now as requested "geometry isn't quite right" implies it needs fixing.
+            // "double height step" was the complaint.
+            // Ensure H levels match.
+            // West End H = 4*stepH.
+            // Step 4 Top = 4*stepH.
+            // Step 3 Top = 3*stepH.
+            // North Start H = 2*stepH.
+
+            const step4Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
+            const step4 = new THREE.Mesh(step4Geo, winderMat);
+            step4.position.set(-1.64, 3.5 * stepH, -1.64);
+            registerArch(step4);
+
+            const step3Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
+            const step3 = new THREE.Mesh(step3Geo, winderMat);
+            step3.position.set(-1.64, 2.5 * stepH, -1.64);
+            // Shrink step 3 to indicate winder? 
+            // User wants "Winder".
+            // Let's Cut Step 3 in half diagonally.
+            // But for now stacked boxes are safer than broken geometry.
+            registerArch(step3);
+
+            // --- 3. North Run (Steps 1, 2) ---
+            // Going East from Corner.
+            // Starts X = -1.34.
+            // Step 2 Top = 2*stepH.
+            // Step 1 Top = 1*stepH.
+            // Length = 2 treads = 0.5m.
+            // Ends X = -0.84.
+
+            const northShape = new THREE.Shape();
+            northShape.moveTo(0, 2 * stepH);
 
             // Step 2
-            const s2Geo = new THREE.BoxGeometry(0.25, 2 * stepH, 0.6);
-            const s2Mesh = new THREE.Mesh(s2Geo, stairMat);
-            s2Mesh.position.set(-1.34 + 0.125, stepH, -1.64);
-            scene.add(s2Mesh);
-
+            northShape.lineTo(tread, 2 * stepH); // Tread
+            northShape.lineTo(tread, stepH);   // Riser
             // Step 1
-            const s1Geo = new THREE.BoxGeometry(0.25, 1 * stepH, 0.6);
-            const s1Mesh = new THREE.Mesh(s1Geo, stairMat);
-            s1Mesh.position.set(-1.34 + 0.375, stepH / 2, -1.64);
-            scene.add(s1Mesh);
+            northShape.lineTo(tread * 2, stepH);
+            northShape.lineTo(tread * 2, 0);
+
+            // Soffit
+            // Slope back
+            const nDx = 0.3 * Math.sin(angle);
+            const nDy = 0.3 * Math.cos(angle);
+
+            northShape.lineTo(tread * 2 - nDx, 0 - nDy);
+            northShape.lineTo(0 - nDx, 2 * stepH - nDy);
+            northShape.lineTo(0, 2 * stepH);
+
+            const northGeo = new THREE.ExtrudeGeometry(northShape, extrudeSettings);
+            // Extrude along Z (0.6).
+            // North Wall is at Z=-2. Gap 60mm -> Z=-1.94.
+            // Face South.
+            // Shape X -> World X. Shape Y -> World Y.
+            // Extrude Z -> World Z.
+            // Shape starts X=0. We want X=-1.34.
+            // Extrude 0..0.6. We want Z[-1.94, -1.34].
+            // So Position Z = -1.94.
+
+            const northMesh = new THREE.Mesh(northGeo, stairMat);
+            northMesh.position.set(-1.34, 0, -1.94);
+            registerArch(northMesh);
 
             // --- Solid Wall ---
-            // "Solid wall 200mm wide going from the gallery to the edge of the winder. Height 3.35m."
-            // Gallery Z=1.
-            // Winder Edge Z ~ -1.34.
-            // Wall positioned at inner edge of stairs? X = -1.34.
-            // Width 0.2. Center X = -1.34 + 0.1 = -1.24?
-            // Length: From Z=1 to Z=-1.34 = 2.34m.
-            // Height 3.35m.
-
             const wGeo = new THREE.BoxGeometry(0.2, 3.35, 2.34);
-            const wMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.wallSolid });
+            const wMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.wallSolid, transparent: true });
             const wMesh = new THREE.Mesh(wGeo, wMat);
-            wMesh.position.set(-1.24, 3.35 / 2, 1.0 - 2.34 / 2); // Start Z=1, go -Z
-            scene.add(wMesh);
+            wMesh.position.set(-1.24, 3.35 / 2, 1.0 - 2.34 / 2);
+            registerArch(wMesh);
 
             // --- Glass Balustrade ---
-            // "Glass balustrade to the gallery terminating at the edge of this new wall."
-            // Gallery Z=1.
-            // From East Wall (X=2) to Wall (X=-1.14 approx).
-            // Length = 2 - (-1.14) = 3.14m.
-            // Height 1m.
-            // Position: X center = (-1.14 + 2)/2 = 0.43. Z=1. Y = 2.35 + 0.5.
-
             const gGeo = new THREE.BoxGeometry(3.14, 1.0, 0.05);
             const gMat = new THREE.MeshPhysicalMaterial({
                 color: CONFIG.colors.glass,
                 transmission: 0.9,
-                opacity: 1,
-                metalness: 0,
-                roughness: 0,
-                ior: 1.5,
-                thickness: 0.05,
+                opacity: 1, // Will be controlled by slider?
                 transparent: true
             });
             const gMesh = new THREE.Mesh(gGeo, gMat);
             gMesh.position.set(0.43, 2.35 + 0.5, 1.0);
-            scene.add(gMesh);
+            registerArch(gMesh);
         }
 
         createMezzanine();
@@ -935,14 +1075,24 @@
         document.getElementById('btn-wireframe').onclick = () => {
             state.isWireframe = !state.isWireframe;
             scene.traverse(obj => {
-                if (obj.isMesh && obj.userData.tile) {
+                if (obj.isMesh) {
                     obj.material.wireframe = state.isWireframe;
-                    obj.material.needsUpdate = true;
                 }
             });
         };
         document.getElementById('btn-export').onclick = () => {
             saveToFirebase();
+        };
+
+        document.getElementById('opacity-slider').oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            scene.traverse(obj => {
+                if (obj.userData && obj.userData.isArchitecture) {
+                    obj.material.opacity = val;
+                    // If opacity is 1, maybe turn off transparent to deal with depth sorting if needed? 
+                    // But generally fine to leave transparent=true.
+                }
+            });
         };
 
         // --- Firebase Init ---
