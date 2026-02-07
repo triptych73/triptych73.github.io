@@ -121,7 +121,9 @@
         {
             "imports": {
                 "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "three-mesh-bvh": "https://unpkg.com/three-mesh-bvh@0.7.3/build/index.module.js",
+                "three-bvh-csg": "https://unpkg.com/three-bvh-csg@0.0.16/build/index.module.js"
             }
         }
     </script>
@@ -170,9 +172,10 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -215,7 +218,8 @@
                 flushRender: 0xeeeeee, // Slightly off-white
                 wireframe: 0x333333,
                 background: 0x202020,
-                selection: 0x00ff00 // Green selection glow
+                selection: 0x00ff00, // Green selection glow
+                mezzanine: 0x808080 // Grey concrete
             }
         };
 
@@ -242,6 +246,7 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -256,11 +261,54 @@
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(5, 10, 5);
         dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
         scene.add(dirLight);
 
         const pointLight = new THREE.PointLight(0xffaa00, 0.5, 10);
         pointLight.position.set(0, 4, 0);
         scene.add(pointLight);
+
+        // --- CSG Evaluator ---
+        const csgEvaluator = new Evaluator();
+        // Reuse brush for performance
+        const windowCutterBrush = new Brush(
+            new THREE.CylinderGeometry(CONFIG.window.archRadius, CONFIG.window.archRadius, 1, 32)
+        );
+        // Wait, the window is Rect + Arch. 
+        // Let's create a single Geometry for the window VOID.
+        // It needs to be long enough to pierce the wall.
+
+        function createWindowCutter() {
+            // Compose a shape: Box + Cylinder
+            // Box for rect part
+            const boxGeo = new THREE.BoxGeometry(CONFIG.window.width, CONFIG.window.heightRect, 2.0); // Depth 2.0 to pierce wall
+            const boxBrush = new Brush(boxGeo);
+            boxBrush.position.y = CONFIG.window.heightRect / 2; // Center it
+            boxBrush.updateMatrixWorld();
+
+            // Cylinder for arch
+            const cylGeo = new THREE.CylinderGeometry(CONFIG.window.archRadius, CONFIG.window.archRadius, 2.0, 32);
+            // Cylinder is vertical by default. Rotate to Z axis.
+            cylGeo.rotateX(Math.PI / 2);
+            const cylBrush = new Brush(cylGeo);
+            cylBrush.position.y = CONFIG.window.heightRect;
+            cylBrush.updateMatrixWorld();
+
+            // Union? No, just use two brushes or union them?
+            // Let's union them into one Cutter Brush for efficiency.
+            // Actually Evaluator.evaluate takes 2 brushes.
+            // So let's pre-compute the Union of Box + Arch as the "Cutter".
+            // But CSG operations are expensive.
+            // Better: Just use the Arch Cutter for tiles above the Rect height.
+            // Rectangular tiles are handled by grid logic (skipped).
+            // Only the Arch border needs cutting.
+            // So "Cutter" is just the cylinder.
+            return cylBrush;
+        }
+
+        const archCutter = createWindowCutter();
+
 
         // --- Helper Functions (Hoisted) ---
         function updateStats() {
@@ -311,25 +359,30 @@
                 const indicator = document.getElementById('saved-indicator');
                 if (indicator) indicator.style.opacity = '1';
             } catch (e) {
-                console.error("Save failed", e);
+                // console.error("Save failed", e); // Silence unless needed
             }
         }
 
         // --- Helper Classes ---
 
         class Tile {
-            constructor(position, normal, width, height, type = 'wall', wallId, gx, gy) {
+            constructor(position, normal, width, height, type = 'wall', wallId, gx, gy, existingGeometry = null) {
                 this.state = 0; // 0: Brick, 1: Insulated, 2: Flush Render
                 this.originalPosition = position.clone();
                 this.normal = normal.clone();
                 this.type = type; // 'wall', 'reveal'
-                this.wallId = wallId; // ID of the wall/plane this belongs to
+                this.wallId = wallId;
                 this.gridX = gx;
                 this.gridY = gy;
                 this.isSelected = false;
 
                 // Create geometry
-                const geometry = new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02);
+                let geometry;
+                if (existingGeometry) {
+                    geometry = existingGeometry;
+                } else {
+                    geometry = new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02);
+                }
 
                 this.material = new THREE.MeshStandardMaterial({
                     color: CONFIG.colors.brick,
@@ -340,7 +393,21 @@
 
                 this.mesh = new THREE.Mesh(geometry, this.material);
                 this.mesh.position.copy(this.originalPosition);
-                this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+
+                // If custom (cut) geometry, correct orientation might be tricky if we cut it in local space.
+                // Standard Box faces Z. lookAt correctly orients it.
+                // If we provided existingGeometry (CSG result), it was computed in WORLD space relative to tile center?
+                // Actually, best to compute CSG in local tile space.
+
+                if (!existingGeometry) {
+                    this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+                } else {
+                    // If it's CSG geometry, it's already oriented if we did it right.
+                    // But typically simpler to keep tile logic consistent.
+                    this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+                    // Wait, if I supply geometry, I should assume it fits the "standard box" space (centered at 0,0,0)
+                }
+
                 this.mesh.userData = { tile: this };
 
                 scene.add(this.mesh);
@@ -360,12 +427,12 @@
 
             setSelection(selected) {
                 this.isSelected = selected;
-                this.material.emissive.setHex(selected ? 0x00ff00 : 0x000000);
+                this.material.emissive.setHex(selected ? CONFIG.colors.selection : 0x000000);
                 this.material.emissiveIntensity = selected ? 0.5 : 0;
             }
 
             updateVisuals() {
-                // Defer stats update to avoid layout thrashing if mass updating
+                // Defer stats update 
                 requestAnimationFrame(updateStats);
 
                 if (this.state === 1) { // Insulated
@@ -387,23 +454,51 @@
 
         // --- Wall Generation Logic ---
 
-        function isHole(localX, localY, type) {
-            if (type === 'window') {
-                const halfW = CONFIG.window.width / 2;
-                if (localX > -halfW && localX < halfW && localY < CONFIG.window.heightRect) {
+        function isInsideHole(localX, localY) {
+            // Standard check for skipping
+            // Check Rectangular part
+            const halfW = CONFIG.window.width / 2;
+            if (localX > -halfW && localX < halfW && localY < CONFIG.window.heightRect) {
+                return true;
+            }
+            // Check Arch part (approximate for skipping full tiles)
+            if (localY >= CONFIG.window.heightRect) {
+                const dy = localY - CONFIG.window.heightRect;
+                if (localX * localX + dy * dy < CONFIG.window.archRadius * CONFIG.window.archRadius) {
                     return true;
                 }
-                if (localY >= CONFIG.window.heightRect) {
-                    const dy = localY - CONFIG.window.heightRect;
-                    if (localX * localX + dy * dy < CONFIG.window.archRadius * CONFIG.window.archRadius) {
-                        return true;
-                    }
-                }
-            } else if (type === 'door') {
-                const halfW = CONFIG.door.width / 2;
-                if (localX > -halfW && localX < halfW && localY < CONFIG.door.height) {
-                    return true;
-                }
+            }
+            return false;
+        }
+
+        function isIntersectingArch(localX, localY, width, height) {
+            // Only care if above rect height
+            const tileBottom = localY - height / 2;
+            const tileTop = localY + height / 2;
+
+            if (tileTop < CONFIG.window.heightRect) return false; // purely rectangular part
+
+            // Define tile bounds
+            const minX = localX - width / 2;
+            const maxX = localX + width / 2;
+            const minY = localY - height / 2;
+            const maxY = localY + height / 2;
+
+            // Arch circle center relative to tile local coords
+            // Arch center is at (0, heightRect)
+            // Check if any corner is inside vs outside
+            // Or if the circle intersects the box.
+
+            // Simplified: Just run CSG on everything near the arch boundary?
+            // Let's rely on checking if center is outside but distance to center < Radius + tolerance
+
+            const dy = Math.max(0, localY - CONFIG.window.heightRect);
+            const dist = Math.sqrt(localX * localX + dy * dy);
+
+            // If dist is somewhat close to Radius
+            const tolerance = Math.max(width, height) * 1.5;
+            if (dist > CONFIG.window.archRadius - tolerance && dist < CONFIG.window.archRadius + tolerance) {
+                return true;
             }
             return false;
         }
@@ -414,51 +509,73 @@
 
             const wallDir = new THREE.Vector3().subVectors(p2, p1).normalize();
             const upDir = new THREE.Vector3(0, 1, 0);
-
             let normal = new THREE.Vector3().crossVectors(wallDir, upDir).normalize();
 
             const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-            if (normal.dot(midPoint) > 0) {
-                normal.negate();
-            }
+            if (normal.dot(midPoint) > 0) normal.negate();
 
             const stepsX = Math.ceil(length / CONFIG.tileSize);
             const stepsY = Math.ceil(height / CONFIG.tileSize);
-
             const realTileW = length / stepsX;
             const realTileH = height / stepsY;
 
             let holeCenterX = length / 2;
-
             if (type === 'window' || type === 'door') {
-                if (Math.abs(p1.z + 2) < 0.01 && p1.x < 0) { holeCenterX = 2.0; } // North Wall detection
-                if (Math.abs(p1.x - 2) < 0.01 && p1.z < 0) { holeCenterX = 0.75; } // East Wall detection
+                if (Math.abs(p1.z + 2) < 0.01 && p1.x < 0) { holeCenterX = 2.0; }
+                if (Math.abs(p1.x - 2) < 0.01 && p1.z < 0) { holeCenterX = 0.75; }
             }
-
-            if (type === 'chamfer') {
-                type = 'door';
-                holeCenterX = length / 2;
-            }
+            if (type === 'chamfer') { type = 'door'; holeCenterX = length / 2; }
 
             for (let ix = 0; ix < stepsX; ix++) {
                 for (let iy = 0; iy < stepsY; iy++) {
                     const localX = (ix + 0.5) * realTileW;
                     const localY = (iy + 0.5) * realTileH;
-
                     const relativeX = localX - holeCenterX;
 
-                    let skip = false;
-                    if (type === 'window') {
-                        if (isHole(relativeX, localY, 'window')) skip = true;
-                    } else if (type === 'door') {
-                        if (isHole(relativeX, localY, 'door')) skip = true;
-                    }
+                    // 1. Fully Inside -> Skip
+                    if (type === 'window' && isInsideHole(relativeX, localY)) continue;
+                    if (type === 'door' && isHoleDoor(relativeX, localY)) continue;
 
-                    if (!skip) {
-                        const pos = p1.clone()
-                            .add(wallDir.clone().multiplyScalar(localX))
-                            .add(upDir.clone().multiplyScalar(localY));
+                    const pos = p1.clone()
+                        .add(wallDir.clone().multiplyScalar(localX))
+                        .add(upDir.clone().multiplyScalar(localY));
 
+                    // 2. Arch Intersection -> CSG Tile
+                    if (type === 'window' && isIntersectingArch(relativeX, localY, realTileW, realTileH)) {
+                        // Create Tile Brush
+                        const tileGeo = new THREE.BoxGeometry(realTileW * 0.95, realTileH * 0.95, 0.02);
+                        const tileBrush = new Brush(tileGeo);
+
+                        // Setup Cutter - Needs to be transformed into Tile Space?
+                        // No, CSG works in World Space usually, or we transform Cutter into Tile Space.
+                        // Easier: Transform Cutter to match where the hole is RELATIVE TO THE TILE.
+                        // Hole center is at relativeX = 0, localY = heightRect.
+                        // Tile is at (0,0,0) in its own space.
+                        // So Hole Center in Tile Space is (-relativeX, CONFIG.window.heightRect - localY, 0).
+
+                        const localHoleX = -relativeX;
+                        const localHoleY = CONFIG.window.heightRect - localY;
+
+                        // Update Arch Cutter Brush position
+                        archCutter.position.set(localHoleX, localHoleY, 0);
+                        // Note: Cylinder is rotated X in createWindowCutter to face Z.
+                        archCutter.updateMatrixWorld();
+
+                        tileBrush.updateMatrixWorld();
+
+                        const result = csgEvaluator.evaluate(tileBrush, archCutter, SUBTRACTION);
+                        const resGeo = result.geometry;
+
+                        // Check if geometry is valid (not empty)
+                        // Unfortunately resGeo always exists.
+                        // Just assume valid if we are here (since we checked isInsideHole false)
+
+                        // Create Tile with Custom Geo
+                        const tile = new Tile(pos, normal, realTileW, realTileH, 'wall', wallId, ix, iy, resGeo);
+                        state.tiles.push(tile);
+
+                    } else {
+                        // Standard Square Tile
                         const tile = new Tile(pos, normal, realTileW, realTileH, 'wall', wallId, ix, iy);
                         state.tiles.push(tile);
                     }
@@ -469,6 +586,11 @@
                 const holeCenterPos = p1.clone().add(wallDir.clone().multiplyScalar(holeCenterX));
                 createReveal(holeCenterPos, normal, wallDir, wallId);
             }
+        }
+
+        function isHoleDoor(localX, localY) {
+            const halfW = CONFIG.door.width / 2;
+            return (localX > -halfW && localX < halfW && localY < CONFIG.door.height);
         }
 
         function createReveal(centerPos, wallNormal, wallDir, parentWallId) {
@@ -493,7 +615,7 @@
                         .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
                         .sub(wallNormal.clone().multiplyScalar(ld));
 
-                    const tile = new Tile(pos, wallDir, tileD, tileH, 'reveal', leftId, id, iy); // x=depth, y=height
+                    const tile = new Tile(pos, wallDir, tileD, tileH, 'reveal', leftId, id, iy);
                     state.tiles.push(tile);
                 }
             }
@@ -539,11 +661,61 @@
                         .negate()
                         .normalize();
 
-                    const tile = new Tile(pos, tileNormal, tileD, tileArcLen, 'reveal', archId, id, i); // x=depth, y=angle
+                    const tile = new Tile(pos, tileNormal, tileD, tileArcLen, 'reveal', archId, id, i);
                     state.tiles.push(tile);
                 }
             }
         }
+
+        // --- Mezzanine Generation ---
+        function createMezzanine() {
+            // Location: South Wall (Z=2).
+            // Extends from wall towards -Z by 1m.
+            // Height: Bottom 2.1m. Thickness 0.25m.
+            // Width: Full room width (4m)? Yes, "projection from the wall".
+            // Also "Extend into the window alcove".
+
+            // 1. Main Slab (Room Part)
+            // Center: X=0, Y=2.1 + 0.25/2 = 2.225, Z = 2 - 1/2 = 1.5
+            // Size: W=4, H=0.25, D=1
+
+            const mainGeo = new THREE.BoxGeometry(4, 0.25, 1);
+            const mainMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.mezzanine, roughness: 0.8 });
+            const mainMesh = new THREE.Mesh(mainGeo, mainMat);
+            mainMesh.position.set(0, 2.225, 1.5);
+            mainMesh.receiveShadow = true;
+            mainMesh.castShadow = true;
+            scene.add(mainMesh);
+
+            // 2. Alcove Extension
+            // Window on South Wall (Z=2) is centered.
+            // Window Width: 1.5m. Depth: 0.45m.
+            // Slab needs to extend into it.
+            // Size: W=1.5, H=0.25, D=0.45.
+            // Center: X=2 (HoleCenterX for SouthWall... wait)
+
+            // Check South Wall Coords:
+            // SE(2,0,2) -> SW(-2,0,2).
+            // HoleCenterX = Length/2 = 2m.
+            // So Hole Center (world) = SE + (SW-SE).normalize() * 2 = 2,0,2 + (-1,0,0)*2 = (0,0,2).
+            // Correct, window is at X=0 on South Wall.
+
+            // Alcove Extension Pos:
+            // X=0, Y=2.225.
+            // Z? Wall face is Z=2. Depth goes OUT (towards +Z? No, Reveal goes into wall thickness).
+            // Wall Normal for South Wall (facing In) is -Z (0,0,-1).
+            // Wait, South Wall is at Z=2. Normal points to (0,0,0) so Normal is (0,0,-1).
+            // Wall Thickness not modeled really, "Insulated" moves IN. Reveal goes OUT (towards +Z).
+            // So Alcove Extension Center Z = 2 + 0.45/2 = 2.225.
+
+            const extGeo = new THREE.BoxGeometry(CONFIG.window.width, 0.25, CONFIG.window.depth);
+            const extMesh = new THREE.Mesh(extGeo, mainMat);
+            extMesh.position.set(0, 2.225, 2 + CONFIG.window.depth / 2);
+            extMesh.receiveShadow = true;
+            scene.add(extMesh);
+        }
+
+        createMezzanine();
 
         // --- Build Geometry ---
         const SW = new THREE.Vector3(-2, 0, 2);
@@ -563,7 +735,6 @@
         const ptr = new THREE.Vector2();
 
         function onPointerDown(event) {
-            // Only handle pointer interactions on canvas
             if (event.target !== renderer.domElement) return;
 
             ptr.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -573,10 +744,11 @@
             const intersects = rc.intersectObjects(scene.children);
 
             if (intersects.length > 0) {
-                const obj = intersects[0].object;
-                if (obj.userData && obj.userData.tile) {
-                    const tile = obj.userData.tile;
-
+                let targetObj = intersects[0].object;
+                // Traverse up if we hit a child of a group (if any)
+                // But here we just use userData check
+                if (targetObj.userData && targetObj.userData.tile) {
+                    const tile = targetObj.userData.tile;
                     if (event.button === 0) { // Left Click
                         tile.toggle();
                     } else if (event.button === 2) { // Right Click
@@ -586,33 +758,24 @@
             }
         }
 
-        // Prevent context menu
         window.addEventListener('contextmenu', e => e.preventDefault());
         window.addEventListener('pointerdown', onPointerDown);
 
         function handleRightClick(tile) {
             if (!state.selectedTile) {
-                // Select Start
                 state.selectedTile = tile;
                 tile.setSelection(true);
             } else {
-                // If clicking same tile, deselect
                 if (state.selectedTile === tile) {
                     state.selectedTile = null;
                     tile.setSelection(false);
                     return;
                 }
-
-                // If clicking different tile, check wall Match
                 if (state.selectedTile.wallId === tile.wallId) {
-                    // Perform Block Fill
                     performBlockFill(state.selectedTile, tile);
-
-                    // Deselect
                     state.selectedTile.setSelection(false);
                     state.selectedTile = null;
                 } else {
-                    // Different wall -> New Selection
                     state.selectedTile.setSelection(false);
                     state.selectedTile = tile;
                     tile.setSelection(true);
@@ -627,7 +790,6 @@
             const minY = Math.min(t1.gridY, t2.gridY);
             const maxY = Math.max(t1.gridY, t2.gridY);
 
-            // Find tiles in range
             const tilesInRange = state.tiles.filter(t =>
                 t.wallId === wallId &&
                 t.gridX >= minX && t.gridX <= maxX &&
@@ -636,7 +798,6 @@
 
             if (tilesInRange.length === 0) return;
 
-            // Find most common type
             const counts = { 0: 0, 1: 0, 2: 0 };
             tilesInRange.forEach(t => counts[t.state]++);
 
@@ -650,11 +811,7 @@
             }
 
             const nextState = (commonState + 1) % 3;
-
-            // Apply
             tilesInRange.forEach(t => t.setState(nextState));
-
-            // Save
             scheduleSave();
         }
 
@@ -684,9 +841,8 @@
             saveToFirebase();
         };
 
-        // --- Firebase Init & Listeners ---
+        // --- Firebase Init ---
         signInAnonymously(auth).then(() => {
-            console.log("Signed in anonymously");
             onSnapshot(doc(db, 'artifacts', APP_ID, 'configurations', DOC_ID), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
