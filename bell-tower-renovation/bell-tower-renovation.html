@@ -666,8 +666,28 @@
             registerArch(extMesh);
         }
 
+        // --- Roof Bridge Generation ---
+        function createRoofBridge() {
+            // Bridge: E-W direction, bottom at 4.6m, thickness 0.6m, width 2.4m
+            // Centered in room with 800mm gaps to N and S walls
+            const bridgeGeo = new THREE.BoxGeometry(4, 0.6, 2.4); // Length (X), Height (Y), Width (Z)
+            const bridgeMat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.mezzanine,
+                roughness: 0.8,
+                transparent: true
+            });
+            const bridgeMesh = new THREE.Mesh(bridgeGeo, bridgeMat);
+            // Bottom at 4.6m, thickness 0.6m, so center Y = 4.6 + 0.3 = 4.9m
+            // Centered in room: X=0, Z=0
+            bridgeMesh.position.set(0, 4.9, 0);
+            bridgeMesh.receiveShadow = true;
+            bridgeMesh.castShadow = true;
+            registerArch(bridgeMesh);
+        }
+
 
         createMezzanine();
+        createRoofBridge();
 
 
         // --- Build Walls ---
