@@ -669,73 +669,17 @@
         // --- Staircase & Features Generation ---
         function createStaircase() {
             // Stairs along West Wall (X=-2) from Mezzanine (Z=1, H=2.35) -> North
-            // Mezzanine Floor: 2.35m.
-            // Total steps = 13. StepH = 2.35/13 = 0.18m.
-            // Thread = 0.25m.
-            // Width = 0.6m.
-
             const stairMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.stairs, roughness: 0.7, transparent: true });
             const stepH = 2.35 / 13;
             const tread = 0.25;
             const width = 0.6;
 
             // --- 1. Top/West Run (Descending North) ---
-            // Steps 13 down to 5. (9 steps).
-            // Step 13 (Top): Riser from H(12) to H(13) (2.35). Tread at H(13)? No, tread at H(12) usually for top step if it meets floor? 
-            // Or Top step is flush with floor.
-            // Let's assume Top Step Tread is at 2.35 - stepH.
-            // Riser at Z=1.0. Tread extends North (-Z).
-            // Z start = 1.0.
-            // Shape in Z-Y plane.
-            // Vertices (Clockwise or CCW):
-
-            const shape = new THREE.Shape();
-            shape.moveTo(0, 2.35 - stepH); // Top Tread Start (at Z=0 relative to start?)
-            // Let's define origin at (Z=1.0, Y=0).
-            // Local Z goes negative (North).
+            // Profile in Z-Y plane.
 
             const numWestSteps = 9; // 13 down to 5
-            let currentH = 2.35 - stepH;
-            let currentZ = 0;
-
-            // Zig Zag Top
-            for (let i = 0; i < numWestSteps; i++) {
-                // Horizontal Tread
-                shape.lineTo(currentZ - tread, currentH);
-                currentZ -= tread;
-
-                // Vertical Riser (down)
-                if (i < numWestSteps - 1) {
-                    currentH -= stepH;
-                    shape.lineTo(currentZ, currentH);
-                }
-            }
-
-            // Now at bottom of last riser (Step 5).
-            // CurrentZ = -9 * 0.25 = -2.25.
-            // CurrentH = Step 5 Height - stepH? 
-            // Step 5 H = 5 * stepH. 
-            // We are at H = (13 - 9) * stepH = 4 * stepH?
-            // Wait. 
-            // Top Step is 13.
-            // i=0: Tread 13 (at H 12.something). Riser down to H 11.something?
-            // Let's count heights properly.
-            // Floor is H=2.35.
-            // Step 13 Tread Level = 2.35. (If flush). Or 2.35 - stepH?
-            // Usually top tread is floor level.
-            // So Step 13 Tread is at 2.35.
-            // Riser drops to 2.35 - stepH.
-            // But we start from Mezzanine edge.
-
-            // Re-do Profile:
-            // Start at (0, 2.35). (Mezzanine Edge).
-            // Riser Down -> (0, 2.35 - stepH).
-            // Tread Forward -> (-0.25, 2.35 - stepH).
-            // Riser Down -> (-0.25, 2.35 - 2*stepH).
-            // ...
-
             const westShape = new THREE.Shape();
-            westShape.moveTo(0, 2.35);
+            westShape.moveTo(0, 2.35); // Start Top (Z=0 in local shape)
 
             for (let i = 0; i < numWestSteps; i++) {
                 const hTop = 2.35 - i * stepH;
@@ -747,28 +691,10 @@
                 westShape.lineTo(zFar, hBot);  // Tread forward
             }
 
-            // Bottom Point: (zFar_last, hBot_last).
-            // Z = -2.25. H = 2.35 - 9*stepH = 4*stepH. (Correct, reaches Step 4 level).
-
-            // Slope Bottom (Soffit)
-            // Normal depth 300mm.
-            // Calculate vector from Top Nosing (0, 2.35) to Bottom Nosing (-2.25, 4*stepH).
-            // Or simpler: Offset the zigzag points? No, flat slope.
-            // Start Point Soffit: Top offset.
-            // End Point Soffit: Bottom offset.
-            // Let's just create a thick slab.
-            // Slope line from (-2.25, 4*stepH - 0.3?) to (0, 2.35 - 0.3?).
-            // Actual efficient calculation:
-            // Angle of stairs = atan(stepH / tread).
-            // Normal vector (-sin, cos).
-            // Offset = 0.3.
-            // dx = 0.3 * sin(ang). dy = -0.3 * cos(ang).
-
             const angle = Math.atan2(stepH, tread);
             const dx = 0.3 * Math.sin(angle);
             const dy = 0.3 * Math.cos(angle);
 
-            // Bottom corner point
             const zLast = -numWestSteps * tread;
             const hLast = 2.35 - numWestSteps * stepH;
 
@@ -779,144 +705,83 @@
             const extrudeSettings = { depth: 0.6, bevelEnabled: false };
             const westGeo = new THREE.ExtrudeGeometry(westShape, extrudeSettings);
 
-            // Rotate to align with West Wall (Face East).
-            // Shape is in XY. We treated X as Z.
-            // So Rotate Y -90? Or just manual mesh positioning.
-            // Current: +Y is Up. +X is -Z (North).
-            // Extrude Depth is +Z (which is +X in world).
-            // We want Extrusion along +X world (Width). 0.6.
-            // We want Shape X to map to World Z.
-            // We want Shape Y to map to World Y.
+            // Rotate so Shape X -> World Z. Shape Y -> World Y. Extrude Z -> World X.
+            // Geometry default: Extrude along Z. Shape in XY.
+            // We want Extrude to be along World X (Width).
+            // Rotate Y 90 deg -> Z becomes X. X becomes Z (actually -Z depending on direction).
+            // Let's verify:
+            // rotateY(PI/2): (x,y,z) -> (z, y, -x).
+            // Shape X (Run, e.g. -2.25) -> World Z (-2.25). 
+            // THIS IS SOUTH. Negative World Z is North.
+            // We want -2.25 Shape X to map to -2.25 World Z.
+            // So we need X -> Z mapping.
+            // rotateY(-PI/2): (x,y,z) -> (-z, y, x).
+            // Shape X -> World Z? No, World X?
+            // Let's rely on standard rotation:
+            westGeo.rotateY(Math.PI / 2);
+            // Maps X->Z. But reversed?
+            // Shape X is negative (going North in local).
+            // Result World Z is negative (North).
+            // Wait, rotateY(PI/2) takes (1,0,0) to (0,0,-1).
+            // So positive X becomes negative Z.
+            // So negative X becomes positive Z (South).
+            // So `westGeo.rotateY(Math.PI / 2)` makes it go South.
+            // We want it to go North.
+            // So use `rotateY(-Math.PI / 2)`?
+            // (1,0,0) -> (0,0,1).
+            // (-1,0,0) -> (0,0,-1) = North.
+
+            westGeo.rotateY(-Math.PI / 2);
 
             const westMesh = new THREE.Mesh(westGeo, stairMat);
-            // Default: Extrude along Z. Shape in XY.
-            // Rotate Y 90 deg -> Shape in ZY. Extrude along X.
-            westMesh.rotation.y = Math.PI / 2;
-            // Position: 
-            // Origin (0,0) of shape maps to (0,0,0) of Mesh.
-            // We want Origin (Top Edge) to be at (X=-1.94, Y=0, Z=1.0).
-            // BUT Rotation Y 90 maps +X_shape to +Z_world? 
-            // Let's check rotation. R_y(90): (x,y,z) -> (z, y, -x).
-            // Shape pt (z_s, y_s, 0). -> (0, y_s, -z_s).
-            // Wait, shape X was "Negative Z". so z_s is negative. -z_s is positive.
-            // That means stairs go South. We want North (Negative Z).
-            // So we need Shape X (negative) to map to World Z (negative).
-            // So (z_s, y_s, 0) -> (0, y_s, z_s).
-            // Rotation Y -90? (z, y, x)? No.
-            // Let's just rotate Y 90 and Flip Z? 
-            // Simplest: Rotate Y -90 -> ( -z, y, x ).
-            // Shape X is negative. -X is positive. Maps to Z positive. Wrong.
 
-            // Let's manually rotate geometry.
-            westGeo.rotateY(Math.PI / 2);
-            // Now X_shape -> Z_world. Y_shape -> Y_world. Z_extrude -> X_world.
-            // Shape X (0 to -2.25) -> World Z (0 to -2.25). Correct (goes North).
-            // Extrude (0 to 0.6) -> World X (0 to 0.6).
-            // We want World X to be [-1.94, -1.34].
-            // Currently 0..0.6.
-            // Position Mesh at X = -1.94.
-            // Z Origin was 1.0. Shape starts at 0. So Mesh Z = 1.0.
+            // Position:
+            // Top start point (0, 2.35) of shape.
+            // With rotateY(-PI/2), X=0 -> Z=0.
+            // We want Start Z = 1.0.
+            // Extrude (0..0.6) along Z original -> Maps to World -X ?
+            // rotateY(-PI/2): Z -> X?
+            // (0,0,1) -> (1,0,0). Yes.
+            // So Extrude is Positive X.
+            // We want Extrude to cover [-1.94, -1.34].
+            // Pos X = -1.94.
 
             westMesh.position.set(-1.94, 0, 1.0);
             registerArch(westMesh);
 
             // --- 2. Corner Winder (Steps 3, 4) ---
-            // Heights: Step 3 (2*stepH to 3*stepH). Step 4 (3*stepH to 4*stepH).
-            // Corner Box: X[-1.94, -1.34], Z[-1.94, -1.34].
-            // Step 4 (Higher): North-West half? Or?
-            // Transitioning from West Run (Ends at Z=-1.25, H=4*stepH) to North Run.
-            // West Run ends at Z = 1.0 - 2.25 = -1.25.
-            // Corner starts at Z = -1.34.
-            // Gap filled by landing/winder.
-            // Let's put Step 4 at the landing of West Run.
-            // Actually West Run ends at Step 5 base (H=4*stepH). 
-            // So Step 4 is the next one down.
-            // Step 4 should be the Top Winder.
-            // Step 3 is Bottom Winder.
-
-            // Let's make Step 4 a Triangle.
-            // (X,Z) points: (-1.94, -1.25) [Connects to West Run?], (-1.34, -1.25), (-1.94, -1.94)? 
-            // West Run ends at Z=-1.25.
-            // Winder Box is Z[-1.94, -1.34]. 
-            // Gap of 0.09m? Let's assume West Run connects flush.
-
-            // Winder Geometry: 2 Prisms.
-            // Prism 1 (Step 4): H = 4*stepH. Thickness stepH? 
-            // Shape: Square minus Triangle?
-            // Let's just make 2 Box stairs for robustness in low-fidelity.
-            // Or 2 Triangles.
-
-            const winderMat = stairMat;
-            const cornerSize = 0.6;
-            const cornerX = -1.94;
-            const cornerZ = -1.94;
-
-            // Step 4 (Top Corner)
-            // Shape: Triangle (0,0) -> (0.6, 0) -> (0, 0.6).
-            // In XZ plane.
-            const s4Shape = new THREE.Shape();
-            s4Shape.moveTo(0, 0);
-            s4Shape.lineTo(cornerSize, 0);
-            s4Shape.lineTo(0, cornerSize);
-            s4Shape.lineTo(0, 0);
-
-            const s4Geo = new THREE.ExtrudeGeometry(s4Shape, { depth: stepH, bevelEnabled: false });
-            s4Geo.rotateX(Math.PI / 2); // Make flat
-            s4Geo.translate(cornerX, 4 * stepH - stepH, cornerZ + cornerSize); // Adjust pos
-            // Wait orientation...
-            // Needs to connect West Run (North End) to Step 3.
-            // Let's just use a Box for Step 4 at corner, and Box for Step 3.
-            // Step 4: Box at (-1.94, 3*stepH, -1.34) size (0.6, stepH, 0.6)? No.
-
-            // Simple Winder:
-            // Step 4 (Higher): Box 0.6 x stepH x 0.6. Pos: Corner.
-            // Step 3 (Lower): Box 0.6 x stepH x 0.6 ?? No overlap.
-            // Let's split corner: 
-            // Step 4: North Half? (-1.94, -1.64) to (-1.34, -1.34)?
-            // Let's just make Step 3 and 4 fill the corner block height 2*stepH to 4*stepH.
-            // Step 4 is a platform 0.6x0.6 at H=3.5stepH (mid).
-            // Just a box for now as requested "geometry isn't quite right" implies it needs fixing.
-            // "double height step" was the complaint.
-            // Ensure H levels match.
-            // West End H = 4*stepH.
-            // Step 4 Top = 4*stepH.
-            // Step 3 Top = 3*stepH.
-            // North Start H = 2*stepH.
+            // Step 4 (Higher): North-West half.
+            // Step 3 (Lower): South-East half?
+            // We are at Corner Z = -1.34.
+            // West Run ends at Z = 1.0 + (-2.25) = -1.25.
+            // So transition happens at Z ~ -1.25.
+            // Winder Box Center (-1.64, -1.64).
 
             const step4Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
-            const step4 = new THREE.Mesh(step4Geo, winderMat);
+            const step4 = new THREE.Mesh(step4Geo, stairMat);
             step4.position.set(-1.64, 3.5 * stepH, -1.64);
             registerArch(step4);
 
             const step3Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
-            const step3 = new THREE.Mesh(step3Geo, winderMat);
+            const step3 = new THREE.Mesh(step3Geo, stairMat);
             step3.position.set(-1.64, 2.5 * stepH, -1.64);
-            // Shrink step 3 to indicate winder? 
-            // User wants "Winder".
-            // Let's Cut Step 3 in half diagonally.
-            // But for now stacked boxes are safer than broken geometry.
             registerArch(step3);
 
             // --- 3. North Run (Steps 1, 2) ---
             // Going East from Corner.
-            // Starts X = -1.34.
-            // Step 2 Top = 2*stepH.
-            // Step 1 Top = 1*stepH.
-            // Length = 2 treads = 0.5m.
-            // Ends X = -0.84.
+            // Starts X = -1.34. Go East (+X).
 
             const northShape = new THREE.Shape();
             northShape.moveTo(0, 2 * stepH);
 
             // Step 2
-            northShape.lineTo(tread, 2 * stepH); // Tread
-            northShape.lineTo(tread, stepH);   // Riser
+            northShape.lineTo(tread, 2 * stepH);
+            northShape.lineTo(tread, stepH);
             // Step 1
             northShape.lineTo(tread * 2, stepH);
             northShape.lineTo(tread * 2, 0);
 
             // Soffit
-            // Slope back
             const nDx = 0.3 * Math.sin(angle);
             const nDy = 0.3 * Math.cos(angle);
 
@@ -927,12 +792,13 @@
             const northGeo = new THREE.ExtrudeGeometry(northShape, extrudeSettings);
             // Extrude along Z (0.6).
             // North Wall is at Z=-2. Gap 60mm -> Z=-1.94.
-            // Face South.
             // Shape X -> World X. Shape Y -> World Y.
             // Extrude Z -> World Z.
-            // Shape starts X=0. We want X=-1.34.
-            // Extrude 0..0.6. We want Z[-1.94, -1.34].
-            // So Position Z = -1.94.
+            // Shape X goes Positive (East).
+            // Extrude goes Positive Z.
+            // We want Extrude to fill [-1.94, -1.34] in Z.
+            // So translate Z to -1.94.
+            // Position X at -1.34.
 
             const northMesh = new THREE.Mesh(northGeo, stairMat);
             northMesh.position.set(-1.34, 0, -1.94);
@@ -950,7 +816,7 @@
             const gMat = new THREE.MeshPhysicalMaterial({
                 color: CONFIG.colors.glass,
                 transmission: 0.9,
-                opacity: 1, // Will be controlled by slider?
+                opacity: 1,
                 transparent: true
             });
             const gMesh = new THREE.Mesh(gGeo, gMat);
@@ -961,7 +827,7 @@
         createMezzanine();
         createStaircase();
 
-        // --- Build Geometry ---
+        // --- Build Walls ---
         const SW = new THREE.Vector3(-2, 0, 2);
         const SE = new THREE.Vector3(2, 0, 2);
         const NW = new THREE.Vector3(-2, 0, -2);
@@ -974,7 +840,7 @@
         createWall(EastCut, SE, 'window', 'east_wall');
         createWall(NorthCut, EastCut, 'chamfer', 'chamfer_wall');
 
-        // --- Raycasting & Interaction Setup ---
+        // --- Raycasting ---
         const rc = new THREE.Raycaster();
         const ptr = new THREE.Vector2();
 
@@ -985,17 +851,18 @@
             ptr.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
             rc.setFromCamera(ptr, camera);
-            const intersects = rc.intersectObjects(scene.children);
+
+            // Filter out invisible objects for raycasting
+            const visibleChildren = scene.children.filter(obj => obj.visible);
+            const intersects = rc.intersectObjects(visibleChildren);
 
             if (intersects.length > 0) {
                 let targetObj = intersects[0].object;
-                // Traverse up if we hit a child of a group (if any)
-                // But here we just use userData check
                 if (targetObj.userData && targetObj.userData.tile) {
                     const tile = targetObj.userData.tile;
-                    if (event.button === 0) { // Left Click
+                    if (event.button === 0) {
                         tile.toggle();
-                    } else if (event.button === 2) { // Right Click
+                    } else if (event.button === 2) {
                         handleRightClick(tile);
                     }
                 }
@@ -1059,17 +926,17 @@
             scheduleSave();
         }
 
-        // --- UI Listeners Setup ---
+        // --- Buttons ---
         document.getElementById('btn-reset').onclick = () => {
-            state.tiles.forEach(t => t.setState(0)); // Brick
+            state.tiles.forEach(t => t.setState(0));
             scheduleSave();
         };
         document.getElementById('btn-render-all').onclick = () => {
-            state.tiles.forEach(t => t.setState(1)); // Insulated
+            state.tiles.forEach(t => t.setState(1));
             scheduleSave();
         };
         document.getElementById('btn-flush-all').onclick = () => {
-            state.tiles.forEach(t => t.setState(2)); // Flush
+            state.tiles.forEach(t => t.setState(2));
             scheduleSave();
         };
         document.getElementById('btn-wireframe').onclick = () => {
@@ -1089,8 +956,8 @@
             scene.traverse(obj => {
                 if (obj.userData && obj.userData.isArchitecture) {
                     obj.material.opacity = val;
-                    // If opacity is 1, maybe turn off transparent to deal with depth sorting if needed? 
-                    // But generally fine to leave transparent=true.
+                    // If opacity is near zero, make invisible to allow click-through
+                    obj.visible = (val > 0.05);
                 }
             });
         };
