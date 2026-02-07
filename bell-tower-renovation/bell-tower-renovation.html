@@ -689,6 +689,95 @@
         createMezzanine();
         createRoofBridge();
 
+        // --- Glass Landing & Stairs Generation ---
+        function createGlassLanding() {
+            // 800x800x30mm landing in SE corner
+            // Center X = 2 - 0.4 = 1.6
+            // Center Z = 2 - 0.4 = 1.6
+            // Bottom Y = 5.0. Thickness = 0.03. Center Y = 5.015.
+
+            const width = 0.8;
+            const depth = 0.8;
+            const thickness = 0.03;
+
+            const geo = new THREE.BoxGeometry(width, thickness, depth);
+            const mat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.glass,
+                roughness: 0.1,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(1.6, 5.0 + thickness / 2, 1.6);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            registerArch(mesh);
+
+            return mesh; // Return for reference if needed
+        }
+
+        function createGlassStairs() {
+            // Line from Top Centre of Landing (1.6, 5.03, 1.6)
+            // Direction: West (-X)
+            // Angle: 42 degrees down from horizontal
+            // 10 Steps.
+            // Step Dimensions: 700mm wide (Z), 250mm deep (X), 30mm thick (Y)
+
+            const startPoint = new THREE.Vector3(1.6, 5.03, 1.6);
+            const stepCount = 10;
+            const stepDepth = 0.25; // Run
+            const stepWidth = 0.70;
+            const stepThickness = 0.03;
+
+            // Calculate Drop per step
+            // tan(42) = Drop / Run
+            const angleRad = 42 * (Math.PI / 180);
+            const stepDrop = stepDepth * Math.tan(angleRad);
+
+            const mat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.glass,
+                roughness: 0.1,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+
+            const geo = new THREE.BoxGeometry(stepDepth, stepThickness, stepWidth);
+
+            for (let i = 1; i <= stepCount; i++) {
+                // Calculate Nose Position for Step i
+                // Moving West means X decreases by stepDepth * i
+                // Moving Down means Y decreases by stepDrop * i
+
+                const noseX = startPoint.x - (stepDepth * i);
+                const noseY = startPoint.y - (stepDrop * i);
+                const noseZ = startPoint.z;
+
+                // Mesh Position Conversion
+                // The Nose is the Top-West edge of the step.
+                // The Mesh Center X = NoseX + (StepDepth / 2) (Since Nose is at the "Left"/West end)
+                // The Mesh Center Y = NoseY - (StepThickness / 2) (Since Nose is at the Top)
+
+                const meshX = noseX + (stepDepth / 2);
+                const meshY = noseY - (stepThickness / 2);
+                const meshZ = noseZ;
+
+                const stepMesh = new THREE.Mesh(geo, mat);
+                stepMesh.position.set(meshX, meshY, meshZ);
+                stepMesh.castShadow = true;
+                stepMesh.receiveShadow = true;
+
+                registerArch(stepMesh);
+            }
+        }
+
+        createGlassLanding();
+        createGlassStairs();
+
 
         // --- Build Walls ---
         const SW = new THREE.Vector3(-2, 0, 2);
