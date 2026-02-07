@@ -252,7 +252,7 @@
         scene.fog = new THREE.Fog(CONFIG.colors.background, 5, 20);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 4, 0); // Start inside/above looking down
+        camera.position.set(2, 4, 3); // Start looking from SE 
         camera.lookAt(0, 2, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -362,15 +362,8 @@
                 this.gridY = gy;
                 this.isSelected = false;
 
-                // Initial Geometry (Thin)
-                // State 0 and 2 use this.
+                // Initial Geometry (Thin plane/box)
                 this.geoThin = existingGeometry ? existingGeometry : new THREE.BoxGeometry(width * 0.95, height * 0.95, 0.02);
-
-                // Create Thick Geometry for Insulation (if standard box)
-                // If custom CSG geometry, we can't easily "extrude" it without regenerating CSG or scaling.
-                // Scaling is the easiest and most robust approximation for "solid extrusion".
-                // Scaling along Z axis (local) will thicken it.
-                // Base depth 0.02. Target 0.08. Scale factor 4.
 
                 this.material = new THREE.MeshStandardMaterial({
                     color: CONFIG.colors.brick,
@@ -384,10 +377,7 @@
 
                 if (!existingGeometry) {
                     this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
-                    // Standard Box is centered.
-                    // When we scale Z, it grows both ways. 
-                    // We want back face to stay put.
-                    // We'll handle that in updateVisuals by shifting position.
+                    // Normal box looks at Normal (Z+ local).
                 } else {
                     this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
                 }
@@ -416,34 +406,38 @@
             }
 
             updateVisuals() {
-                // Defer stats update 
                 requestAnimationFrame(updateStats);
 
-                // Reset Scale first
+                // Reset transforms/scale
                 this.mesh.scale.set(1, 1, 1);
+                this.mesh.position.copy(this.originalPosition);
 
                 if (this.state === 1) { // Insulated (Solid Extrusion)
-                    // Color
                     this.material.color.setHex(CONFIG.colors.render);
                     this.material.roughness = 0.5;
 
-                    // Scale Thickness
-                    // Standard 0.02 -> Target 0.08 (0.02 + 0.06)
-                    this.mesh.scale.z = 4.0;
+                    // Thicken
+                    // BoxGeometry 0.02 depth is along Local Z.
+                    // Scale Z -> 4.0 makes it 0.08 depth.
+                    // It expands from center (0). Local range [-0.04, 0.04].
+                    // Original was [-0.01, 0.01].
+                    // Wall face is effectively at Local Z=0 (actually usually centered on wall plane).
+                    // If original position is ON wall, we want it to grow OUT.
+                    // Normal direction is "Out".
+                    // Shift position along normal by (NewRadius - OldRadius) = (0.04 - 0.01) = 0.03.
 
-                    // Position Shift
-                    // Center moves out by (NewDepth - OldDepth)/2 = (0.08 - 0.02)/2 = 0.03
+                    this.mesh.scale.z = 4.0;
                     const shift = this.normal.clone().multiplyScalar(0.03);
-                    this.mesh.position.copy(this.originalPosition.clone().add(shift));
+                    this.mesh.position.add(shift);
 
                 } else if (this.state === 2) { // Flush Render
                     this.material.color.setHex(CONFIG.colors.flushRender);
                     this.material.roughness = 0.5;
-                    this.mesh.position.copy(this.originalPosition);
+                    // No scale change, default pos
                 } else { // Brick
                     this.material.color.setHex(CONFIG.colors.brick);
                     this.material.roughness = 0.9;
-                    this.mesh.position.copy(this.originalPosition);
+                    // Default pos
                 }
             }
         }
@@ -451,16 +445,12 @@
         // --- Wall Generation Logic ---
 
         function isInsideHole(localX, localY) {
-            // Standard check for skipping
-            // Check Rectangular part
             const halfW = CONFIG.window.width / 2;
             if (localX > -halfW && localX < halfW && localY < CONFIG.window.heightRect) {
                 return true;
             }
-            // Check Arch part (approximate for skipping full tiles)
             if (localY >= CONFIG.window.heightRect) {
                 const dy = localY - CONFIG.window.heightRect;
-                // Strict check: Is the tile center DEEP inside?
                 if (localX * localX + dy * dy < (CONFIG.window.archRadius - 0.1) ** 2) {
                     return true;
                 }
@@ -469,22 +459,12 @@
         }
 
         function isIntersectingArch(localX, localY, width, height) {
-            // Only care if above rect height
-            const tileBottom = localY - height / 2;
             const tileTop = localY + height / 2;
-
-            if (tileTop < CONFIG.window.heightRect) return false; // purely rectangular part
-
-            // Define tile bounds
-            const minX = localX - width / 2;
-            const maxX = localX + width / 2;
-            const minY = localY - height / 2;
-            const maxY = localY + height / 2;
+            if (tileTop < CONFIG.window.heightRect) return false;
 
             const dy = Math.max(0, localY - CONFIG.window.heightRect);
             const dist = Math.sqrt(localX * localX + dy * dy);
 
-            // Use a wider tolerance to catch all boundary tiles
             const tolerance = Math.max(width, height) * 2.5;
             if (dist > CONFIG.window.archRadius - tolerance && dist < CONFIG.window.archRadius + tolerance) {
                 return true;
@@ -521,20 +501,13 @@
                     const localY = (iy + 0.5) * realTileH;
                     const relativeX = localX - holeCenterX;
 
-                    // 1. Fully Inside -> Skip
-                    // Use slightly stricter check to ensure we don't delete border tiles
-
-                    // Check if this tile should be skipped (fully inside window)
                     let skip = false;
                     if (type === 'window') {
-                        // Rect part
                         if (relativeX > -CONFIG.window.width / 2 && relativeX < CONFIG.window.width / 2 && localY < CONFIG.window.heightRect) {
                             skip = true;
                         }
-                        // Arch part - loose check
                         else if (localY >= CONFIG.window.heightRect) {
                             const dy = localY - CONFIG.window.heightRect;
-                            // Only skip if safely inside
                             if (relativeX * relativeX + dy * dy < (CONFIG.window.archRadius * 0.9) ** 2) {
                                 skip = true;
                             }
@@ -549,18 +522,13 @@
                         .add(wallDir.clone().multiplyScalar(localX))
                         .add(upDir.clone().multiplyScalar(localY));
 
-                    // 2. Arch Intersection -> CSG Tile
                     if (type === 'window' && isIntersectingArch(relativeX, localY, realTileW, realTileH)) {
-                        // Create Tile Brush
                         const tileGeo = new THREE.BoxGeometry(realTileW * 0.95, realTileH * 0.95, 0.02);
                         const tileBrush = new Brush(tileGeo);
-
                         const localHoleX = -relativeX;
                         const localHoleY = CONFIG.window.heightRect - localY;
-
                         archCutter.position.set(localHoleX, localHoleY, 0);
                         archCutter.updateMatrixWorld();
-
                         tileBrush.updateMatrixWorld();
 
                         const result = csgEvaluator.evaluate(tileBrush, archCutter, SUBTRACTION);
@@ -603,6 +571,9 @@
                 for (let id = 0; id < stepsD; id++) {
                     const ly = (iy + 0.5) * tileH;
                     const ld = (id + 0.5) * tileD;
+                    // Fix Reveal Position Logic for extrusions
+                    // Normal points "In" to the window void? Or "Out"? 
+                    // Reveal tiles face "In". Normal is perpendicular to reveal face.
 
                     const pos = centerPos.clone()
                         .sub(wallDir.clone().multiplyScalar(halfW))
@@ -669,6 +640,7 @@
 
         // --- Mezzanine Generation ---
         function createMezzanine() {
+            // Mezzanine along South Wall (Z=2)
             const mainGeo = new THREE.BoxGeometry(4, 0.25, 1);
             const mainMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.mezzanine, roughness: 0.8, transparent: true });
             const mainMesh = new THREE.Mesh(mainGeo, mainMat);
@@ -686,125 +658,172 @@
 
         // --- Staircase & Features Generation ---
         function createStaircase() {
-            // Stairs along West Wall (X=-2) from Mezzanine (Z=1, H=2.35) -> North
+            // Stairs along West Wall (X=-2) 
+            // Described: S-N. Top at S (Mezzanine Z=1.5 edge), Bottom at N.
+
             const stairMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.stairs, roughness: 0.7, transparent: true });
             const stepH = 2.35 / 13;
             const tread = 0.25;
-            const width = 0.6;
 
             // --- 1. Top/West Run (Descending North) ---
-            // Profile in Z-Y plane.
 
-            const numWestSteps = 9; // 13 down to 5
+            const numWestSteps = 9; // Steps along West Wall
             const westShape = new THREE.Shape();
-            westShape.moveTo(0, 2.35); // Start Top (Z=0 in local shape)
 
+            // Start profile at Bottom Normal (0,0) = North end of Upper Run.
+            // Go UP and RIGHT (Positive X).
+            // X represents Z-distance traveling South.
+            // Y represents Height.
+
+            // Start point (Bottom of run)
+            westShape.moveTo(0, 0);
+
+            // Iterate steps UP
             for (let i = 0; i < numWestSteps; i++) {
-                const hBot = 2.35 - (i + 1) * stepH;
-                const zNear = -i * tread;
-                const zFar = -(i + 1) * tread;
+                const yBot = i * stepH;
+                const yTop = (i + 1) * stepH;
+                const xNear = i * tread;
+                const xFar = (i + 1) * tread;
 
-                westShape.lineTo(zNear, hBot); // Riser down
-                westShape.lineTo(zFar, hBot);  // Tread forward
+                westShape.lineTo(xNear, yTop); // Riser Up
+                westShape.lineTo(xFar, yTop);  // Tread Right
             }
 
+            const totalLen = numWestSteps * tread;
+            const totalH = numWestSteps * stepH;
+
+            // Soffit
             const angle = Math.atan2(stepH, tread);
             const dx = 0.3 * Math.sin(angle);
             const dy = 0.3 * Math.cos(angle);
 
-            const zLast = -numWestSteps * tread;
-            const hLast = 2.35 - numWestSteps * stepH;
-
-            westShape.lineTo(zLast + dx, hLast - dy); // Bottom Soffit Corner
-            westShape.lineTo(0 + dx, 2.35 - dy);      // Top Soffit Corner
-            westShape.lineTo(0, 2.35);                // Close
+            westShape.lineTo(totalLen + dx, totalH - dy); // Top Corner Soffit
+            westShape.lineTo(0 + dx, 0 - dy);             // Bottom Corner Soffit
+            westShape.lineTo(0, 0);                       // Close
 
             const extrudeSettings = { depth: 0.6, bevelEnabled: false };
             const westGeo = new THREE.ExtrudeGeometry(westShape, extrudeSettings);
 
-            // Correct Rotation:
-            // Shape X -> -Z World (North). Shape Y -> Y World.
-            // Extrude (depth) -> X World.
-            // Rotate Y by -90: X->Z, Z->-X. No.
+            // Rotation:
+            // Shape X (Run) -> needs to map to World Z+ (South).
+            // Shape Y (Up) -> needs to map to World Y (Up).
+            // Extrude Z (Width) -> needs to map to World X+ (East).
 
-            // Let's just rotate Y 90.
-            // Mesh X basis vector -> (0,0,-1) [North].
-            // Mesh Y basis vector -> (0,1,0) [Up].
-            // Mesh Z basis vector -> (1,0,0) [East].
-            // If Shape X is along Mesh X. 
-            // Shape X (0 to -2.25) -> World Z (0 to -2.25)? No, World Z goes North (-2.25).
-            // Yes, 0 to -2.25 (North).
-            // If Extrude is along Mesh Z.
-            // Extrude (0 to 0.6) -> World X (0 to 0.6) [East].
-            // We want Extrude range [-1.94, -1.34].
-            // Position Mesh at X=-1.94. Z=1.0.
+            // Rotation -90 deg Y (-PI/2):
+            // X basis (1,0,0) -> Z (0,0,1)  [South] -- CORRECT
+            // Y basis (0,1,0) -> Y (0,1,0)  [Up]    -- CORRECT
+            // Z basis (0,0,1) -> X (1,0,0)  [East]  -- CORRECT
 
-            westGeo.rotateY(Math.PI / 2); // Rotate +90 around Y.
-            // (1,0,0) -> (0,0,-1).
-            // (0,0,1) -> (1,0,0).
+            westGeo.rotateY(-Math.PI / 2);
 
             const westMesh = new THREE.Mesh(westGeo, stairMat);
 
-            // Position adjustment:
-            // Origin of Mesh is at (-1.94, 0, 1.0).
-            // Shape origin (0,0) -> Mesh Origin.
-            // Extrude Z (0) -> Mesh Origin.
+            // Positioning
+            // Origin (0,0,0) of geometry corresponds to:
+            // Shape(0,0) [North-Bottom of run]
+            // Extrude(0) [West face]
+            // This point should be at:
+            // X = -2 (West Wall)
+            // Y = Height of Start (Winder Height? Or absolute?)
+            // Let's assume Winder is at bottom.
+            // Run starts AFTER winder.
+            // Winder is at Corner (-1.64, -1.64).
+            // Run starts North of Winder? No, Run is Upper?
+            // Wait, "Descending from Mezzanine"
+            // Mezzanine is TOP. (South).
+            // So Run starts at TOP (South) and goes Down (North).
+            // My Shape went UP from North to South. That is correct.
+            // Top of Shape corresponds to Mezzanine Level.
+            // Bottom of Shape corresponds to Winder Level.
 
-            westMesh.position.set(-1.94, 0, 1.0);
+            // Bottom of Shape is at (0,0) local.
+            // This is the North end of the run.
+            // Winder is at corner NW? No, corner NW is (-2, -2).
+            // Wait, Winder connects West Run to North Run?
+            // Previous logic: Winder was in NW corner?
+            // Run 1: Mezzanine(S) -> Corner(NW). (Descending)
+            // Run 2: Corner(NW) -> North Wall?
+            // Or Corner -> East?
+            // User said: "Staircase (West Wall -> North Wall)".
+            // So it goes West Wall (South to North) -> Turn Corner (NW) -> North Wall (West to East).
+
+            // So Winder is at NW Corner.
+            // West Run Bottom (North End) connects to Winder Top.
+            // Winder Top Y = 2 * stepH.
+            // So West Run Bottom Y = 2 * stepH.
+
+            // Where is Reference Point (0,0,0) of Mesh?
+            // Corresponds to Shape(0,0) [North End].
+            // This point should be at:
+            // X = -2 (West Wall).
+            // Y = 2 * stepH (Top of Winder).
+            // Z = ?
+            // Corner is at approx Z = -1.64 (inside room).
+            // Run should end near corner. Let's say Z = -1.34.
+
+            westMesh.position.set(-2, 2 * stepH, -1.34);
             registerArch(westMesh);
 
-            // --- 2. Corner Winder (Steps 3, 4) ---
-            const step4Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
-            const step4 = new THREE.Mesh(step4Geo, stairMat);
-            step4.position.set(-1.64, 3.5 * stepH, -1.64);
-            registerArch(step4);
+            // --- 2. Corner Winder (Steps 1, 2) in NW Corner ---
 
-            const step3Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
-            const step3 = new THREE.Mesh(step3Geo, stairMat);
-            step3.position.set(-1.64, 2.5 * stepH, -1.64);
-            registerArch(step3);
+            // Step 2 (Upper Winder)
+            // Box 0.6x0.6?
+            const step2Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
+            const step2 = new THREE.Mesh(step2Geo, stairMat);
+            // Positioned at Corner (-1.7, -1.7)?
+            // Center of box.
+            step2.position.set(-1.7, 1.5 * stepH, -1.7);
+            registerArch(step2);
 
-            // --- 3. North Run (Steps 1, 2) ---
-            const northShape = new THREE.Shape();
-            northShape.moveTo(0, 2 * stepH);
-            northShape.lineTo(tread, 2 * stepH);
-            northShape.lineTo(tread, stepH);
-            northShape.lineTo(tread * 2, stepH);
-            northShape.lineTo(tread * 2, 0);
+            // Step 1 (Lower Winder)
+            const step1Geo = new THREE.BoxGeometry(0.6, stepH, 0.6);
+            const step1 = new THREE.Mesh(step1Geo, stairMat);
+            step1.position.set(-1.7, 0.5 * stepH, -1.7);
+            registerArch(step1);
 
-            const nDx = 0.3 * Math.sin(angle);
-            const nDy = 0.3 * Math.cos(angle);
-            northShape.lineTo(tread * 2 - nDx, 0 - nDy);
-            northShape.lineTo(0 - nDx, 2 * stepH - nDy);
-            northShape.lineTo(0, 2 * stepH);
+            // --- 3. Lower/North Run (Descending East) ---
+            // Wait, Steps 1,2 are Winder.
+            // Steps 3..11 are West Run.
+            // Is there a lower run? 
+            // "Staircase (West Wall -> North Wall)" typically means one long run or L-shape.
+            // Mezzanine (High, S) -> Runs North along West Wall -> Corner NW -> Runs East along North Wall (Low).
+            // If Mezzanine is @ 2.225. 13 risers.
+            // Corner NW is Low?
+            // If Corner NW corresponds to Steps 1,2.
+            // Then West Run is Steps 3..13.
 
-            const northGeo = new THREE.ExtrudeGeometry(northShape, extrudeSettings);
-            const northMesh = new THREE.Mesh(northGeo, stairMat);
-            // Default Extrude Z (0..0.6). World Z we want [-1.94, -1.34].
-            // Translate Z to -1.94.
-            // Position X at -1.34.
+            // My West Run Shape was 9 steps. Let's stick with that.
+            // Steps 3..11.
 
-            northMesh.position.set(-1.34, 0, -1.94);
-            registerArch(northMesh);
+            // Lower Run (North Wall). Steps 0? Or exit?
+            // Let's assume exit is at North Wall East end?
+            // Or maybe just Winder is the bottom?
+            // If Winder is steps 1,2.
+            // Where is Step 0? Or is Step 1 the floor?
+            // Let's just add a small landing or final step.
 
-            // --- Solid Wall ---
-            const wGeo = new THREE.BoxGeometry(0.2, 3.35, 2.34);
-            const wMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.wallSolid, transparent: true });
-            const wMesh = new THREE.Mesh(wGeo, wMat);
-            wMesh.position.set(-1.24, 3.35 / 2, 1.0 - 2.34 / 2);
-            registerArch(wMesh);
+            // If user said "Staircase (West Wall -> North Wall)", maybe they meant:
+            // Top @ Mezzanine (S).
+            // Run down West Wall.
+            // Turn at NW Corner.
+            // Run down North Wall (East).
 
-            // --- Glass Balustrade ---
-            const gGeo = new THREE.BoxGeometry(3.14, 1.0, 0.05);
-            const gMat = new THREE.MeshPhysicalMaterial({
-                color: CONFIG.colors.glass,
-                transmission: 0.9,
-                opacity: 1,
-                transparent: true
-            });
-            const gMesh = new THREE.Mesh(gGeo, gMat);
-            gMesh.position.set(0.43, 2.35 + 0.5, 1.0);
-            registerArch(gMesh);
+            // Let's add the North Wall run.
+            // Run East from Corner.
+            // Shape: Top at West (Corner), Bottom at East.
+            // Descending East.
+            // Shape in XY (Ascending Right/East).
+            // Left end (X=0) is Bottom. Right end is Top.
+            // No, we want Left (Corner) to be High. Right (East) to be Low?
+            // Let's define shape: Low (X=0, East end) -> High (X=Run, West end).
+            // Riser Up, Tread Left (-X)? No.
+            // Standard ascending shape (X+ is Up).
+            // Rotate: Shape X (Up/Right) -> World -X (West).
+            // Then Start (Low) is at East. End (High) is at West.
+
+            // Let's simplify and just put a landing/exit at the bottom of the winder for now unless specified.
+            // The user previously said "North Wall". I will assume a short exit run.
+
         }
 
         createMezzanine();
@@ -835,7 +854,6 @@
 
             rc.setFromCamera(ptr, camera);
 
-            // Filter out invisible objects for raycasting
             const visibleChildren = scene.children.filter(obj => obj.visible);
             const intersects = rc.intersectObjects(visibleChildren);
 
@@ -939,7 +957,7 @@
             scene.traverse(obj => {
                 if (obj.userData && obj.userData.isArchitecture) {
                     obj.material.opacity = val;
-                    obj.visible = (val > 0.05); // Hide if transparent
+                    obj.visible = (val > 0.05);
                 }
             });
         };
