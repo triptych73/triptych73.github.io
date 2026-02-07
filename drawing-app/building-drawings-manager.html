@@ -11,6 +11,7 @@
     <!-- Firebase SDKs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-storage-compat.min.js"></script>
     <script src="firebase-config.js"></script>
 
@@ -18,6 +19,11 @@
     <script>
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+            // Initialize Firestore
+            const db = firebase.firestore();
+            window.db = db;
+            console.log("Manager: Firestore Initialized");
 
             firebase.auth().onAuthStateChanged((user) => {
                 if (!user) {
@@ -128,7 +134,7 @@
         <div class="flex items-center gap-4">
             <h1 class="font-serif text-lg tracking-widest uppercase text-midnight">St Mary Somerset</h1>
             <span class="h-4 w-px bg-bronze/30"></span>
-            <span class="text-[10px] tracking-[0.2em] text-bronze uppercase">Manager v2.3.1</span>
+            <span class="text-[10px] tracking-[0.2em] text-bronze uppercase">Manager v2.4.0</span>
         </div>
 
         <div class="flex items-center gap-3">
@@ -348,26 +354,69 @@
         // --- INIT ---
         async function init() {
             try {
-                // Load CSV Data & Meta
-                const savedData = localStorage.getItem('buildingDrawingsData');
-                if (savedData) {
+                // 1. CLOUD LOAD (Primary)
+                let loadedFromCloud = false;
+                if (typeof db !== 'undefined') {
                     try {
-                        const parsed = JSON.parse(savedData);
-                        if (parsed.csvData && Array.isArray(parsed.csvData)) {
-                            // Convert Array to Map for O(1) lookup
-                            parsed.csvData.forEach(row => csvData[row[0]] = parseInt(row[1]));
-                        }
-                        if (parsed.assignmentDetails && typeof parsed.assignmentDetails === 'object') {
-                            assignmentDetails = parsed.assignmentDetails;
-                        }
-                        // PRESERVE VIEWER DATA
-                        if (parsed.urlData) urlData = parsed.urlData;
-                        if (parsed.roomConfig) roomConfig = parsed.roomConfig;
+                        const docRef = db.collection('drawing_projects').doc('st_mary_somerset');
+                        const doc = await docRef.get();
 
+                        if (doc.exists) {
+                            const data = doc.data();
+                            console.log("Loaded Data from Cloud:", data);
+
+                            if (data.csvData) {
+                                // CSV stored as JSON String
+                                const parsedCsv = JSON.parse(data.csvData);
+                                if (Array.isArray(parsedCsv)) {
+                                    parsedCsv.forEach(row => csvData[row[0]] = parseInt(row[1]));
+                                }
+                            }
+                            if (data.assignmentDetails) assignmentDetails = data.assignmentDetails;
+                            if (data.urlData) urlData = data.urlData;
+                            if (data.roomConfig) roomConfig = data.roomConfig;
+
+                            showMessage('Loaded from Cloud');
+                            loadedFromCloud = true;
+
+                            // Update local backup
+                            localStorage.setItem('buildingDrawingsData', JSON.stringify({
+                                csvData: data.csvData ? JSON.parse(data.csvData) : [],
+                                assignmentDetails, urlData, roomConfig
+                            }));
+                        }
                     } catch (e) {
-                        console.error("Error parsing saved data", e);
-                        // If data is corrupt, maybe we should clear it or warn?
-                        // For now, simple console error, fallback to defaults.
+                        console.error("Cloud Load Error:", e);
+                        showMessage('Cloud Load Failed');
+                    }
+                }
+
+                // 2. LOCAL FALLBACK (If Cloud missing or failed)
+                if (!loadedFromCloud) {
+                    const savedData = localStorage.getItem('buildingDrawingsData');
+                    if (savedData) {
+                        try {
+                            const parsed = JSON.parse(savedData);
+                            if (parsed.csvData && Array.isArray(parsed.csvData)) {
+                                parsed.csvData.forEach(row => csvData[row[0]] = parseInt(row[1]));
+                            }
+                            if (parsed.assignmentDetails) assignmentDetails = parsed.assignmentDetails;
+                            if (parsed.urlData) urlData = parsed.urlData;
+                            if (parsed.roomConfig) roomConfig = parsed.roomConfig;
+
+                            showMessage('Loaded from Local Backup');
+
+                            // AUTO-MIGRATE to Cloud if we have local data but no cloud data
+                            if (typeof db !== 'undefined') {
+                                console.log("Migrating Local Data to Cloud...");
+                                // We can't call saveConfig here directly if we want to be safe, but actually we SHOULD.
+                                // But let's delay it slightly or just do it.
+                                setTimeout(() => saveConfig(), 2000);
+                            }
+
+                        } catch (e) {
+                            console.error("Error parsing saved data", e);
+                        }
                     }
                 }
 
@@ -541,7 +590,7 @@
                 renderUploadList();
             }
 
-            saveToLocalStorage();
+            saveConfig();
             renderMatrix();
             document.getElementById('uploadStats').textContent = `Upload Complete. ${successCount} files processed.`;
 
@@ -622,7 +671,7 @@
 
                             // Simple visual update (or re-render)
                             renderMatrix(); // Re-render to update tooltip
-                            saveToLocalStorage(); // Auto-save on click
+                            saveConfig(); // Auto-save on click
                         });
 
                         // Right Click - Toggle As-Built (A)
@@ -631,8 +680,9 @@
                             const newStatusA = !hasA;
                             csvData[keyA] = newStatusA ? 1 : 0;
                             renderMatrix();
-                            saveToLocalStorage();
+                            saveConfig();
                         });
+
 
                         td.appendChild(div);
                         tr.appendChild(td);
@@ -796,25 +846,49 @@
 
             modalOverlay.classList.add('hidden');
             showMessage(`Applied ${count} assignments`);
-            saveToLocalStorage();
+            saveConfig();
             renderMatrix();
         }
 
         // --- EXPORT/IMPORT ---
-        function saveToLocalStorage() {
-            // Convert Map back to Array for generic storage format expected by Viewer
+        // --- EXPORT/IMPORT ---
+        async function saveConfig() {
+            // 1. Prepare Data
             const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
             const data = {
                 csvData: exportData,
-                assignmentDetails: assignmentDetails, // Persist meta
-                urlData: urlData, // Persist Viewer Links
-                roomConfig: roomConfig // Persist Viewer Config
+                assignmentDetails: assignmentDetails,
+                urlData: urlData,
+                roomConfig: roomConfig
             };
+
+            // 2. Local Backup (Fast)
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
+
+            // 3. Cloud Save (Firestore)
+            if (typeof db !== 'undefined') {
+                showMessage('Saving to Cloud...');
+                try {
+                    await db.collection('drawing_projects').doc('st_mary_somerset').set({
+                        csvData: JSON.stringify(exportData), // Store as string to avoid nested array indexing issues/limits
+                        assignmentDetails: assignmentDetails,
+                        urlData: urlData,
+                        roomConfig: roomConfig,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                    console.log("Cloud Save Complete");
+                    showMessage('Saved to Cloud');
+                } catch (e) {
+                    console.error("Cloud Save Error:", e);
+                    showMessage('Cloud Save Failed (Local OK)');
+                }
+            } else {
+                showMessage('Saved Locally Only');
+            }
         }
 
         function saveAndExport() {
-            saveToLocalStorage();
+            saveConfig();
             const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
             const csv = Papa.unparse({
                 fields: ['key', 'hasDrawing'],
@@ -840,7 +914,7 @@
                             csvData[row[0]] = parseInt(row[1]);
                         }
                     });
-                    saveToLocalStorage();
+                    saveConfig();
                     renderMatrix();
                     showMessage('CSV Imported');
                 }

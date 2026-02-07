@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eufy Live Monitor v7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.33);
+                opacity: 1;
+            }
+
+            80%,
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        .live-dot::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ef4444;
+            border-radius: 50%;
+            z-index: -1;
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        /* Toggle Button Styles */
+        .toggle-btn {
+            transition: all 0.2s ease;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .toggle-active {
+            background-color: rgba(59, 130, 246, 0.3);
+            /* Blue background */
+            color: #60a5fa;
+            /* Blue text */
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+        }
+
+        .toggle-inactive {
+            color: #9ca3af;
+            /* Gray text */
+            background-color: transparent;
+            border-color: transparent;
+        }
+
+        .toggle-inactive:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #f3f4f6;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 min-h-screen font-sans flex flex-col items-center justify-center p-4">
+
+    <!-- Config Warning -->
+    <div id="config-warning"
+        class="hidden mb-6 bg-yellow-600/20 border border-yellow-500 text-yellow-200 p-4 rounded-lg max-w-md text-sm">
+        ⚠️ <strong>Configuration Needed:</strong> Open source code and paste Database URL.
+    </div>
+
+    <!-- Main Card -->
+    <div
+        class="w-full max-w-md bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-800 flex flex-col relative">
+
+        <!-- HEADER BAR (More transparent for immersive feel) -->
+        <div
+            class="bg-gray-900/80 p-3 flex justify-between items-center border-b border-white/5 z-30 absolute top-0 w-full h-16 shadow-md backdrop-blur-md">
+
+            <!-- Left: Title & Status -->
+            <div class="flex items-center gap-3 pl-1 w-1/3">
+                <span id="live-indicator"
+                    class="relative w-2.5 h-2.5 bg-red-500 rounded-full live-dot transition-opacity duration-300"></span>
+                <div class="flex flex-col">
+                    <h1 class="font-bold text-sm text-white leading-none shadow-black drop-shadow-md">Monitor</h1>
+                    <span id="date-subtitle" class="text-[10px] text-gray-400 font-mono mt-0.5">Today</span>
+                </div>
+            </div>
+
+            <!-- Center: Filters (AM / PM / Bell) -->
+            <div class="flex items-center justify-center gap-2 w-1/3">
+                <button id="btn-am" onclick="toggleFilter('AM')"
+                    class="toggle-btn toggle-inactive px-3 py-1.5 rounded-lg text-xs backdrop-blur-sm">AM</button>
+                <button id="btn-pm" onclick="toggleFilter('PM')"
+                    class="toggle-btn toggle-inactive px-3 py-1.5 rounded-lg text-xs backdrop-blur-sm">PM</button>
+
+                <!-- Divider -->
+                <div class="w-px h-4 bg-white/20 mx-0.5"></div>
+
+                <!-- Bell Filter -->
+                <button id="btn-bell" onclick="toggleRing()"
+                    class="toggle-btn toggle-inactive p-1.5 rounded-lg backdrop-blur-sm" title="Show Rings Only">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Right: Settings Cog -->
+            <div class="flex justify-end w-1/3 pr-1">
+                <button onclick="toggleSettings()"
+                    class="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors backdrop-blur-sm"
+                    aria-label="Settings">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                        </path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- IMAGE VIEWER -->
+        <div class="relative bg-black aspect-[4/3] w-full group">
+
+            <!-- Loading Spinner -->
+            <div id="loading-state"
+                class="absolute inset-0 flex flex-col items-center justify-center text-gray-600 z-0 pt-0">
+                <svg class="w-8 h-8 animate-spin mb-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                <span class="text-xs">Connecting...</span>
+            </div>
+
+            <!-- Carousel (REMOVED PADDING to allow full fill) -->
+            <div id="image-carousel"
+                class="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory no-scrollbar z-10 scroll-smooth">
+                <!-- Javascript will insert images here -->
+            </div>
+
+            <!-- Info Overlay (Logic added to hide this if empty) -->
+            <div id="info-overlay"
+                class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/95 via-black/70 to-transparent p-5 pt-12 z-20 pointer-events-none transition-opacity duration-300">
+                <h2 id="event-title" class="font-bold text-white text-lg leading-tight drop-shadow-md">--</h2>
+                <div class="flex justify-between items-end mt-1">
+                    <p id="event-time" class="text-sm text-blue-300 font-mono font-medium">--</p>
+                    <div class="flex items-center gap-2">
+                        <span id="slide-counter" class="text-[10px] text-gray-400 font-mono">0/0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-4 py-3 bg-gray-900 border-t border-gray-800 flex justify-between items-center z-30">
+            <span class="text-[10px] text-gray-500 uppercase tracking-wider">Swipe for history</span>
+            <button onclick="jumpToLive()"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors uppercase tracking-wider">
+                Latest
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all duration-300 opacity-0">
+        <div class="bg-gray-900 border border-gray-700 w-full max-w-sm rounded-2xl p-5 shadow-2xl transform scale-95 transition-all duration-300"
+            id="settings-panel">
+
+            <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+                <h3 class="text-lg font-bold flex items-center gap-2 text-white">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                        </path>
+                    </svg>
+                    Settings
+                </h3>
+                <button onclick="toggleSettings()" class="text-gray-500 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Date Selector -->
+                <div class="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                    <label
+                        class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 block flex items-center gap-2">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        Date Selection
+                    </label>
+                    <div class="flex items-center justify-between bg-gray-900 rounded-lg p-1 border border-gray-700">
+                        <button onclick="changeDate(-1)"
+                            class="p-2 hover:bg-gray-700 rounded-md text-gray-400 hover:text-white transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div class="relative group flex-1 text-center">
+                            <input type="date" id="date-picker"
+                                class="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10">
+                            <div class="py-2 cursor-pointer hover:text-blue-400 transition-colors">
+                                <span id="current-date-display" class="text-sm font-medium">Today</span>
+                            </div>
+                        </div>
+
+                        <button onclick="changeDate(1)"
+                            class="p-2 hover:bg-gray-700 rounded-md text-gray-400 hover:text-white transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Range Settings -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 mb-1 block">AM Time Range</label>
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="am-start" value="00:00"
+                                class="bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm w-full focus:ring-1 focus:ring-blue-500 outline-none text-gray-300">
+                            <span class="text-gray-600">-</span>
+                            <input type="time" id="am-end" value="12:00"
+                                class="bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm w-full focus:ring-1 focus:ring-blue-500 outline-none text-gray-300">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 mb-1 block">PM Time Range</label>
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="pm-start" value="12:00"
+                                class="bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm w-full focus:ring-1 focus:ring-blue-500 outline-none text-gray-300">
+                            <span class="text-gray-600">-</span>
+                            <input type="time" id="pm-end" value="23:59"
+                                class="bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm w-full focus:ring-1 focus:ring-blue-500 outline-none text-gray-300">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                <button onclick="saveSettings()"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-blue-900/20">
+                    Apply & Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, query, limitToLast, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const DATABASE_URL = "https://st-mary-somerset-default-rtdb.europe-west1.firebasedatabase.app/";
+
+        const els = {
+            carousel: document.getElementById('image-carousel'),
+            title: document.getElementById('event-title'),
+            time: document.getElementById('event-time'),
+            counter: document.getElementById('slide-counter'),
+            overlay: document.getElementById('info-overlay'), // New reference
+            dateDisplay: document.getElementById('current-date-display'),
+            dateSubtitle: document.getElementById('date-subtitle'),
+            datePicker: document.getElementById('date-picker'),
+            modal: document.getElementById('settings-modal'),
+            modalPanel: document.getElementById('settings-panel'),
+            amBtn: document.getElementById('btn-am'),
+            pmBtn: document.getElementById('btn-pm'),
+            bellBtn: document.getElementById('btn-bell'),
+            loading: document.getElementById('loading-state'),
+            configInputs: {
+                amStart: document.getElementById('am-start'),
+                amEnd: document.getElementById('am-end'),
+                pmStart: document.getElementById('pm-start'),
+                pmEnd: document.getElementById('pm-end'),
+            }
+        };
+
+        let appState = {
+            events: [],
+            filter: 'ALL',
+            filterRing: false,
+            currentDate: new Date(),
+            config: {
+                am: { start: '00:00', end: '12:00' },
+                pm: { start: '12:00', end: '23:59' }
+            },
+            isLive: true
+        };
+
+        if (DATABASE_URL.includes("PASTE_YOUR")) document.getElementById('config-warning').classList.remove('hidden');
+
+        const app = initializeApp({ databaseURL: DATABASE_URL });
+        const db = getDatabase(app);
+
+        // --- FILTER TOGGLING ---
+
+        window.toggleFilter = (mode) => {
+            if (appState.filter === mode) {
+                appState.filter = 'ALL';
+            } else {
+                appState.filter = mode;
+            }
+            updateFilterButtons();
+            applyFilters();
+        };
+
+        window.toggleRing = () => {
+            appState.filterRing = !appState.filterRing;
+            updateFilterButtons();
+            applyFilters();
+        };
+
+        function updateFilterButtons() {
+            const setActive = (el, active) => {
+                if (active) {
+                    el.classList.remove('toggle-inactive');
+                    el.classList.add('toggle-active');
+                } else {
+                    el.classList.remove('toggle-active');
+                    el.classList.add('toggle-inactive');
+                }
+            };
+
+            setActive(els.amBtn, appState.filter === 'AM');
+            setActive(els.pmBtn, appState.filter === 'PM');
+            setActive(els.bellBtn, appState.filterRing);
+        }
+
+        // --- FILTER LOGIC ---
+
+        function applyFilters() {
+            const { filter, filterRing, config, events } = appState;
+            let filtered = events;
+
+            // 1. Apply AM/PM Filter
+            if (filter !== 'ALL') {
+                const range = filter === 'AM' ? config.am : config.pm;
+                const startMins = timeToMins(range.start);
+                const endMins = timeToMins(range.end);
+
+                filtered = filtered.filter(ev => {
+                    const d = parseTime(ev);
+                    if (!d) return false;
+                    const mins = d.getHours() * 60 + d.getMinutes();
+                    if (startMins <= endMins) return mins >= startMins && mins <= endMins;
+                    else return mins >= startMins || mins <= endMins;
+                });
+            }
+
+            // 2. Apply Ring Filter
+            if (filterRing) {
+                filtered = filtered.filter(ev => {
+                    const title = (ev.title || "").toLowerCase();
+                    return title.includes("ring");
+                });
+            }
+
+            render(filtered);
+        }
+
+        // --- DATE LOGIC ---
+
+        function formatDateDisplay(date) {
+            const today = new Date();
+            const isToday = date.toDateString() === today.toDateString();
+            const displayStr = isToday ? "Today" : date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+
+            els.dateDisplay.innerText = displayStr;
+            els.dateSubtitle.innerText = displayStr;
+            els.datePicker.value = date.toISOString().split('T')[0];
+        }
+
+        window.changeDate = (delta) => {
+            const newDate = new Date(appState.currentDate);
+            newDate.setDate(newDate.getDate() + delta);
+            updateDate(newDate);
+        };
+
+        els.datePicker.addEventListener('change', (e) => {
+            if (e.target.value) updateDate(new Date(e.target.value));
+        });
+
+        function updateDate(date) {
+            appState.currentDate = date;
+            formatDateDisplay(date);
+            fetchData();
+        }
+
+        // --- DATA FETCHING ---
+
+        function fetchData() {
+            const date = appState.currentDate;
+            const isToday = date.toDateString() === new Date().toDateString();
+
+            els.carousel.innerHTML = '';
+            els.loading.classList.remove('hidden');
+
+            const notificationsRef = ref(db, 'notifications');
+            const dbQuery = query(notificationsRef, limitToLast(200));
+
+            if (isToday) {
+                appState.isLive = true;
+                onValue(dbQuery, handleSnapshot);
+            } else {
+                appState.isLive = false;
+                get(dbQuery).then(handleSnapshot);
+            }
+        }
+
+        function handleSnapshot(snapshot) {
+            const data = snapshot.val();
+            if (!data) {
+                render([]);
+                return;
+            }
+
+            let events = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+            const targetDateStr = appState.currentDate.toDateString();
+
+            events = events.filter(ev => {
+                const evDate = parseTime(ev);
+                return evDate && evDate.toDateString() === targetDateStr;
+            });
+
+            appState.events = events;
+            applyFilters();
+        }
+
+        // --- RENDER ---
+
+        function render(list) {
+            els.carousel.innerHTML = '';
+
+            if (!list || list.length === 0) {
+                els.loading.classList.remove('hidden');
+                els.loading.innerHTML = `<div class='flex flex-col items-center gap-2'><span class='text-xs text-gray-500'>No events found</span><span class='text-[10px] text-gray-600'>Try changing filters</span></div>`;
+                // Hide Overlay if empty
+                els.overlay.classList.add('opacity-0');
+                return;
+            }
+
+            // Show Overlay if data exists
+            els.overlay.classList.remove('opacity-0');
+            els.loading.classList.add('hidden');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        const idx = parseInt(e.target.dataset.index);
+                        updateInfo(list[idx], idx + 1, list.length);
+                    }
+                });
+            }, { root: els.carousel, threshold: 0.6 });
+
+            list.forEach((ev, index) => {
+                const slide = document.createElement('div');
+                // Removed padding pt-8 pb-4 to fill viewer
+                slide.className = "min-w-full h-full relative snap-center flex items-center justify-center bg-black";
+                slide.dataset.index = index;
+
+                const img = document.createElement('img');
+                img.src = ev.image;
+                img.className = "max-w-full max-h-full object-contain";
+                img.loading = "lazy";
+
+                slide.appendChild(img);
+                els.carousel.appendChild(slide);
+                observer.observe(slide);
+            });
+
+            if (appState.isLive && appState.filter === 'ALL' && !appState.filterRing) {
+                setTimeout(() => els.carousel.scrollLeft = els.carousel.scrollWidth, 150);
+            }
+        }
+
+        // --- HELPERS ---
+
+        function updateInfo(ev, index, total) {
+            els.title.innerText = ev.title || "Event";
+            if (ev.text) els.title.innerText += `: ${ev.text}`;
+
+            const d = parseTime(ev);
+            els.time.innerText = d ? d.toLocaleTimeString('en-GB') : "Unknown";
+            els.counter.innerText = `${index}/${total}`;
+        }
+
+        function parseTime(ev) {
+            const raw = ev.timestamp || ev.time || ev.date;
+            if (raw) {
+                if (!isNaN(raw)) {
+                    let ts = Number(raw);
+                    if (ts < 100000000000) ts *= 1000;
+                    return new Date(ts);
+                }
+                return new Date(raw);
+            }
+            if (ev.id && ev.id.startsWith('-')) {
+                const PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+                const id = ev.id.substring(0, 8);
+                let time = 0;
+                for (let i = 0; i < 8; i++) time = time * 64 + PUSH_CHARS.indexOf(id.charAt(i));
+                return new Date(time);
+            }
+            return null;
+        }
+
+        function timeToMins(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        // --- UI TOGGLERS ---
+
+        window.toggleSettings = () => {
+            const modal = els.modal;
+            const panel = els.modalPanel;
+
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    panel.classList.remove('scale-95');
+                    panel.classList.add('scale-100');
+                }, 10);
+            } else {
+                modal.classList.add('opacity-0');
+                panel.classList.remove('scale-100');
+                panel.classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        };
+
+        window.saveSettings = () => {
+            appState.config.am = { start: els.configInputs.amStart.value, end: els.configInputs.amEnd.value };
+            appState.config.pm = { start: els.configInputs.pmStart.value, end: els.configInputs.pmEnd.value };
+
+            applyFilters();
+            toggleSettings();
+        };
+
+        window.jumpToLive = () => {
+            els.carousel.scrollTo({ left: els.carousel.scrollWidth, behavior: 'smooth' });
+            if (appState.currentDate.toDateString() !== new Date().toDateString()) {
+                updateDate(new Date());
+                if (appState.filter !== 'ALL') toggleFilter(appState.filter);
+                if (appState.filterRing) toggleRing();
+            }
+        };
+
+        // Init
+        formatDateDisplay(appState.currentDate);
+        fetchData();
+
+    </script>
+</body>
+
+</html>

@@ -91,5 +91,11 @@ service cloud.firestore {
     match /planning_zones/{document=**} {
         allow read, write: if true;
     }
+
+    // --- DRAWING APP ---
+    // Configuration and Matrix State
+    match /drawing_projects/{projectId} {
+      allow read, write: if isAuthenticated(); // Private: Viewer & Manager both require login
+    }
   }
 }

@@ -11,12 +11,19 @@
     <!-- Firebase SDKs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
     <script src="firebase-config.js"></script>
 
-    <!-- Auth Guard -->
+    <!-- Auth Guard & DB Init -->
     <script>
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+            // Initialize Firestore
+            const db = firebase.firestore();
+            window.db = db;
+            console.log("Firestore Initialized");
+
 
             firebase.auth().onAuthStateChanged((user) => {
                 if (!user) {
@@ -170,8 +177,7 @@
         <div class="flex items-center gap-4">
             <h1 class="font-serif text-xl tracking-widest uppercase text-midnight">St Mary Somerset</h1>
             <span class="h-4 w-px bg-bronze/30"></span>
-            <span class="text-xs tracking-[0.2em] text-bronze uppercase">Drawings Archive</span>
-            <span class="text-[9px] ml-2 text-gray-300 font-mono">v1.3.6</span>
+            <span class="text-xs tracking-[0.2em] text-bronze uppercase">Drawings Archive v2.4.0</span>
         </div>
 
         <div class="flex items-center gap-4">
@@ -549,68 +555,48 @@
 
 
         // Initialize
-        function init() {
+        async function init() {
             generateEmptyCsvData(); // Fallback
             setupEventListeners();
             renderFloorRegions();
 
-            // Try to load CSV from localStorage first
-            const savedCsv = localStorage.getItem('buildingDrawingsData');
-            if (savedCsv) {
+            // CLOUD LOAD (Firestore)
+            if (typeof db !== 'undefined') {
                 try {
-                    const savedData = JSON.parse(savedCsv);
-                    // Minimal merge logic or overwrite
-                    // For simplicity, we trust the saved data if it exists
-                    if (savedData.csvData && savedData.csvData.length > 0) csvData = savedData.csvData;
-                    console.log("Loaded CSV Data:", csvData);
-                    if (savedData.urlData && savedData.urlData.length > 0) urlData = savedData.urlData;
-                    console.log("Loaded URL Data:", urlData);
+                    const docRef = db.collection('drawing_projects').doc('st_mary_somerset');
+                    const doc = await docRef.get();
 
-                    if (savedData.assignmentDetails && typeof savedData.assignmentDetails === 'object') {
-                        assignmentDetails = savedData.assignmentDetails;
-                    }
+                    if (doc.exists) {
+                        const data = doc.data();
+                        console.log("Loaded Data from Cloud:", data);
 
-                    // Robust check for roomConfig
-                    if (savedData.roomConfig && typeof savedData.roomConfig === 'object') {
-                        roomConfig = savedData.roomConfig;
-                        console.log("Loaded Room Config:", roomConfig);
-                    } else {
-                        console.warn("No valid roomConfig found in saved data. Using defaults.");
-                    }
+                        if (data.csvData) csvData = JSON.parse(data.csvData); // Assuming simple JSON string for consistency
+                        if (data.urlData) urlData = data.urlData;             // Array
+                        if (data.roomConfig) roomConfig = data.roomConfig;
+                        if (data.assignmentDetails) assignmentDetails = data.assignmentDetails; // If strictly needed
 
-                    // Verify keys
-                    Object.keys(roomConfig).forEach(k => {
-                        if (typeof roomConfig[k] === 'number') {
-                            // Migrate on the fly?
-                            console.log(`Migrating legacy config for floor ${k}`);
-                            roomConfig[k] = { count: roomConfig[k], names: {} };
-                        }
-                    });
-
-                    showNotification('Project Cache Loaded');
-                } catch (e) {
-                    console.error('Error loading data from localStorage:', e);
-                }
-            } else {
-                // Try fetching the actual CSV file
-                fetch('building_drawings.csv')
-                    .then(response => {
-                        if (response.ok) return response.text();
-                        throw new Error('No default CSV found');
-                    })
-                    .then(csvText => {
-                        Papa.parse(csvText, {
-                            header: true,
-                            complete: function (results) {
-                                processImportedData(results.data);
-                                showNotification('Default Drawings Loaded');
+                        // Robust check for roomConfig keys (migration)
+                        Object.keys(roomConfig).forEach(k => {
+                            if (typeof roomConfig[k] === 'number') {
+                                roomConfig[k] = { count: roomConfig[k], names: {} };
                             }
                         });
-                    })
-                    .catch(err => console.log('Starting with empty state.'));
+
+                        showNotification('Project Loaded from Cloud');
+                    } else {
+                        console.log("No Cloud Data found. Starting empty.");
+                        // Optional: Try localStorage as fallback if cloud is empty? 
+                        // For now, let's Stick to Cloud as authority.
+                    }
+                } catch (e) {
+                    console.error("Error loading from Cloud:", e);
+                    showNotification('Cloud Load Failed', 'error');
+                }
+            } else {
+                console.warn("Firestore not available. Offline mode?");
             }
 
-            // After data load (or empty), update UI
+            // After data load, update UI
             updateUI();
         }
 
@@ -1200,19 +1186,38 @@
             // (Optional, strictly speaking we just need urlData)
 
             showNotification('URL Updated');
-            // Save to local storage
-            saveToLocalStorage();
+            // Save to Cloud
+            saveConfig();
             updateUI();
         }
 
-        function saveToLocalStorage() {
+        async function saveConfig() {
             const data = {
                 urlData: urlData,
                 csvData: csvData,
                 roomConfig: roomConfig,
                 assignmentDetails: assignmentDetails
             };
+
+            // 1. Local Backup
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
+
+            // 2. Cloud Save
+            if (typeof db !== 'undefined') {
+                try {
+                    await db.collection('drawing_projects').doc('st_mary_somerset').set({
+                        csvData: JSON.stringify(csvData),
+                        urlData: urlData,
+                        roomConfig: roomConfig,
+                        assignmentDetails: assignmentDetails,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                    console.log("Viewer: Cloud Save Complete");
+                } catch (e) {
+                    console.error("Viewer: Cloud Save Error:", e);
+                    showNotification('Cloud Save Failed', 'error');
+                }
+            }
         }
 
         function zoom(delta) {
