@@ -726,7 +726,7 @@
             // 10 Steps.
             // Step Dimensions: 700mm wide (Z), 250mm deep (X), 30mm thick (Y)
 
-            const startPoint = new THREE.Vector3(1.6, 5.03, 1.6);
+            const startPoint = new THREE.Vector3(1.2, 5.03, 1.6); // Shifted -0.4m in X
             const stepCount = 10;
             const stepDepth = 0.25; // Run
             const stepWidth = 0.70;
@@ -735,7 +735,8 @@
             // Calculate Drop per step
             // tan(42) = Drop / Run
             const angleRad = 42 * (Math.PI / 180);
-            const stepDrop = stepDepth * Math.tan(angleRad);
+            let stepDrop = stepDepth * Math.tan(angleRad);
+            stepDrop *= 1.038; // Increase vertical spacing by 3.8%
 
             const mat = new THREE.MeshStandardMaterial({
                 color: CONFIG.colors.glass,
