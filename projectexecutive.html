@@ -1352,7 +1352,7 @@
                                     class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">MS</button>
                             </div>
                         </div>
-                        <!-- Date & Hours -->
+                        <!-- Date & Mode Selection -->
                         <div class="flex gap-4">
                             <div class="flex-1">
                                 <label
@@ -1360,11 +1360,38 @@
                                 <input type="date" id="ts-date"
                                     class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none">
                             </div>
-                            <div class="w-24">
-                                <label
-                                    class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Hours</label>
-                                <input type="number" id="ts-hours" step="0.5" placeholder="8"
-                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none text-center">
+                            <div class="flex-1">
+                                <label class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Entry
+                                    Mode</label>
+                                <div class="flex gap-1 p-1 bg-white/5 rounded-lg">
+                                    <button id="ts-mode-hours"
+                                        class="flex-1 py-1.5 text-[9px] font-mono uppercase rounded-md bg-bronze/20 text-bronze border border-bronze/30">Hours</button>
+                                    <button id="ts-mode-range"
+                                        class="flex-1 py-1.5 text-[9px] font-mono uppercase rounded-md text-white/40 hover:text-white transition-all">Range</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hours / Range Input Area -->
+                        <div id="ts-input-mode-hours">
+                            <label class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Total
+                                Hours</label>
+                            <input type="number" id="ts-hours" step="0.5" placeholder="8"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none text-center">
+                        </div>
+
+                        <div id="ts-input-mode-range" class="hidden flex gap-4">
+                            <div class="flex-1">
+                                <label class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Start
+                                    Time</label>
+                                <input type="time" id="ts-start"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none">
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">End
+                                    Time</label>
+                                <input type="time" id="ts-end"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none">
                             </div>
                         </div>
                     </div>
@@ -2755,7 +2782,15 @@
             const sectionInput = document.getElementById('ts-section-input');
             const sectionView = document.getElementById('ts-section-view');
 
+            const btnModeHours = document.getElementById('ts-mode-hours');
+            const btnModeRange = document.getElementById('ts-mode-range');
+            const inputHoursArea = document.getElementById('ts-input-mode-hours');
+            const inputRangeArea = document.getElementById('ts-input-mode-range');
+            const tsStart = document.getElementById('ts-start');
+            const tsEnd = document.getElementById('ts-end');
+
             let selectedPerson = null;
+            let entryMode = 'hours'; // or 'range'
             let currentWeekStart = new Date();
             // Adjust to Monday of current week
             const day = currentWeekStart.getDay();
@@ -2808,11 +2843,47 @@
                 });
             }
 
+            // Mode Switching
+            if (btnModeHours && btnModeRange) {
+                btnModeHours.addEventListener('click', () => {
+                    entryMode = 'hours';
+                    btnModeHours.classList.add('bg-bronze/20', 'text-bronze', 'border-bronze/30');
+                    btnModeHours.classList.remove('text-white/40');
+                    btnModeRange.classList.remove('bg-bronze/20', 'text-bronze', 'border-bronze/30');
+                    btnModeRange.classList.add('text-white/40');
+                    inputHoursArea.classList.remove('hidden');
+                    inputRangeArea.classList.add('hidden');
+                });
+
+                btnModeRange.addEventListener('click', () => {
+                    entryMode = 'range';
+                    btnModeRange.classList.add('bg-bronze/20', 'text-bronze', 'border-bronze/30');
+                    btnModeRange.classList.remove('text-white/40');
+                    btnModeHours.classList.remove('bg-bronze/20', 'text-bronze', 'border-bronze/30');
+                    btnModeHours.classList.add('text-white/40');
+                    inputRangeArea.classList.remove('hidden');
+                    inputHoursArea.classList.add('hidden');
+                });
+            }
+
             // Save
             if (tsSave) {
                 tsSave.addEventListener('click', async () => {
-                    if (!selectedPerson || !tsHoursInput.value || !tsDateInput.value) {
-                        alert('Please select person, date and hours.');
+                    let hours = 0;
+                    if (entryMode === 'hours') {
+                        hours = parseFloat(tsHoursInput.value);
+                    } else {
+                        if (tsStart.value && tsEnd.value) {
+                            const [sH, sM] = tsStart.value.split(':').map(Number);
+                            const [eH, eM] = tsEnd.value.split(':').map(Number);
+                            let diff = (eH * 60 + eM) - (sH * 60 + sM);
+                            if (diff < 0) diff += 24 * 60; // Handle overnight
+                            hours = Math.round((diff / 60) * 100) / 100;
+                        }
+                    }
+
+                    if (!selectedPerson || !tsDateInput.value || hours <= 0) {
+                        alert('Please select person, date and ensure hours are calculated.');
                         return;
                     }
 
@@ -2824,7 +2895,9 @@
                         await firebase.firestore().collection('timesheets').add({
                             person: selectedPerson,
                             date: tsDateInput.value,
-                            hours: parseFloat(tsHoursInput.value),
+                            hours: hours,
+                            startTime: entryMode === 'range' ? tsStart.value : null,
+                            endTime: entryMode === 'range' ? tsEnd.value : null,
                             note: tsNoteInput.value,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                             uid: firebase.auth().currentUser ? firebase.auth().currentUser.uid : 'anon'
@@ -2832,6 +2905,8 @@
 
                         // Success feedback
                         tsHoursInput.value = '';
+                        tsStart.value = '';
+                        tsEnd.value = '';
                         tsNoteInput.value = '';
                         document.getElementById('ts-save-text').innerText = 'Saved!';
                         setTimeout(() => {
@@ -2950,11 +3025,12 @@
                 entries.sort((a, b) => b.date.localeCompare(a.date)).forEach(e => {
                     const item = document.createElement('div');
                     item.className = 'p-3 bg-white/5 rounded border border-white/5 flex justify-between items-start hover:bg-white/10 transition-colors';
+                    const timeRange = e.startTime && e.endTime ? `<span class="text-[9px] text-white/30 ml-2 font-mono">${e.startTime}-${e.endTime}</span>` : '';
                     item.innerHTML = `
                         <div>
                             <div class="flex items-center gap-2">
                                 <span class="px-1.5 py-0.5 bg-bronze/20 text-bronze rounded text-[9px] font-bold">${e.person}</span>
-                                <span class="text-[10px] text-white/60 font-mono">${e.date}</span>
+                                <span class="text-[10px] text-white/60 font-mono">${e.date}${timeRange}</span>
                             </div>
                             <p class="text-xs text-white/40 mt-1">${e.note || '(No description)'}</p>
                         </div>
