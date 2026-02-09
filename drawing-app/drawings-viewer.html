@@ -500,15 +500,15 @@
         ];
 
         // State
-        let csvData = [];
-        let urlData = [];
+        let drawings = {}; // Unified: { "key": { exists: true, path: "...", uploadedAt: "...", revisions: [] } }
+        let urlCache = {}; // Cache resolved URLs: { "path": "https://..." }
         let assignmentDetails = {}; // Preserved from Manager
         let activeFloor = '01';
         let activeRoom = '1';
         let activeType = 'G';
         let activeOrientation = 'Default';
         let activeStage = 'O'; // Default active stage
-        let roomConfig = {}; // e.g. { '01': 3, '02': 1 }
+        let roomConfig = {}; // e.g. { '01': { count: 3, names: {} } }
 
 
         // Viewport State
@@ -556,7 +556,6 @@
 
         // Initialize
         async function init() {
-            generateEmptyCsvData(); // Fallback
             setupEventListeners();
             renderFloorRegions();
 
@@ -570,10 +569,38 @@
                         const data = doc.data();
                         console.log("Loaded Data from Cloud:", data);
 
-                        if (data.csvData) csvData = JSON.parse(data.csvData); // Assuming simple JSON string for consistency
-                        if (data.urlData) urlData = data.urlData;             // Array
+                        // NEW FORMAT: drawings object
+                        if (data.drawings) {
+                            drawings = data.drawings;
+                            console.log("Loaded new drawings format");
+                        }
+                        // LEGACY MIGRATION: Convert old csvData/urlData
+                        else if (data.csvData) {
+                            console.log("Migrating old data format...");
+                            const parsedCsv = typeof data.csvData === 'string' ? JSON.parse(data.csvData) : data.csvData;
+                            if (Array.isArray(parsedCsv)) {
+                                parsedCsv.forEach(row => {
+                                    const key = row[0];
+                                    const exists = parseInt(row[1]) === 1;
+                                    drawings[key] = { exists, path: null, uploadedAt: null, revisions: [] };
+                                });
+                            }
+                            // Migrate URLs
+                            if (data.urlData && Array.isArray(data.urlData)) {
+                                data.urlData.forEach(([key, url]) => {
+                                    if (drawings[key]) {
+                                        drawings[key].legacyUrl = url;
+                                        const pathMatch = url.match(/\/o\/(.*?)\?/);
+                                        if (pathMatch) {
+                                            drawings[key].path = decodeURIComponent(pathMatch[1]);
+                                        }
+                                    }
+                                });
+                            }
+                        }
+
                         if (data.roomConfig) roomConfig = data.roomConfig;
-                        if (data.assignmentDetails) assignmentDetails = data.assignmentDetails; // If strictly needed
+                        if (data.assignmentDetails) assignmentDetails = data.assignmentDetails;
 
                         // Robust check for roomConfig keys (migration)
                         Object.keys(roomConfig).forEach(k => {
@@ -585,8 +612,6 @@
                         showNotification('Project Loaded from Cloud');
                     } else {
                         console.log("No Cloud Data found. Starting empty.");
-                        // Optional: Try localStorage as fallback if cloud is empty? 
-                        // For now, let's Stick to Cloud as authority.
                     }
                 } catch (e) {
                     console.error("Error loading from Cloud:", e);
@@ -938,9 +963,9 @@
         }
 
         // UPDATE MAIN VIEW
-        function updateDrawingView() {
+        async function updateDrawingView() {
             const currentKey = getCurrentKey(activeStage);
-            const drawingEntry = getDrawingEntry(currentKey);
+            const drawing = drawings[currentKey];
 
             // Title
             const typeName = types.find(t => t.code === activeType).name;
@@ -954,10 +979,11 @@
             drawingDescription.textContent = `${typeName} ${orientName} (${stageName})`;
 
             // Show Image or Form
-            if (drawingEntry && drawingEntry.url && drawingEntry.url.trim() !== '') {
-                // We have a URL
-                drawingImage.src = drawingEntry.url;
-                urlInput.value = drawingEntry.url;
+            const url = await getDrawingUrl(drawing);
+
+            if (url) {
+                drawingImage.src = url;
+                urlInput.value = url;
 
                 drawingContainer.classList.remove('hidden');
                 drawingContainer.classList.add('flex');
@@ -1074,65 +1100,90 @@
         window.selectRoomCount = selectRoomCount;
         window.updateRoomName = updateRoomName;
 
-        function saveConfigurator() {
-            // Persist
+        async function saveConfigurator() {
+            // Persist to localStorage (new format)
             const data = {
-                csvData: csvData,
-                urlData: urlData,
+                drawings: drawings,
                 roomConfig: roomConfig,
                 assignmentDetails: assignmentDetails
             };
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
 
-            showNotification('Room Types Saved');
+            // Persist to Firestore
+            if (typeof db !== 'undefined') {
+                try {
+                    await db.collection('drawing_projects').doc('st_mary_somerset').update({
+                        roomConfig: roomConfig,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (e) {
+                    console.error("Error saving roomConfig to cloud:", e);
+                }
+            }
+
+            showNotification('Room Configuration Saved');
             configModal.classList.add('hidden');
             updateUI(); // Refresh view
         }
 
         // --- HELPER FUNCTIONS ---
 
-
         function getCurrentKey(stageCode) {
             return `${activeFloor}-${activeRoom}-${activeType}-${activeOrientation}-${stageCode}`;
         }
 
-        function getDrawingEntry(key) {
-            // Look in urlData primarily
-            const entry = urlData.find(row => Array.isArray(row) ? row[0] === key : row.key === key);
+        // Resolve path to download URL (with caching)
+        async function getDrawingUrl(drawing) {
+            if (!drawing || !drawing.exists) return null;
 
-            // Normalize return
-            if (Array.isArray(entry)) return { key: entry[0], url: entry[1] };
-            return entry || null;
+            // Check for legacy URL first
+            if (drawing.legacyUrl) return drawing.legacyUrl;
+
+            // No path means no file
+            if (!drawing.path) return null;
+
+            // Check cache
+            if (urlCache[drawing.path]) return urlCache[drawing.path];
+
+            // Resolve from Firebase Storage
+            try {
+                const url = await firebase.storage().ref(drawing.path).getDownloadURL();
+                urlCache[drawing.path] = url; // Cache it
+                return url;
+            } catch (e) {
+                console.error('Failed to get download URL for:', drawing.path, e);
+                return null;
+            }
+        }
+
+        function getDrawingEntry(key) {
+            // Use unified drawings object
+            return drawings[key] || null;
         }
 
         function checkDrawingExists(key) {
-            const entry = getDrawingEntry(key);
-            return entry && entry.url && entry.url !== '';
+            const drawing = drawings[key];
+            return drawing && drawing.exists && (drawing.path || drawing.legacyUrl);
         }
 
         // Search helpers for enabling tabs
         function hasAnyDrawingForRoomType(fl, rm, tp) {
-            // Check all orientations/stages for this combo
-            // Simplified check: iterate urlData
-            // Optimization: Filter logic
-            // Since data structures might be array or object, handle both
-            return urlData.some(row => {
-                const k = Array.isArray(row) ? row[0] : row.key;
-                const u = Array.isArray(row) ? row[1] : row.url;
-                if (!u || u === '') return false;
+            // Check all orientations/stages for this combo in drawings object
+            return Object.keys(drawings).some(key => {
+                const drawing = drawings[key];
+                if (!drawing.exists || (!drawing.path && !drawing.legacyUrl)) return false;
 
-                const parts = k.split('-'); // 0:fl, 1:rm, 2:tp, 3:or, 4:st
+                const parts = key.split('-'); // 0:fl, 1:rm, 2:tp, 3:or, 4:st
                 return parts[0] == fl && parts[1] == rm && parts[2] == tp;
             });
         }
 
         function hasAnyDrawingForOrientation(fl, rm, tp, or) {
-            return urlData.some(row => {
-                const k = Array.isArray(row) ? row[0] : row.key;
-                const u = Array.isArray(row) ? row[1] : row.url;
-                if (!u || u === '') return false;
+            return Object.keys(drawings).some(key => {
+                const drawing = drawings[key];
+                if (!drawing.exists || (!drawing.path && !drawing.legacyUrl)) return false;
 
-                const parts = k.split('-');
+                const parts = key.split('-');
                 return parts[0] == fl && parts[1] == rm && parts[2] == tp && parts[3] == or;
             });
         }

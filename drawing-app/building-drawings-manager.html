@@ -330,12 +330,15 @@
         });
 
         // --- STATE ---
-        let csvData = {}; // Map: "key" -> 1/0
+        let drawings = {}; // Unified: { "key": { exists: true, path: "...", uploadedAt: "...", revisions: [] } }
+        let changedKeys = new Set(); // Track keys modified since last save for field-level updates
         let assignmentDetails = {}; // Map: "key" -> { sourceFile: "...", logic: "..." }
-        let urlData = []; // Preserved from Viewer
         let roomConfig = {}; // Preserved from Viewer
         let metadata = null; // Loaded JSON
         let aiMetadata = []; // Loaded JSON for bulk upload
+
+        // Legacy compat (will be migrated)
+        let urlData = []; // Kept for migration only
 
         // --- DOM ---
         const matrixBody = document.getElementById('matrixBody');
@@ -365,25 +368,44 @@
                             const data = doc.data();
                             console.log("Loaded Data from Cloud:", data);
 
-                            if (data.csvData) {
-                                // CSV stored as JSON String
-                                const parsedCsv = JSON.parse(data.csvData);
-                                if (Array.isArray(parsedCsv)) {
-                                    parsedCsv.forEach(row => csvData[row[0]] = parseInt(row[1]));
-                                }
+                            // NEW FORMAT: drawings object
+                            if (data.drawings) {
+                                drawings = data.drawings;
+                                console.log("Loaded new drawings format");
                             }
+                            // LEGACY MIGRATION: Convert old csvData/urlData
+                            else if (data.csvData) {
+                                console.log("Migrating old data format...");
+                                const parsedCsv = typeof data.csvData === 'string' ? JSON.parse(data.csvData) : data.csvData;
+                                if (Array.isArray(parsedCsv)) {
+                                    parsedCsv.forEach(row => {
+                                        const key = row[0];
+                                        const exists = parseInt(row[1]) === 1;
+                                        drawings[key] = { exists, path: null, uploadedAt: null, revisions: [] };
+                                    });
+                                }
+                                // Migrate URLs
+                                if (data.urlData && Array.isArray(data.urlData)) {
+                                    data.urlData.forEach(([key, url]) => {
+                                        if (drawings[key]) {
+                                            // Extract path from URL or store legacy URL
+                                            drawings[key].legacyUrl = url;
+                                            // Try to extract path from Firebase Storage URL
+                                            const pathMatch = url.match(/\/o\/(.*?)\?/);
+                                            if (pathMatch) {
+                                                drawings[key].path = decodeURIComponent(pathMatch[1]);
+                                            }
+                                        }
+                                    });
+                                }
+                                showMessage('Migrated legacy data');
+                            }
+
                             if (data.assignmentDetails) assignmentDetails = data.assignmentDetails;
-                            if (data.urlData) urlData = data.urlData;
                             if (data.roomConfig) roomConfig = data.roomConfig;
 
                             showMessage('Loaded from Cloud');
                             loadedFromCloud = true;
-
-                            // Update local backup
-                            localStorage.setItem('buildingDrawingsData', JSON.stringify({
-                                csvData: data.csvData ? JSON.parse(data.csvData) : [],
-                                assignmentDetails, urlData, roomConfig
-                            }));
                         }
                     } catch (e) {
                         console.error("Cloud Load Error:", e);
@@ -397,20 +419,37 @@
                     if (savedData) {
                         try {
                             const parsed = JSON.parse(savedData);
-                            if (parsed.csvData && Array.isArray(parsed.csvData)) {
-                                parsed.csvData.forEach(row => csvData[row[0]] = parseInt(row[1]));
+                            // NEW FORMAT
+                            if (parsed.drawings) {
+                                drawings = parsed.drawings;
+                            }
+                            // LEGACY MIGRATION
+                            else if (parsed.csvData && Array.isArray(parsed.csvData)) {
+                                parsed.csvData.forEach(row => {
+                                    const key = row[0];
+                                    const exists = parseInt(row[1]) === 1;
+                                    drawings[key] = { exists, path: null, uploadedAt: null, revisions: [] };
+                                });
+                                if (parsed.urlData) {
+                                    parsed.urlData.forEach(([key, url]) => {
+                                        if (drawings[key]) {
+                                            drawings[key].legacyUrl = url;
+                                            const pathMatch = url.match(/\/o\/(.*?)\?/);
+                                            if (pathMatch) {
+                                                drawings[key].path = decodeURIComponent(pathMatch[1]);
+                                            }
+                                        }
+                                    });
+                                }
                             }
                             if (parsed.assignmentDetails) assignmentDetails = parsed.assignmentDetails;
-                            if (parsed.urlData) urlData = parsed.urlData;
                             if (parsed.roomConfig) roomConfig = parsed.roomConfig;
 
                             showMessage('Loaded from Local Backup');
 
-                            // AUTO-MIGRATE to Cloud if we have local data but no cloud data
+                            // AUTO-MIGRATE to Cloud
                             if (typeof db !== 'undefined') {
                                 console.log("Migrating Local Data to Cloud...");
-                                // We can't call saveConfig here directly if we want to be safe, but actually we SHOULD.
-                                // But let's delay it slightly or just do it.
                                 setTimeout(() => saveConfig(), 2000);
                             }
 
@@ -564,22 +603,35 @@
                 renderUploadList();
 
                 try {
-                    const path = `drawings/${item.meta.floor}/${item.file.name}`;
-                    const fileRef = storageRef.child(path);
+                    const storagePath = `drawings/${item.meta.floor}/${item.file.name}`;
+                    const fileRef = storageRef.child(storagePath);
 
-                    const snapshot = await fileRef.put(item.file);
-                    const downloadURL = await snapshot.ref.getDownloadURL();
+                    await fileRef.put(item.file);
 
                     const key1 = `${item.meta.floor}-${item.meta.room}-${item.meta.type}-${item.meta.orientation}-P`;
-                    csvData[key1] = 1;
-                    assignmentDetails[key1] = { sourceFile: item.file.name, logic: 'Bulk Upload' };
+                    const now = new Date().toISOString();
+                    const currentUser = firebase.auth().currentUser?.email || 'unknown';
 
-                    const existingIdx = urlData.findIndex(row => row[0] === key1);
-                    if (existingIdx > -1) {
-                        urlData[existingIdx][1] = downloadURL;
-                    } else {
-                        urlData.push([key1, downloadURL]);
+                    // Handle versioning: if key already exists, archive old version
+                    if (drawings[key1]?.exists && drawings[key1]?.path) {
+                        drawings[key1].revisions = drawings[key1].revisions || [];
+                        drawings[key1].revisions.push({
+                            path: drawings[key1].path,
+                            uploadedAt: drawings[key1].uploadedAt,
+                            uploadedBy: drawings[key1].uploadedBy
+                        });
                     }
+
+                    drawings[key1] = {
+                        exists: true,
+                        path: storagePath,  // Store PATH, not full URL
+                        uploadedAt: now,
+                        uploadedBy: currentUser,
+                        revisions: drawings[key1]?.revisions || []
+                    };
+
+                    assignmentDetails[key1] = { sourceFile: item.file.name, logic: 'Bulk Upload' };
+                    changedKeys.add(key1);
 
                     item.status = 'success';
                     successCount++;
@@ -638,19 +690,18 @@
                         const td = document.createElement('td');
                         td.className = "border-b border-r border-dashed border-gray-200 text-center p-1";
 
-                        // Check Status
-                        // Logic: If ANY stage is active? Or particular stage?
-                        // Let's check Proposed (P) and As-Built (A)
+                        // Check Status using unified drawings object
                         const keyP = `${floor}-${room}-${col.type}-${col.orient}-P`;
                         const keyA = `${floor}-${room}-${col.type}-${col.orient}-A`;
 
-                        const hasP = csvData[keyP] === 1;
-                        const hasA = csvData[keyA] === 1;
+                        const hasP = drawings[keyP]?.exists === true;
+                        const hasA = drawings[keyA]?.exists === true;
 
                         // Tooltip Info
                         const details = assignmentDetails[keyP] || {};
+                        const drawingInfo = drawings[keyP] || {};
                         const title = hasP
-                            ? `File: ${details.sourceFile || 'Manual Entry'}\nLogic: ${details.logic || 'User'}`
+                            ? `File: ${details.sourceFile || drawingInfo.path || 'Manual Entry'}\nLogic: ${details.logic || 'User'}`
                             : 'Click to Add';
 
                         // Visual
@@ -660,25 +711,34 @@
                                 'bg-transparent hover:bg-gray-100 text-transparent hover:text-gray-300'
                             }`;
                         div.textContent = hasP ? 'P' : (hasA ? 'A' : '+');
-                        div.title = title; // Add Tooltip
+                        div.title = title;
 
                         // Click Handler - Toggle P
                         div.addEventListener('click', () => {
                             const newStatus = !hasP;
-                            csvData[keyP] = newStatus ? 1 : 0;
-                            if (!newStatus) delete assignmentDetails[keyP]; // Cleanup logic on delete
-                            else if (!assignmentDetails[keyP]) assignmentDetails[keyP] = { logic: 'Manual' };
-
-                            // Simple visual update (or re-render)
-                            renderMatrix(); // Re-render to update tooltip
-                            saveConfig(); // Auto-save on click
+                            if (!drawings[keyP]) {
+                                drawings[keyP] = { exists: false, path: null, uploadedAt: null, revisions: [] };
+                            }
+                            drawings[keyP].exists = newStatus;
+                            if (!newStatus) {
+                                delete assignmentDetails[keyP];
+                            } else if (!assignmentDetails[keyP]) {
+                                assignmentDetails[keyP] = { logic: 'Manual' };
+                            }
+                            changedKeys.add(keyP);
+                            renderMatrix();
+                            saveConfig();
                         });
 
                         // Right Click - Toggle As-Built (A)
                         div.addEventListener('contextmenu', (e) => {
                             e.preventDefault();
                             const newStatusA = !hasA;
-                            csvData[keyA] = newStatusA ? 1 : 0;
+                            if (!drawings[keyA]) {
+                                drawings[keyA] = { exists: false, path: null, uploadedAt: null, revisions: [] };
+                            }
+                            drawings[keyA].exists = newStatusA;
+                            changedKeys.add(keyA);
                             renderMatrix();
                             saveConfig();
                         });
@@ -834,12 +894,15 @@
                 const match = pendingMatches[idx];
 
                 if (match) {
-                    csvData[match.key] = 1;
-                    // SAVE INFO
+                    if (!drawings[match.key]) {
+                        drawings[match.key] = { exists: false, path: null, uploadedAt: null, revisions: [] };
+                    }
+                    drawings[match.key].exists = true;
                     assignmentDetails[match.key] = {
                         sourceFile: (match.source.number || '') + ' ' + (match.source.title || ''),
                         logic: match.logic
                     };
+                    changedKeys.add(match.key);
                     count++;
                 }
             });
@@ -851,32 +914,48 @@
         }
 
         // --- EXPORT/IMPORT ---
-        // --- EXPORT/IMPORT ---
         async function saveConfig() {
-            // 1. Prepare Data
-            const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
+            // 1. Prepare Data (new unified format)
             const data = {
-                csvData: exportData,
+                drawings: drawings,
                 assignmentDetails: assignmentDetails,
-                urlData: urlData,
                 roomConfig: roomConfig
             };
 
             // 2. Local Backup (Fast)
             localStorage.setItem('buildingDrawingsData', JSON.stringify(data));
 
-            // 3. Cloud Save (Firestore)
+            // 3. Cloud Save (Firestore) - Use field-level updates when possible
             if (typeof db !== 'undefined') {
                 showMessage('Saving to Cloud...');
                 try {
-                    await db.collection('drawing_projects').doc('st_mary_somerset').set({
-                        csvData: JSON.stringify(exportData), // Store as string to avoid nested array indexing issues/limits
-                        assignmentDetails: assignmentDetails,
-                        urlData: urlData,
-                        roomConfig: roomConfig,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                    console.log("Cloud Save Complete");
+                    const docRef = db.collection('drawing_projects').doc('st_mary_somerset');
+
+                    // If we have tracked changes, use field-level updates (race-condition safe)
+                    if (changedKeys.size > 0 && changedKeys.size < 50) {
+                        const updates = {
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        changedKeys.forEach(key => {
+                            updates[`drawings.${key}`] = drawings[key];
+                            if (assignmentDetails[key]) {
+                                updates[`assignmentDetails.${key}`] = assignmentDetails[key];
+                            }
+                        });
+                        await docRef.update(updates);
+                        console.log(`Field-level update: ${changedKeys.size} keys`);
+                    } else {
+                        // Full save (for initial save or many changes)
+                        await docRef.set({
+                            drawings: drawings,
+                            assignmentDetails: assignmentDetails,
+                            roomConfig: roomConfig,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                        console.log("Full document save complete");
+                    }
+
+                    changedKeys.clear(); // Reset change tracking
                     showMessage('Saved to Cloud');
                 } catch (e) {
                     console.error("Cloud Save Error:", e);
@@ -889,7 +968,8 @@
 
         function saveAndExport() {
             saveConfig();
-            const exportData = Object.entries(csvData).map(([k, v]) => [k, v]);
+            // Export as CSV (key, exists)
+            const exportData = Object.entries(drawings).map(([k, v]) => [k, v.exists ? 1 : 0]);
             const csv = Papa.unparse({
                 fields: ['key', 'hasDrawing'],
                 data: exportData
@@ -911,7 +991,13 @@
                     const data = results.data[0][0] === 'key' ? results.data.slice(1) : results.data;
                     data.forEach(row => {
                         if (row.length >= 2 && row[0]) {
-                            csvData[row[0]] = parseInt(row[1]);
+                            const key = row[0];
+                            const exists = parseInt(row[1]) === 1;
+                            if (!drawings[key]) {
+                                drawings[key] = { exists: false, path: null, uploadedAt: null, revisions: [] };
+                            }
+                            drawings[key].exists = exists;
+                            changedKeys.add(key);
                         }
                     });
                     saveConfig();
