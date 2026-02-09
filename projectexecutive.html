@@ -1304,6 +1304,157 @@
         </div>
     </div>
 
+    <!-- Timesheet Modal -->
+    <div id="timesheet-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div
+            class="glass-panel w-full max-w-2xl rounded-xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-6 border-b border-white/5 bg-white/[0.02]">
+                <div>
+                    <h3 class="font-serif text-xl text-bronze">Project Timesheets</h3>
+                    <p class="text-[10px] text-white/40 uppercase tracking-widest mt-1">St Mary Somerset | SMS-1694</p>
+                </div>
+                <button id="timesheet-close"
+                    class="p-2 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                <!-- Tabs -->
+                <div class="flex gap-2 p-1 bg-white/5 rounded-lg w-fit">
+                    <button id="ts-tab-input"
+                        class="px-4 py-2 text-[10px] font-mono uppercase tracking-widest rounded-md bg-bronze/20 text-bronze border border-bronze/30 transition-all">Quick
+                        Entry</button>
+                    <button id="ts-tab-view"
+                        class="px-4 py-2 text-[10px] font-mono uppercase tracking-widest rounded-md text-white/40 hover:text-white transition-all">Weekly
+                        View</button>
+                </div>
+
+                <!-- Input Section -->
+                <div id="ts-section-input" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Person Selection -->
+                        <div>
+                            <label
+                                class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Individual</label>
+                            <div class="flex gap-2">
+                                <button data-person="GR"
+                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">GR</button>
+                                <button data-person="AA"
+                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">AA</button>
+                                <button data-person="MS"
+                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">MS</button>
+                            </div>
+                        </div>
+                        <!-- Date & Hours -->
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <label
+                                    class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Date</label>
+                                <input type="date" id="ts-date"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none">
+                            </div>
+                            <div class="w-24">
+                                <label
+                                    class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Hours</label>
+                                <input type="number" id="ts-hours" step="0.5" placeholder="8"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none text-center">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description/Note -->
+                    <div>
+                        <label class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Description /
+                            Note</label>
+                        <textarea id="ts-note" rows="3" placeholder="Work performed today..."
+                            class="w-full bg-white/5 border border-white/10 rounded-lg p-4 text-sm text-portland/80 focus:ring-1 focus:ring-bronze outline-none resize-none"></textarea>
+                    </div>
+
+                    <button id="ts-save"
+                        class="w-full py-4 bg-bronze/20 hover:bg-bronze/30 border border-bronze/40 text-bronze text-xs font-mono uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group">
+                        <span id="ts-save-text">Log Entry</span>
+                        <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- View Section -->
+                <div id="ts-section-view" class="hidden space-y-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-4">
+                            <button id="ts-prev-week"
+                                class="p-2 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                            </button>
+                            <span id="ts-week-label" class="text-sm font-mono text-white/80">Week: --</span>
+                            <button id="ts-next-week"
+                                class="p-2 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex gap-2">
+                            <div
+                                class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[9px] text-white/40 font-mono">
+                                Total: <span id="ts-total-all" class="text-bronze">0</span>h</div>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr
+                                    class="text-[9px] uppercase tracking-[0.2em] text-bronze/60 border-b border-white/5">
+                                    <th class="py-3 font-medium">Day</th>
+                                    <th class="py-3 font-medium text-center">GR</th>
+                                    <th class="py-3 font-medium text-center">AA</th>
+                                    <th class="py-3 font-medium text-center">MS</th>
+                                    <th class="py-3 font-medium text-right">Daily Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ts-weekly-body" class="text-xs font-mono text-white/70">
+                                <!-- Days populated by JS -->
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t border-white/10 text-white font-bold">
+                                    <td class="py-4">TOTALS</td>
+                                    <td id="total-GR" class="py-4 text-center text-bronze">0</td>
+                                    <td id="total-AA" class="py-4 text-center text-bronze">0</td>
+                                    <td id="total-MS" class="py-4 text-center text-bronze">0</td>
+                                    <td id="total-WEEK" class="py-4 text-right text-portland">0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Quick List of entries -->
+                    <div class="mt-8">
+                        <h4 class="text-[10px] text-white/40 uppercase tracking-widest mb-4">Detailed Entries</h4>
+                        <div id="ts-entries-list" class="space-y-2">
+                            <!-- Entries populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -2814,156 +2965,6 @@
             }
         })();
     </script>
-
-    <!-- Timesheet Modal -->
-    <div id="timesheet-modal"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4 overflow-y-auto">
-        <div
-            class="glass-panel w-full max-w-2xl rounded-xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]">
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center p-6 border-b border-white/5 bg-white/[0.02]">
-                <div>
-                    <h3 class="font-serif text-xl text-bronze">Project Timesheets</h3>
-                    <p class="text-[10px] text-white/40 uppercase tracking-widest mt-1">St Mary Somerset | SMS-1694</p>
-                </div>
-                <button id="timesheet-close"
-                    class="p-2 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Modal Content -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                <!-- Tabs -->
-                <div class="flex gap-2 p-1 bg-white/5 rounded-lg w-fit">
-                    <button id="ts-tab-input"
-                        class="px-4 py-2 text-[10px] font-mono uppercase tracking-widest rounded-md bg-bronze/20 text-bronze border border-bronze/30 transition-all">Quick
-                        Entry</button>
-                    <button id="ts-tab-view"
-                        class="px-4 py-2 text-[10px] font-mono uppercase tracking-widest rounded-md text-white/40 hover:text-white transition-all">Weekly
-                        View</button>
-                </div>
-
-                <!-- Input Section -->
-                <div id="ts-section-input" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Person Selection -->
-                        <div>
-                            <label
-                                class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Individual</label>
-                            <div class="flex gap-2">
-                                <button data-person="GR"
-                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">GR</button>
-                                <button data-person="AA"
-                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">AA</button>
-                                <button data-person="MS"
-                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">MS</button>
-                            </div>
-                        </div>
-                        <!-- Date & Hours -->
-                        <div class="flex gap-4">
-                            <div class="flex-1">
-                                <label
-                                    class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Date</label>
-                                <input type="date" id="ts-date"
-                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none">
-                            </div>
-                            <div class="w-24">
-                                <label
-                                    class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Hours</label>
-                                <input type="number" id="ts-hours" step="0.5" placeholder="8"
-                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none text-center">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Description/Note -->
-                    <div>
-                        <label class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Description /
-                            Note</label>
-                        <textarea id="ts-note" rows="3" placeholder="Work performed today..."
-                            class="w-full bg-white/5 border border-white/10 rounded-lg p-4 text-sm text-portland/80 focus:ring-1 focus:ring-bronze outline-none resize-none"></textarea>
-                    </div>
-
-                    <button id="ts-save"
-                        class="w-full py-4 bg-bronze/20 hover:bg-bronze/30 border border-bronze/40 text-bronze text-xs font-mono uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group">
-                        <span id="ts-save-text">Log Entry</span>
-                        <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- View Section -->
-                <div id="ts-section-view" class="hidden space-y-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <div class="flex items-center gap-4">
-                            <button id="ts-prev-week"
-                                class="p-2 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15 19l-7-7 7-7"></path>
-                                </svg>
-                            </button>
-                            <span id="ts-week-label" class="text-sm font-mono text-white/80">Week: --</span>
-                            <button id="ts-next-week"
-                                class="p-2 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="flex gap-2">
-                            <div
-                                class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[9px] text-white/40 font-mono">
-                                Total: <span id="ts-total-all" class="text-bronze">0</span>h</div>
-                        </div>
-                    </div>
-
-                    <!-- Weekly Table -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr
-                                    class="text-[9px] uppercase tracking-[0.2em] text-bronze/60 border-b border-white/5">
-                                    <th class="py-3 font-medium">Day</th>
-                                    <th class="py-3 font-medium text-center">GR</th>
-                                    <th class="py-3 font-medium text-center">AA</th>
-                                    <th class="py-3 font-medium text-center">MS</th>
-                                    <th class="py-3 font-medium text-right">Daily Total</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ts-weekly-body" class="text-xs font-mono text-white/70">
-                                <!-- Days populated by JS -->
-                            </tbody>
-                            <tfoot>
-                                <tr class="border-t border-white/10 text-white font-bold">
-                                    <td class="py-4">TOTALS</td>
-                                    <td id="total-GR" class="py-4 text-center text-bronze">0</td>
-                                    <td id="total-AA" class="py-4 text-center text-bronze">0</td>
-                                    <td id="total-MS" class="py-4 text-center text-bronze">0</td>
-                                    <td id="total-WEEK" class="py-4 text-right text-portland">0</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <!-- Quick List of entries -->
-                    <div class="mt-8">
-                        <h4 class="text-[10px] text-white/40 uppercase tracking-widest mb-4">Detailed Entries</h4>
-                        <div id="ts-entries-list" class="space-y-2">
-                            <!-- Entries populated by JS -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
 </body>
