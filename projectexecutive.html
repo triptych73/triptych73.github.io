@@ -165,6 +165,17 @@
                             d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                 </div>
+                <!-- Timesheet Icon Button -->
+                <div id="nav-timesheet-btn"
+                    class="hidden md:flex items-center gap-2 border-l border-white/10 pl-6 border-r pr-6 border-white/10 cursor-pointer hover:bg-white/5 transition-colors group"
+                    title="Open Timesheets">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-4 h-4 text-white/40 group-hover:text-bronze transition-colors">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 3h.008v.008H12V18Zm-3-6h.008v.008H9v-.008ZM9 15h.008v.008H9V15Zm0 3h.008v.008H9V18Zm6-6h.008v.008H15v-.008ZM15 15h.008v.008H15V15Zm0 3h.008v.008H15V18Z" />
+                    </svg>
+                    <span class="text-white/40 group-hover:text-portland transition-colors">TAS</span>
+                </div>
                 <a href="#" onclick="firebase.auth().signOut().then(() => window.location.href='index.html')"
                     class="hover:text-bronze transition-colors ml-4 text-white/20 hover:text-white/60">Log Out</a>
             </div>
@@ -2577,7 +2588,383 @@
             updateFilterButtons();
             fetchEufyData();
         })();
+
+        // --- TIMESHEET WIDGET LOGIC ---
+        (function () {
+            const tsModal = document.getElementById('timesheet-modal');
+            const tsBtn = document.getElementById('nav-timesheet-btn');
+            const tsClose = document.getElementById('timesheet-close');
+            const tsSave = document.getElementById('ts-save');
+            const tsDateInput = document.getElementById('ts-date');
+            const tsHoursInput = document.getElementById('ts-hours');
+            const tsNoteInput = document.getElementById('ts-note');
+            const personBtns = document.querySelectorAll('.ts-person-btn');
+            const tabInput = document.getElementById('ts-tab-input');
+            const tabView = document.getElementById('ts-tab-view');
+            const sectionInput = document.getElementById('ts-section-input');
+            const sectionView = document.getElementById('ts-section-view');
+
+            let selectedPerson = null;
+            let currentWeekStart = new Date();
+            // Adjust to Monday of current week
+            const day = currentWeekStart.getDay();
+            const diff = currentWeekStart.getDate() - day + (day === 0 ? -6 : 1);
+            currentWeekStart.setDate(diff);
+            currentWeekStart.setHours(0, 0, 0, 0);
+
+            // Open/Close
+            if (tsBtn) {
+                tsBtn.addEventListener('click', () => {
+                    tsModal.classList.remove('hidden');
+                    tsDateInput.valueAsDate = new Date();
+                    loadWeeklyData();
+                });
+            }
+
+            if (tsClose) tsClose.addEventListener('click', () => tsModal.classList.add('hidden'));
+            if (tsModal) {
+                tsModal.addEventListener('click', (e) => {
+                    if (e.target === tsModal) tsModal.classList.add('hidden');
+                });
+            }
+
+            // Person Selection
+            personBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    personBtns.forEach(b => b.classList.remove('bg-bronze/20', 'text-bronze', 'border-bronze/50'));
+                    btn.classList.add('bg-bronze/20', 'text-bronze', 'border-bronze/50');
+                    selectedPerson = btn.dataset.person;
+                });
+            });
+
+            // Tabs
+            if (tabInput && tabView) {
+                tabInput.addEventListener('click', () => {
+                    tabInput.classList.add('bg-bronze/20', 'text-bronze', 'border-bronze/30');
+                    tabView.classList.remove('bg-bronze/20', 'text-bronze', 'border-bronze/30');
+                    tabView.classList.add('text-white/40');
+                    sectionInput.classList.remove('hidden');
+                    sectionView.classList.add('hidden');
+                });
+
+                tabView.addEventListener('click', () => {
+                    tabView.classList.add('bg-bronze/20', 'text-bronze', 'border-bronze/30');
+                    tabInput.classList.remove('bg-bronze/20', 'text-bronze', 'border-bronze/30');
+                    tabInput.classList.add('text-white/40');
+                    sectionView.classList.remove('hidden');
+                    sectionInput.classList.add('hidden');
+                    loadWeeklyData();
+                });
+            }
+
+            // Save
+            if (tsSave) {
+                tsSave.addEventListener('click', async () => {
+                    if (!selectedPerson || !tsHoursInput.value || !tsDateInput.value) {
+                        alert('Please select person, date and hours.');
+                        return;
+                    }
+
+                    const originalText = document.getElementById('ts-save-text').innerText;
+                    document.getElementById('ts-save-text').innerText = 'Saving...';
+                    tsSave.disabled = true;
+
+                    try {
+                        await firebase.firestore().collection('timesheets').add({
+                            person: selectedPerson,
+                            date: tsDateInput.value,
+                            hours: parseFloat(tsHoursInput.value),
+                            note: tsNoteInput.value,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            uid: firebase.auth().currentUser ? firebase.auth().currentUser.uid : 'anon'
+                        });
+
+                        // Success feedback
+                        tsHoursInput.value = '';
+                        tsNoteInput.value = '';
+                        document.getElementById('ts-save-text').innerText = 'Saved!';
+                        setTimeout(() => {
+                            document.getElementById('ts-save-text').innerText = originalText;
+                            tsSave.disabled = false;
+                        }, 2000);
+
+                    } catch (err) {
+                        console.error('Error saving timesheet:', err);
+                        alert('Error saving data. Check console.');
+                        document.getElementById('ts-save-text').innerText = 'Error';
+                        tsSave.disabled = false;
+                    }
+                });
+            }
+
+            // Weekly View Logic
+            const prevBtn = document.getElementById('ts-prev-week');
+            const nextBtn = document.getElementById('ts-next-week');
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+                    loadWeeklyData();
+                });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+                    loadWeeklyData();
+                });
+            }
+
+            async function loadWeeklyData() {
+                const weekEnd = new Date(currentWeekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+
+                const startStr = currentWeekStart.toISOString().split('T')[0];
+                const endStr = weekEnd.toISOString().split('T')[0];
+
+                const label = document.getElementById('ts-week-label');
+                if (label) label.innerText = `Week: ${startStr} to ${endStr}`;
+
+                try {
+                    const snapshot = await firebase.firestore().collection('timesheets')
+                        .where('date', '>=', startStr)
+                        .where('date', '<=', endStr)
+                        .get();
+
+                    const entries = [];
+                    snapshot.forEach(doc => entries.push({ id: doc.id, ...doc.data() }));
+
+                    renderWeeklyTable(entries);
+                } catch (err) {
+                    console.error('Error loading timesheets:', err);
+                }
+            }
+
+            function renderWeeklyTable(entries) {
+                const body = document.getElementById('ts-weekly-body');
+                const detailList = document.getElementById('ts-entries-list');
+                if (!body || !detailList) return;
+
+                body.innerHTML = '';
+                detailList.innerHTML = '';
+
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                const totals = { GR: 0, AA: 0, MS: 0, total: 0 };
+
+                const dailyData = days.map((day, i) => {
+                    const d = new Date(currentWeekStart);
+                    d.setDate(d.getDate() + i);
+                    const dStr = d.toISOString().split('T')[0];
+                    const dayEntries = entries.filter(e => e.date === dStr);
+
+                    const dayTotals = {
+                        GR: dayEntries.filter(e => e.person === 'GR').reduce((sum, e) => sum + e.hours, 0),
+                        AA: dayEntries.filter(e => e.person === 'AA').reduce((sum, e) => sum + e.hours, 0),
+                        MS: dayEntries.filter(e => e.person === 'MS').reduce((sum, e) => sum + e.hours, 0)
+                    };
+
+                    totals.GR += dayTotals.GR;
+                    totals.AA += dayTotals.AA;
+                    totals.MS += dayTotals.MS;
+                    const dailyTotal = dayTotals.GR + dayTotals.AA + dayTotals.MS;
+                    totals.total += dailyTotal;
+
+                    return { day, dStr, ...dayTotals, dailyTotal };
+                });
+
+                dailyData.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-white/5 hover:bg-white/[0.02] transition-colors';
+                    tr.innerHTML = `
+                        <td class="py-3 text-[10px] text-white/50">${row.day} <span class="text-[8px] opacity-40 block">${row.dStr.slice(5)}</span></td>
+                        <td class="py-3 text-center ${row.GR > 0 ? 'text-portland font-bold' : 'text-white/10'}">${row.GR || '-'}</td>
+                        <td class="py-3 text-center ${row.AA > 0 ? 'text-portland font-bold' : 'text-white/10'}">${row.AA || '-'}</td>
+                        <td class="py-3 text-center ${row.MS > 0 ? 'text-portland font-bold' : 'text-white/10'}">${row.MS || '-'}</td>
+                        <td class="py-3 text-right text-bronze font-mono">${row.dailyTotal || '-'}</td>
+                    `;
+                    body.appendChild(tr);
+                });
+
+                // Update Footer Totals
+                ['GR', 'AA', 'MS'].forEach(p => {
+                    const el = document.getElementById(`total-${p}`);
+                    if (el) el.innerText = totals[p];
+                });
+                const totalWeekEl = document.getElementById('total-WEEK');
+                if (totalWeekEl) totalWeekEl.innerText = totals.total;
+
+                const totalAllEl = document.getElementById('ts-total-all');
+                if (totalAllEl) totalAllEl.innerText = totals.total;
+
+                // Render detail list (sorted by date desc)
+                entries.sort((a, b) => b.date.localeCompare(a.date)).forEach(e => {
+                    const item = document.createElement('div');
+                    item.className = 'p-3 bg-white/5 rounded border border-white/5 flex justify-between items-start hover:bg-white/10 transition-colors';
+                    item.innerHTML = `
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 bg-bronze/20 text-bronze rounded text-[9px] font-bold">${e.person}</span>
+                                <span class="text-[10px] text-white/60 font-mono">${e.date}</span>
+                            </div>
+                            <p class="text-xs text-white/40 mt-1">${e.note || '(No description)'}</p>
+                        </div>
+                        <div class="text-sm font-mono text-bronze font-bold">${e.hours}h</div>
+                    `;
+                    detailList.appendChild(item);
+                });
+            }
+        })();
     </script>
+
+    <!-- Timesheet Modal -->
+    <div id="timesheet-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div
+            class="glass-panel w-full max-w-2xl rounded-xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-6 border-b border-white/5 bg-white/[0.02]">
+                <div>
+                    <h3 class="font-serif text-xl text-bronze">Project Timesheets</h3>
+                    <p class="text-[10px] text-white/40 uppercase tracking-widest mt-1">St Mary Somerset | SMS-1694</p>
+                </div>
+                <button id="timesheet-close"
+                    class="p-2 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                <!-- Tabs -->
+                <div class="flex gap-2 p-1 bg-white/5 rounded-lg w-fit">
+                    <button id="ts-tab-input"
+                        class="px-4 py-2 text-[10px] font-mono uppercase tracking-widest rounded-md bg-bronze/20 text-bronze border border-bronze/30 transition-all">Quick
+                        Entry</button>
+                    <button id="ts-tab-view"
+                        class="px-4 py-2 text-[10px] font-mono uppercase tracking-widest rounded-md text-white/40 hover:text-white transition-all">Weekly
+                        View</button>
+                </div>
+
+                <!-- Input Section -->
+                <div id="ts-section-input" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Person Selection -->
+                        <div>
+                            <label
+                                class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Individual</label>
+                            <div class="flex gap-2">
+                                <button data-person="GR"
+                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">GR</button>
+                                <button data-person="AA"
+                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">AA</button>
+                                <button data-person="MS"
+                                    class="ts-person-btn flex-1 py-3 bg-white/5 border border-white/10 rounded-lg text-sm font-mono hover:bg-white/10 transition-all">MS</button>
+                            </div>
+                        </div>
+                        <!-- Date & Hours -->
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <label
+                                    class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Date</label>
+                                <input type="date" id="ts-date"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none">
+                            </div>
+                            <div class="w-24">
+                                <label
+                                    class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Hours</label>
+                                <input type="number" id="ts-hours" step="0.5" placeholder="8"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm font-mono text-white focus:ring-1 focus:ring-bronze outline-none text-center">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description/Note -->
+                    <div>
+                        <label class="text-[10px] text-white/40 uppercase tracking-widest mb-3 block">Description /
+                            Note</label>
+                        <textarea id="ts-note" rows="3" placeholder="Work performed today..."
+                            class="w-full bg-white/5 border border-white/10 rounded-lg p-4 text-sm text-portland/80 focus:ring-1 focus:ring-bronze outline-none resize-none"></textarea>
+                    </div>
+
+                    <button id="ts-save"
+                        class="w-full py-4 bg-bronze/20 hover:bg-bronze/30 border border-bronze/40 text-bronze text-xs font-mono uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group">
+                        <span id="ts-save-text">Log Entry</span>
+                        <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- View Section -->
+                <div id="ts-section-view" class="hidden space-y-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-4">
+                            <button id="ts-prev-week"
+                                class="p-2 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                            </button>
+                            <span id="ts-week-label" class="text-sm font-mono text-white/80">Week: --</span>
+                            <button id="ts-next-week"
+                                class="p-2 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex gap-2">
+                            <div
+                                class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[9px] text-white/40 font-mono">
+                                Total: <span id="ts-total-all" class="text-bronze">0</span>h</div>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr
+                                    class="text-[9px] uppercase tracking-[0.2em] text-bronze/60 border-b border-white/5">
+                                    <th class="py-3 font-medium">Day</th>
+                                    <th class="py-3 font-medium text-center">GR</th>
+                                    <th class="py-3 font-medium text-center">AA</th>
+                                    <th class="py-3 font-medium text-center">MS</th>
+                                    <th class="py-3 font-medium text-right">Daily Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ts-weekly-body" class="text-xs font-mono text-white/70">
+                                <!-- Days populated by JS -->
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t border-white/10 text-white font-bold">
+                                    <td class="py-4">TOTALS</td>
+                                    <td id="total-GR" class="py-4 text-center text-bronze">0</td>
+                                    <td id="total-AA" class="py-4 text-center text-bronze">0</td>
+                                    <td id="total-MS" class="py-4 text-center text-bronze">0</td>
+                                    <td id="total-WEEK" class="py-4 text-right text-portland">0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Quick List of entries -->
+                    <div class="mt-8">
+                        <h4 class="text-[10px] text-white/40 uppercase tracking-widest mb-4">Detailed Entries</h4>
+                        <div id="ts-entries-list" class="space-y-2">
+                            <!-- Entries populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 
