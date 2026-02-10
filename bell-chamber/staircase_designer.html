@@ -235,8 +235,16 @@
             <div class="control-group">
                 <label>Upper Straight Steps</label>
                 <div class="input-row">
-                    <input type="range" id="upper-slider" min="1" max="10" step="1" value="8">
+                    <input type="range" id="upper-slider" min="1" max="15" step="1" value="8">
                     <input type="number" id="upper-input" value="8">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Upper Flight Length (mm)</label>
+                <div class="input-row">
+                    <input type="range" id="upper-length-slider" min="500" max="6000" step="10" value="2600">
+                    <input type="number" id="upper-length-input" value="2600">
                 </div>
             </div>
 
@@ -429,19 +437,59 @@
             const winderAngleTotal = state.winderTurnAngle * mirrorSign;
             const winderAngleStep = winderAngleTotal / state.winderSteps;
 
+            const outerRadius = state.voidRadius + width;
+            const innerRadius = state.voidRadius;
+
+            // Directions at start of winder
+            const dirStart = dir.clone();
+            const leftStart = left.clone();
+
             for (let i = 0; i < state.winderSteps; i++) {
                 pos.addScaledVector(up, stepRise);
-                recordPath(pos, left, true);
 
+                // Calculate next orientation for the end of this winder step
                 const q = new THREE.Quaternion().setFromAxisAngle(up, -winderAngleStep);
                 dir.applyQuaternion(q);
                 left.applyQuaternion(q);
 
-                const nextPos = pivot.clone().addScaledVector(left, mirrorSign * pivotDist);
-                nextPos.y = pos.y;
-                pos.copy(nextPos);
+                // Pivot-relative calculation for inner and outer paths
+                const angleAtStepFace = winderAngleStep * (i + 1) * mirrorSign;
 
-                recordPath(pos, left, false);
+                // Inner Point (Standard Arc)
+                const innerVec = leftStart.clone().applyAxisAngle(up, -angleAtStepFace).multiplyScalar(mirrorSign * innerRadius);
+                const pInner = pivot.clone().add(innerVec);
+                pInner.y = pos.y;
+
+                // Outer Point (Rectangular Corner)
+                // Boundary intersection logic for 90-degree corner
+                const theta = Math.abs(winderAngleStep * (i + 1));
+                const totalAlpha = Math.abs(state.winderTurnAngle);
+                const splitAlpha = totalAlpha / 2;
+
+                let distToOuter;
+                if (theta <= splitAlpha) {
+                    // Intersect with first leg
+                    distToOuter = outerRadius / Math.cos(theta);
+                } else {
+                    // Intersect with second leg
+                    distToOuter = outerRadius / Math.cos(totalAlpha - theta);
+                }
+
+                const outerVec = leftStart.clone().applyAxisAngle(up, -angleAtStepFace).multiplyScalar(mirrorSign * distToOuter);
+                const pOuter = pivot.clone().add(outerVec);
+                pOuter.y = pos.y;
+
+                // We override the recordPath behavior here to use these custom points
+                pathLeft.push({ pos: state.isMirrored ? pInner : pOuter, isRiser: true });
+                pathRight.push({ pos: state.isMirrored ? pOuter : pInner, isRiser: true });
+
+                // Update pos center (used for next step start)
+                const centerVec = leftStart.clone().applyAxisAngle(up, -angleAtStepFace).multiplyScalar(mirrorSign * pivotDist);
+                pos.copy(pivot.clone().add(centerVec));
+                pos.y = pInner.y;
+
+                pathLeft.push({ pos: state.isMirrored ? pInner.clone() : pOuter.clone(), isRiser: false });
+                pathRight.push({ pos: state.isMirrored ? pOuter.clone() : pInner.clone(), isRiser: false });
             }
 
             // UPPER STEPS
@@ -565,15 +613,62 @@
             state.flightWidth = parseFloat(document.getElementById('width-input').value);
             state.lowerSteps = parseInt(document.getElementById('lower-input').value);
             state.winderSteps = parseInt(document.getElementById('winder-input').value);
-            state.upperSteps = parseInt(document.getElementById('upper-input').value);
             state.soffitThickness = parseFloat(document.getElementById('soffit-input').value);
             state.voidRadius = parseFloat(document.getElementById('void-input').value);
             state.winderTurnAngle = parseFloat(document.getElementById('turn-input').value) * (Math.PI / 180);
             state.isMirrored = document.getElementById('mirror-checkbox').checked;
+
+            // Flight Length Logic
+            const outerRadius = state.voidRadius + state.flightWidth;
+            const currentUpperLength = parseFloat(document.getElementById('upper-length-input').value);
+
+            // Constrain upperSteps based on length
+            state.upperSteps = Math.max(1, Math.round((currentUpperLength - outerRadius) / state.straightGoing));
+
+            // Sync back to steps inputs
+            document.getElementById('upper-slider').value = state.upperSteps;
+            document.getElementById('upper-input').value = state.upperSteps;
+
             rebuildStaircase();
         }
 
-        ['rise', 'width', 'lower', 'winder', 'upper', 'soffit', 'void', 'turn'].forEach(syncInputs);
+        // Add sync for upper steps slider to update length slider
+        const upperStepsSlider = document.getElementById('upper-slider');
+        const upperStepsInput = document.getElementById('upper-input');
+        const upperLengthSlider = document.getElementById('upper-length-slider');
+        const upperLengthInput = document.getElementById('upper-length-input');
+
+        function updateLengthFromSteps() {
+            const outerRadius = state.voidRadius + state.flightWidth;
+            const len = state.upperSteps * state.straightGoing + outerRadius;
+            upperLengthSlider.value = Math.round(len);
+            upperLengthInput.value = Math.round(len);
+        }
+
+        ['rise', 'width', 'lower', 'winder', 'soffit', 'void', 'turn'].forEach(syncInputs);
+
+        // Special manual sync for upper steps and length
+        upperStepsSlider.addEventListener('input', (e) => {
+            upperStepsInput.value = e.target.value;
+            state.upperSteps = parseInt(e.target.value);
+            updateLengthFromSteps();
+            updateState();
+        });
+        upperStepsInput.addEventListener('change', (e) => {
+            upperStepsSlider.value = e.target.value;
+            state.upperSteps = parseInt(e.target.value);
+            updateLengthFromSteps();
+            updateState();
+        });
+        upperLengthSlider.addEventListener('input', (e) => {
+            upperLengthInput.value = e.target.value;
+            updateState();
+        });
+        upperLengthInput.addEventListener('change', (e) => {
+            upperLengthSlider.value = e.target.value;
+            updateState();
+        });
+
         document.getElementById('mirror-checkbox').addEventListener('change', updateState);
 
         document.getElementById('btn-reset').onclick = () => {
