@@ -203,48 +203,48 @@
             <div class="control-group">
                 <label>Total Rise (mm)</label>
                 <div class="input-row">
-                    <input type="range" id="rise-slider" min="1000" max="4000" step="10" value="2600">
-                    <input type="number" id="rise-input" value="2600">
+                    <input type="range" id="rise-slider" min="1000" max="4000" step="10" value="2400">
+                    <input type="number" id="rise-input" value="2400">
                 </div>
             </div>
 
             <div class="control-group">
                 <label>Flight Width (mm)</label>
                 <div class="input-row">
-                    <input type="range" id="width-slider" min="600" max="1500" step="10" value="900">
-                    <input type="number" id="width-input" value="900">
+                    <input type="range" id="width-slider" min="600" max="1500" step="10" value="690">
+                    <input type="number" id="width-input" value="690">
                 </div>
             </div>
 
             <div class="control-group">
                 <label>Lower Straight Steps</label>
                 <div class="input-row">
-                    <input type="range" id="lower-slider" min="1" max="15" step="1" value="5">
-                    <input type="number" id="lower-input" value="5">
+                    <input type="range" id="lower-slider" min="1" max="15" step="1" value="3">
+                    <input type="number" id="lower-input" value="3">
                 </div>
             </div>
 
             <div class="control-group">
                 <label>Winder Steps</label>
                 <div class="input-row">
-                    <input type="range" id="winder-slider" min="2" max="6" step="1" value="3">
-                    <input type="number" id="winder-input" value="3">
+                    <input type="range" id="winder-slider" min="2" max="6" step="1" value="2">
+                    <input type="number" id="winder-input" value="2">
                 </div>
             </div>
 
             <div class="control-group">
                 <label>Upper Straight Steps</label>
                 <div class="input-row">
-                    <input type="range" id="upper-slider" min="1" max="10" step="1" value="2">
-                    <input type="number" id="upper-input" value="2">
+                    <input type="range" id="upper-slider" min="1" max="10" step="1" value="8">
+                    <input type="number" id="upper-input" value="8">
                 </div>
             </div>
 
             <div class="control-group">
                 <label>Soffit Thickness (mm)</label>
                 <div class="input-row">
-                    <input type="range" id="soffit-slider" min="10" max="250" step="5" value="80">
-                    <input type="number" id="soffit-input" value="80">
+                    <input type="range" id="soffit-slider" min="10" max="250" step="5" value="250">
+                    <input type="number" id="soffit-input" value="250">
                 </div>
             </div>
 
@@ -267,7 +267,7 @@
             <div class="control-group">
                 <label>Mirror Staircase</label>
                 <div class="input-row">
-                    <input type="checkbox" id="mirror-checkbox">
+                    <input type="checkbox" id="mirror-checkbox" checked>
                     <span style="font-size: 11px; color: var(--gray-400);">Flip Turn Direction</span>
                 </div>
             </div>
@@ -302,17 +302,17 @@
 
         // --- Configuration & State ---
         const state = {
-            totalRise: 2600,
-            flightWidth: 900,
-            lowerSteps: 5,
-            winderSteps: 3,
-            upperSteps: 2,
-            soffitThickness: 80,
+            totalRise: 2400,
+            flightWidth: 690,
+            lowerSteps: 3,
+            winderSteps: 2,
+            upperSteps: 8,
+            soffitThickness: 250,
             steelThickness: 10,
             voidRadius: 150,
             straightGoing: 220,
             winderTurnAngle: Math.PI / 2,
-            isMirrored: false
+            isMirrored: true
         };
 
         // --- Scene Setup ---
@@ -359,9 +359,9 @@
         // --- Materials ---
         const materials = {
             steel: new THREE.MeshStandardMaterial({
-                color: 0x1A1C20,
-                metalness: 0.8,
-                roughness: 0.2,
+                color: 0xF5F5F0,
+                metalness: 0.2,
+                roughness: 0.8,
                 side: THREE.DoubleSide
             }),
             soffit: new THREE.MeshStandardMaterial({
