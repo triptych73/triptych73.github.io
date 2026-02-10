@@ -264,6 +264,14 @@
                 </div>
             </div>
 
+            <div class="control-group">
+                <label>Mirror Staircase</label>
+                <div class="input-row">
+                    <input type="checkbox" id="mirror-checkbox">
+                    <span style="font-size: 11px; color: var(--gray-400);">Flip Turn Direction</span>
+                </div>
+            </div>
+
             <div class="stats-panel">
                 <div class="stat-row">
                     <span class="stat-label">Riser:</span>
@@ -303,7 +311,8 @@
             steelThickness: 10,
             voidRadius: 150,
             straightGoing: 220,
-            winderTurnAngle: Math.PI / 2
+            winderTurnAngle: Math.PI / 2,
+            isMirrored: false
         };
 
         // --- Scene Setup ---
@@ -414,12 +423,13 @@
             }
 
             // WINDER STEPS
+            const mirrorSign = state.isMirrored ? -1 : 1;
             const pivotDist = state.voidRadius + width / 2;
-            const pivot = pos.clone().addScaledVector(left, -pivotDist);
-            const winderAngleStep = state.winderTurnAngle / state.winderSteps;
+            const pivot = pos.clone().addScaledVector(left, -mirrorSign * pivotDist);
+            const winderAngleTotal = state.winderTurnAngle * mirrorSign;
+            const winderAngleStep = winderAngleTotal / state.winderSteps;
 
             for (let i = 0; i < state.winderSteps; i++) {
-                // Riser
                 pos.addScaledVector(up, stepRise);
                 recordPath(pos, left, true);
 
@@ -427,7 +437,7 @@
                 dir.applyQuaternion(q);
                 left.applyQuaternion(q);
 
-                const nextPos = pivot.clone().addScaledVector(left, pivotDist);
+                const nextPos = pivot.clone().addScaledVector(left, mirrorSign * pivotDist);
                 nextPos.y = pos.y;
                 pos.copy(nextPos);
 
@@ -443,7 +453,6 @@
             }
 
             // BUILD MESHES
-            // 1. Folded Plate Stair
             const stairGeo = new THREE.BufferGeometry();
             const stairPos = [];
 
@@ -463,29 +472,25 @@
             stairMesh.receiveShadow = true;
             mainStairGroup.add(stairMesh);
 
-            // 2. SOFFIT (SWEETING CURVE)
-            const soffitGeo = new THREE.BufferGeometry();
-            const soffitPos = [];
-            const sidePos = [];
-
-            const ptsL = pathLeft.map(p => p.pos.clone().addScaledVector(up, -state.soffitThickness));
-            const ptsR = pathRight.map(p => p.pos.clone().addScaledVector(up, -state.soffitThickness));
+            // 2. SOFFIT (SMOOTH SWEEPING CURVE)
+            // Filter only for bottom corners (even indices) to avoid scalloping the risers
+            const ptsL = pathLeft.filter((p, i) => i % 2 === 0).map(p => p.pos.clone().addScaledVector(up, -state.soffitThickness));
+            const ptsR = pathRight.filter((p, i) => i % 2 === 0).map(p => p.pos.clone().addScaledVector(up, -state.soffitThickness));
 
             const curveL = new THREE.CatmullRomCurve3(ptsL);
             const curveR = new THREE.CatmullRomCurve3(ptsR);
 
-            const segments = (totalSteps * 8);
+            const segments = (totalSteps * 6);
             const splinePtsL = curveL.getPoints(segments);
             const splinePtsR = curveR.getPoints(segments);
 
+            const soffitGeo = new THREE.BufferGeometry();
+            const soffitPos = [];
             for (let i = 0; i < splinePtsL.length - 1; i++) {
-                const sL1 = splinePtsL[i];
-                const sR1 = splinePtsR[i];
-                const sL2 = splinePtsL[i + 1];
-                const sR2 = splinePtsR[i + 1];
-
-                soffitPos.push(sL1.x, sL1.y, sL1.z, sR1.x, sR1.y, sR1.z, sL2.x, sL2.y, sL2.z);
-                soffitPos.push(sR1.x, sR1.y, sR1.z, sR2.x, sR2.y, sR2.z, sL2.x, sL2.y, sL2.z);
+                const l1 = splinePtsL[i], r1 = splinePtsR[i];
+                const l2 = splinePtsL[i + 1], r2 = splinePtsR[i + 1];
+                soffitPos.push(l1.x, l1.y, l1.z, r1.x, r1.y, r1.z, l2.x, l2.y, l2.z);
+                soffitPos.push(r1.x, r1.y, r1.z, r2.x, r2.y, r2.z, l2.x, l2.y, l2.z);
             }
             soffitGeo.setAttribute('position', new THREE.Float32BufferAttribute(soffitPos, 3));
             soffitGeo.computeVertexNormals();
@@ -494,23 +499,21 @@
             soffitMesh.receiveShadow = true;
             mainStairGroup.add(soffitMesh);
 
-            // Side Panels
             const sideGeo = new THREE.BufferGeometry();
-            const buildSide = (path, spline) => {
+            const sidePos = [];
+            const buildSide = (path, curve) => {
                 for (let i = 0; i < path.length - 1; i++) {
-                    const p1 = path[i].pos;
-                    const p2 = path[i + 1].pos;
+                    const p1 = path[i].pos, p2 = path[i + 1].pos;
                     const t1 = i / (path.length - 1);
                     const t2 = (i + 1) / (path.length - 1);
-                    const s1 = spline.getPointAt(t1);
-                    const s2 = spline.getPointAt(t2);
+                    const s1 = curve.getPointAt(t1);
+                    const s2 = curve.getPointAt(t2);
                     sidePos.push(p1.x, p1.y, p1.z, s1.x, s1.y, s1.z, p2.x, p2.y, p2.z);
                     sidePos.push(s1.x, s1.y, s1.z, s2.x, s2.y, s2.z, p2.x, p2.y, p2.z);
                 }
             };
             buildSide(pathLeft, curveL);
             buildSide(pathRight, curveR);
-
             sideGeo.setAttribute('position', new THREE.Float32BufferAttribute(sidePos, 3));
             sideGeo.computeVertexNormals();
             const sideMesh = new THREE.Mesh(sideGeo, materials.soffit);
@@ -566,10 +569,12 @@
             state.soffitThickness = parseFloat(document.getElementById('soffit-input').value);
             state.voidRadius = parseFloat(document.getElementById('void-input').value);
             state.winderTurnAngle = parseFloat(document.getElementById('turn-input').value) * (Math.PI / 180);
+            state.isMirrored = document.getElementById('mirror-checkbox').checked;
             rebuildStaircase();
         }
 
         ['rise', 'width', 'lower', 'winder', 'upper', 'soffit', 'void', 'turn'].forEach(syncInputs);
+        document.getElementById('mirror-checkbox').addEventListener('change', updateState);
 
         document.getElementById('btn-reset').onclick = () => {
             controls.reset();
