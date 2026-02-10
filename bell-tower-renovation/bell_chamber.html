@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bell Chamber Designer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            width: 250px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.2em;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: #444;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        button.primary {
+            background: #0078d4;
+        }
+
+        button.primary:hover {
+            background: #106ebe;
+        }
+
+        .stats {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+            font-size: 0.85em;
+            color: #aaa;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .instructions {
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .saved-status {
+            color: #4caf50;
+            font-weight: bold;
+            transition: opacity 0.5s;
+            opacity: 0;
+            float: right;
+        }
+
+        input[type=range] {
+            width: 100%;
+        }
+
+        /* Context Menu hint */
+        .tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: #333;
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            display: none;
+            z-index: 100;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "three-mesh-bvh": "https://unpkg.com/three-mesh-bvh@0.7.3/build/index.module.js",
+                "three-bvh-csg": "https://unpkg.com/three-bvh-csg@0.0.16/build/index.module.js"
+            }
+        }
+    </script>
+</head>
+
+<body>
+
+    <div id="ui-panel">
+        <h2>Bell Chamber Designer <span id="saved-indicator" class="saved-status">Saved ✓</span></h2>
+        <div class="instructions">
+            Left-Click: Toggle Tile<br>
+            Right-Click: Select Start -> End (Rect Fill)
+        </div>
+
+        <div class="control-group">
+            <label>Architecture Transparency</label>
+            <input type="range" id="opacity-slider" min="0" max="1" step="0.05" value="0.4">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Room Size: <span id="size-value">4.20</span>m
+                <button id="size-lock" style="margin-left: 10px; padding: 2px 8px; cursor: pointer;"
+                    title="Lock/Unlock slider">🔒</button>
+            </label>
+            <input type="range" id="size-slider" min="3.5" max="4.5" step="0.01" value="4.2">
+        </div>
+
+        <div class="control-group">
+            <label>Stair Rotation (0° - 42°)</label>
+            <input type="range" id="stair-slider" min="0" max="42" step="1" value="42">
+        </div>
+
+        <!-- Window Opening -->
+        <div class="control-group">
+            <label>Window Opening: <span id="winOpeningValue">0</span>°</label>
+            <input type="range" id="winOpeningSlider" min="0" max="90" value="0">
+        </div>
+
+        <!-- Window Depth Inset -->
+        <div class="control-group">
+            <label>Window Depth Inset: <span id="winDepthValue">0.58</span>m</label>
+            <input type="range" id="winDepthSlider" min="0.5" max="0.75" step="0.01" value="0.58">
+        </div>
+
+        <div class="control-group">
+            <button id="btn-lock-tiles" style="background: #444; border: 1px solid #666; font-weight: bold;">🔓 Tiles
+                Unlocked</button>
+            <button id="btn-reset" class="primary">Reset to Exposed Brick</button>
+            <button id="btn-render-all">Set All to Insulated</button>
+            <button id="btn-flush-all">Set All to Flush Render</button>
+            <button id="btn-wireframe">Toggle Wireframe</button>
+            <button id="btn-toggle-gaps">Toggle Tile Gaps</button>
+            <button id="btn-export">Force Save</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-row">
+                <span>Total Tiles:</span>
+                <span id="stat-total">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Insulated (60mm):</span>
+                <span id="stat-insulated">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Flush Render:</span>
+                <span id="stat-flush">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Coverage:</span>
+                <span id="stat-percent">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+    <div id="tooltip" class="tooltip"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcezJRuEx8vsThQKhi8Az_XdL_XSM6u8g",
+            authDomain: "st-mary-somerset.firebaseapp.com",
+            projectId: "st-mary-somerset",
+            storageBucket: "st-mary-somerset.firebasestorage.app",
+            messagingSenderId: "924281338278",
+            appId: "1:924281338278:web:83affbb1aff93ba797f767"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const APP_ID = 'bell-tower';
+        const DOC_ID = 'visualizer_state';
+
+        // --- Configuration ---
+        const CONFIG = {
+            roomSize: 4.0,           // 4x4m footprint
+            wallHeight: 6.0,         // Default 6m height
+            chamferStart: 0.75,      // Distance from center where chamfer starts (at window edge)
+            window: {
+                width: 1.5,
+                heightRect: 3.1,
+                archRadius: 0.75,
+                heightTotal: 3.85,
+                depth: 0.45, // Reveal depth
+                frameDepth: 0.045, // 45mm
+                glazingThickness: 0.03, // 30mm
+                glazingInsideOffset: 0.009, // 9mm
+                glazingOutsideOffset: 0.006 // 6mm
+            },
+            door: {
+                width: 0.5,
+                height: 1.5
+            },
+            tileSize: 0.25,          // 25cm grid
+            insulationDepth: 0.06,   // 60mm offset
+            colors: {
+                brick: 0x8b4513,     // SaddleBrown
+                render: 0xffffff,    // White
+                flushRender: 0xeeeeee, // Slightly off-white
+                wireframe: 0x333333,
+                background: 0x202020,
+                selection: 0x00ff00, // Green selection glow
+                mezzanine: 0xffffff, // White
+                stairs: 0xffffff,
+                glass: 0xdaeef5, // Less blue, more neutral
+                wallSolid: 0xffffff,
+                crittall: 0x111111   // Black metal
+            }
+        };
+
+        // --- State ---
+        // --- State ---
+        const state = {
+            tiles: [], // Array of Tile objects
+            isWireframe: false,
+            remoteUpdateInProgress: false,
+            selectedTile: null, // For range selection
+            gapEnabled: true, // Default to having gaps
+            roomSize: 4.2, // Default 4.2m
+            windowOpening: 0, // 0 to 90 degrees
+            windowDepthInset: 0.58, // Default 0.58m
+            sizeLocked: true, // Default locked
+            archOpacity: 0.4, // Architecture visibility default
+            tilesLocked: false // Default to unlocked
+        };
+
+        // --- Scene Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(CONFIG.colors.background);
+
+        // Add some fog for depth
+        scene.fog = new THREE.Fog(CONFIG.colors.background, 5, 20);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 4, 0); // Start inside/above looking down
+        camera.lookAt(0, 2, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 2, 0);
+
+        // --- Lighting ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 5);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        const pointLight = new THREE.PointLight(0xffaa00, 0.5, 10);
+        pointLight.position.set(0, 4, 0);
+        scene.add(pointLight);
+
+        // --- CSG Evaluator ---
+        const csgEvaluator = new Evaluator();
+
+        function createWindowCutter() {
+            const cylGeo = new THREE.CylinderGeometry(CONFIG.window.archRadius, CONFIG.window.archRadius, 2.0, 32);
+            cylGeo.rotateX(Math.PI / 2);
+            const cylBrush = new Brush(cylGeo);
+            cylBrush.position.y = CONFIG.window.heightRect;
+            cylBrush.updateMatrixWorld();
+            return cylBrush;
+        }
+
+        const archCutter = createWindowCutter();
+
+
+        // --- Helper Functions (Hoisted) ---
+        function updateStats() {
+            if (!state.tiles.length) return;
+            const total = state.tiles.length;
+            const insulated = state.tiles.filter(t => t.state === 1).length;
+            const flush = state.tiles.filter(t => t.state === 2).length;
+            const percent = Math.round(((insulated + flush) / total) * 100);
+
+            const elTotal = document.getElementById('stat-total');
+            if (elTotal) elTotal.innerText = total;
+
+            const elIns = document.getElementById('stat-insulated');
+            if (elIns) elIns.innerText = insulated;
+
+            const elFlush = document.getElementById('stat-flush');
+            if (elFlush) elFlush.innerText = flush;
+
+            const elPerc = document.getElementById('stat-percent');
+            if (elPerc) elPerc.innerText = percent + '%';
+        }
+
+        // --- Persistence Logic ---
+        let saveTimeout = null;
+
+        function scheduleSave() {
+            if (state.remoteUpdateInProgress) return;
+
+            const indicator = document.getElementById('saved-indicator');
+            if (indicator) indicator.style.opacity = '0';
+
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(saveToFirebase, 1000);
+        }
+
+        async function saveToFirebase() {
+            if (!auth.currentUser) return;
+
+            const tileStates = state.tiles.map(t => t.state);
+
+            try {
+                await setDoc(doc(db, 'artifacts', APP_ID, 'configurations', DOC_ID), {
+                    tiles: tileStates,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: auth.currentUser.uid
+                }, { merge: true });
+
+                const indicator = document.getElementById('saved-indicator');
+                if (indicator) indicator.style.opacity = '1';
+            } catch (e) {
+                // console.error("Save failed", e); // Silence unless needed
+            }
+        }
+
+        // --- Helper Classes ---
+
+        class Tile {
+            constructor(position, normal, width, height, type = 'wall', wallId, gx, gy, existingGeometry = null, upDir = null) {
+                this.state = 0; // 0: Brick, 1: Insulated, 2: Flush Render
+                this.originalPosition = position.clone();
+                this.normal = normal.clone();
+                this.upDir = upDir ? upDir.clone() : null;
+                this.type = type; // 'wall', 'reveal'
+                this.wallId = wallId;
+                this.gridX = gx;
+                this.gridY = gy;
+                this.isSelected = false;
+                this.width = width;
+                this.height = height;
+
+                // Create geometry
+                let geometry;
+                if (existingGeometry) {
+                    geometry = existingGeometry;
+                } else {
+                    // Start with full size, scale in updateVisuals
+                    geometry = new THREE.BoxGeometry(width, height, 0.02);
+                }
+
+                this.material = new THREE.MeshStandardMaterial({
+                    color: CONFIG.colors.brick,
+                    roughness: 1.0, // Reduced shine
+                    metalness: 0,
+                    emissive: 0x000000
+                });
+
+                this.mesh = new THREE.Mesh(geometry, this.material);
+
+                // Set initial position/scale
+                this.updateVisuals();
+
+                if (!existingGeometry) {
+                    this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+                } else {
+                    // CSG results might need specific orientation or are pre-oriented? 
+                    // Usually CSG result is world-aligned.
+                    // But we want to control them via position.
+                    // For now, assume CSG result orientation is handled.
+                    // Actually, existing logic:
+                    // this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+                }
+
+                // Fix orientation for non-CSG tiles (Standard Box is axis-aligned)
+                if (!existingGeometry) {
+                    this.mesh.position.copy(this.originalPosition);
+                    if (this.upDir) this.mesh.up.copy(this.upDir);
+                    this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+                } else {
+                    // CSG Geometry is already in place? No, we transform it.
+                    // Re-use logic from before:
+                    this.mesh.position.copy(this.originalPosition);
+                    // If it's CSG, rotation is tricky. 
+                    // Let's assume the passed geometry was generated aligned to the wall.
+                    // For `createWall`, tiles are standard.
+                    // For `intersectingArch`, we generate a Brush relative to World?
+                    // Let's stick to the previous working logic for orientation.
+                    this.mesh.lookAt(this.originalPosition.clone().add(this.normal));
+                }
+
+                this.mesh.userData = { tile: this };
+
+                scene.add(this.mesh);
+                this.updateVisuals(); // Ensure scale is correct
+            }
+
+            toggle() {
+                this.state = (this.state + 1) % 3;
+                this.updateVisuals();
+                scheduleSave();
+            }
+
+            setState(newState) {
+                if (this.state === newState) return;
+                this.state = newState;
+                this.updateVisuals();
+            }
+
+            setSelection(selected) {
+                this.isSelected = selected;
+                this.material.emissive.setHex(selected ? CONFIG.colors.selection : 0x000000);
+                this.material.emissiveIntensity = selected ? 0.5 : 0;
+            }
+
+            updateVisuals() {
+                requestAnimationFrame(updateStats);
+
+                // Handle Gaps (Scaling X/Y)
+                const gapScale = state.gapEnabled ? 0.95 : 1.0;
+                this.mesh.scale.x = gapScale;
+                this.mesh.scale.y = gapScale;
+
+                if (this.state === 1) { // Insulated
+                    this.material.color.setHex(CONFIG.colors.render);
+                    this.material.roughness = 1.0;
+                    this.material.metalness = 0;
+
+                    // Full Extrusion Logic
+                    // Base Thickness 0.02. Target 0.08 (0.02 + 0.06 insulation). 
+                    // Scale Z = 4.0.
+                    this.mesh.scale.z = 4.0;
+
+                    // Shift Position so back matches original back?
+                    // Original Center: P. Original Thickness 0.02.
+                    // New Center: P'. New Thickness 0.08.
+                    // P' = P + Normal * 0.03.
+                    const offset = this.normal.clone().multiplyScalar(0.03);
+                    this.mesh.position.copy(this.originalPosition.clone().add(offset));
+
+                } else if (this.state === 2) { // Flush Render
+                    this.material.color.setHex(CONFIG.colors.flushRender);
+                    this.material.roughness = 0.5;
+                    this.mesh.scale.z = 1.0;
+                    this.mesh.position.copy(this.originalPosition);
+                } else { // Brick
+                    this.material.color.setHex(CONFIG.colors.brick);
+                    this.material.roughness = 0.9;
+                    this.mesh.scale.z = 1.0;
+                    this.mesh.position.copy(this.originalPosition);
+                }
+            }
+        }
+
+        // --- Wall Generation Logic ---
+
+        function isInsideHole(localX, localY, width, height) {
+            // Check if tile should be SKIPPED (is inside the window opening)
+            const halfW = CONFIG.window.width / 2;
+            const H = CONFIG.window.heightRect;
+            const R = CONFIG.window.archRadius;
+
+            // Tile bounds
+            const tileLeft = localX - width / 2;
+            const tileRight = localX + width / 2;
+            const tileBottom = localY - height / 2;
+            const tileTop = localY + height / 2;
+
+            // Must be FULLY horizontally within the window (check tile edges)
+            if (tileLeft < -halfW || tileRight > halfW) return false;
+
+            // Case 1: Tile is fully within the rectangular part
+            if (tileTop <= H) return true;
+
+            // Case 2: Tile is fully within the arch part (all corners inside semicircle)
+            if (tileBottom >= H) {
+                // Check if all 4 corners are inside the arch
+                const corners = [
+                    { x: tileLeft, y: tileBottom - H },
+                    { x: tileRight, y: tileBottom - H },
+                    { x: tileLeft, y: tileTop - H },
+                    { x: tileRight, y: tileTop - H }
+                ];
+                let allInside = true;
+                for (const c of corners) {
+                    if (c.x * c.x + c.y * c.y >= R * R) {
+                        allInside = false;
+                        break;
+                    }
+                }
+                return allInside;
+            }
+
+            // Case 3: Tile spans the rect/arch boundary
+            // Check if it's "mostly" inside - use center point
+            if (tileBottom < H && tileTop > H) {
+                // For the arch part, check if center of arch portion is inside
+                const archCenterY = (H + tileTop) / 2 - H;
+                if (localX * localX + archCenterY * archCenterY < R * R) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        function isIntersectingArch(localX, localY, width, height) {
+            const H = CONFIG.window.heightRect;
+            const R = CONFIG.window.archRadius;
+
+            // Effective bounding box above spring line
+            const effMinY = Math.max(localY - height / 2, H);
+            const effMaxY = localY + height / 2;
+
+            if (effMinY >= effMaxY) return false;
+
+            const minX = localX - width / 2;
+            const maxX = localX + width / 2;
+
+            // dMin: Closest point on box to (0,H)
+            const dx = Math.max(minX, Math.min(0, maxX));
+            const dy = effMinY - H;
+            const dMinSq = dx * dx + dy * dy;
+
+            // dMax: Furthest point
+            const corners = [
+                { x: minX, y: effMinY - H },
+                { x: maxX, y: effMinY - H },
+                { x: minX, y: effMaxY - H },
+                { x: maxX, y: effMaxY - H }
+            ];
+            let dMaxSq = 0;
+            for (const c of corners) {
+                const distSq = c.x * c.x + c.y * c.y;
+                if (distSq > dMaxSq) dMaxSq = distSq;
+            }
+
+            const R2 = R * R;
+            // Intersects IF: Not fully inside (dMax > R) AND Not fully outside (dMin < R)
+            return (dMinSq < R2 && dMaxSq > R2);
+        }
+
+        function createWall(p1, p2, type = 'solid', wallId, holeCenterOverride = null) {
+            const length = p1.distanceTo(p2);
+            const height = CONFIG.wallHeight;
+
+            const wallDir = new THREE.Vector3().subVectors(p2, p1).normalize();
+            const upDir = new THREE.Vector3(0, 1, 0);
+            let normal = new THREE.Vector3().crossVectors(wallDir, upDir).normalize();
+
+            const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+            if (normal.dot(midPoint) > 0) normal.negate();
+
+            let stepsX = Math.ceil(length / CONFIG.tileSize);
+            const stepsY = Math.ceil(height / CONFIG.tileSize);
+
+            // For window walls, ensure EVEN number of tiles so gap is at center
+            if (type === 'window' && stepsX % 2 === 1) {
+                stepsX += 1; // Make it even
+            }
+
+            const realTileW = length / stepsX;
+            const realTileH = height / stepsY;
+
+            // Use override if provided, otherwise center on wall
+            let holeCenterX;
+            if (holeCenterOverride !== null) {
+                holeCenterX = holeCenterOverride;
+            } else {
+                holeCenterX = length / 2;
+            }
+            if (type === 'chamfer') { type = 'solid'; }
+
+            for (let ix = 0; ix < stepsX; ix++) {
+                for (let iy = 0; iy < stepsY; iy++) {
+                    // Tiles cover the full wall from 0 to length
+                    const localX = (ix + 0.5) * realTileW;
+                    const localY = (iy + 0.5) * realTileH;
+                    // relativeX is position relative to the window center
+                    const relativeX = localX - holeCenterX;
+
+                    // Skip tiles that would be outside the wall bounds
+                    if (localX < 0 || localX > length) continue;
+
+                    const pos = p1.clone()
+                        .add(wallDir.clone().multiplyScalar(localX))
+                        .add(upDir.clone().multiplyScalar(localY));
+
+                    // Logic:
+                    // 1. If Window -> Check Arch Intersection FIRST.
+                    //    If Intersection -> Create CSG Tile.
+                    // 2. Else -> Check if Inside Hole.
+                    //    If Inside -> Skip.
+                    // 3. Else -> Create Standard Tile.
+
+                    if (type === 'window' && isIntersectingArch(relativeX, localY, realTileW, realTileH)) {
+                        // Create Tile Brush
+                        // Scale to 1.05 to ensure overlap for clean cuts?
+                        const tileGeo = new THREE.BoxGeometry(realTileW, realTileH, 0.02);
+                        const tileBrush = new Brush(tileGeo);
+
+                        const localHoleX = -relativeX;
+                        const localHoleY = CONFIG.window.heightRect - localY;
+
+                        archCutter.position.set(localHoleX, localHoleY, 0);
+                        archCutter.updateMatrixWorld();
+
+                        tileBrush.updateMatrixWorld();
+
+                        const result = csgEvaluator.evaluate(tileBrush, archCutter, SUBTRACTION);
+                        const resGeo = result.geometry;
+
+                        const tile = new Tile(pos, normal, realTileW, realTileH, 'wall', wallId, ix, iy, resGeo);
+                        state.tiles.push(tile);
+                        continue; // Done with this tile
+                    }
+
+                    if (type === 'window' && isInsideHole(relativeX, localY, realTileW, realTileH)) continue;
+                    if (type === 'door' && isHoleDoor(relativeX, localY)) continue;
+
+                    // Check if tile overlaps the jamb edges (needs trimming)
+                    if (type === 'window' && localY < CONFIG.window.heightRect) {
+                        const halfW = CONFIG.window.width / 2;
+                        const tileLeft = relativeX - realTileW / 2;
+                        const tileRight = relativeX + realTileW / 2;
+
+                        // Check if tile overlaps LEFT jamb edge
+                        // Tile spans from outside (left of -halfW) into the void
+                        if (tileLeft < -halfW && tileRight > -halfW) {
+                            // KEEP the left portion (outside the void), CUT the right portion
+                            const newRight = -halfW;
+                            const newWidth = newRight - tileLeft;
+                            const newRelativeX = tileLeft + newWidth / 2;
+                            const newLocalX = holeCenterX + newRelativeX;
+
+                            const newPos = p1.clone()
+                                .add(wallDir.clone().multiplyScalar(newLocalX))
+                                .add(upDir.clone().multiplyScalar(localY));
+
+                            const tile = new Tile(newPos, normal, newWidth, realTileH, 'wall', wallId, ix, iy,
+                                new THREE.BoxGeometry(newWidth, realTileH, 0.02));
+                            state.tiles.push(tile);
+                            continue;
+                        }
+
+                        // Check if tile overlaps RIGHT jamb edge
+                        // Tile spans from the void into outside (right of halfW)
+                        if (tileLeft < halfW && tileRight > halfW) {
+                            // KEEP the right portion (outside the void), CUT the left portion
+                            const newLeft = halfW;
+                            const newWidth = tileRight - newLeft;
+                            const newRelativeX = newLeft + newWidth / 2;
+                            const newLocalX = holeCenterX + newRelativeX;
+
+                            const newPos = p1.clone()
+                                .add(wallDir.clone().multiplyScalar(newLocalX))
+                                .add(upDir.clone().multiplyScalar(localY));
+
+                            const tile = new Tile(newPos, normal, newWidth, realTileH, 'wall', wallId, ix, iy,
+                                new THREE.BoxGeometry(newWidth, realTileH, 0.02));
+                            state.tiles.push(tile);
+                            continue;
+                        }
+                    }
+
+                    // Standard Tile
+                    const tile = new Tile(pos, normal, realTileW, realTileH, 'wall', wallId, ix, iy);
+                    state.tiles.push(tile);
+                }
+            }
+
+            if (type === 'window') {
+                const holeCenterPos = p1.clone().add(wallDir.clone().multiplyScalar(holeCenterX));
+                createReveal(holeCenterPos, normal, wallDir, wallId);
+                createCrittallWindow(holeCenterPos, normal, wallDir, wallId);
+            }
+            if (type === 'door') {
+                const holeCenterPos = p1.clone().add(wallDir.clone().multiplyScalar(holeCenterX));
+                createDoorReveal(holeCenterPos, normal, wallDir, wallId);
+            }
+        }
+
+        function isHoleDoor(localX, localY) {
+            const halfW = CONFIG.door.width / 2;
+            return (localX > -halfW && localX < halfW && localY < CONFIG.door.height);
+        }
+
+        function createReveal(centerPos, wallNormal, wallDir, parentWallId) {
+            const halfW = CONFIG.window.width / 2;
+            const depth = CONFIG.window.depth;
+
+            const stepsY = Math.ceil(CONFIG.window.heightRect / CONFIG.tileSize);
+            const stepsD = Math.ceil(depth / CONFIG.tileSize);
+
+            const tileH = CONFIG.window.heightRect / stepsY;
+            const tileD = depth / stepsD;
+
+            // 1. Left Reveal
+            const leftId = parentWallId + '_reveal_left';
+            for (let iy = 0; iy < stepsY; iy++) {
+                for (let id = 0; id < stepsD; id++) {
+                    const ly = (iy + 0.5) * tileH;
+                    const ld = (id + 0.5) * tileD;
+
+                    const pos = centerPos.clone()
+                        .sub(wallDir.clone().multiplyScalar(halfW))
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
+                        .sub(wallNormal.clone().multiplyScalar(ld));
+
+                    const tile = new Tile(pos, wallDir, tileD, tileH, 'reveal', leftId, id, iy);
+                    state.tiles.push(tile);
+                }
+            }
+
+            // 2. Right Reveal 
+            const rightId = parentWallId + '_reveal_right';
+            for (let iy = 0; iy < stepsY; iy++) {
+                for (let id = 0; id < stepsD; id++) {
+                    const ly = (iy + 0.5) * tileH;
+                    const ld = (id + 0.5) * tileD;
+
+                    const pos = centerPos.clone()
+                        .add(wallDir.clone().multiplyScalar(halfW))
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
+                        .sub(wallNormal.clone().multiplyScalar(ld));
+
+                    const tile = new Tile(pos, wallDir.clone().negate(), tileD, tileH, 'reveal', rightId, id, iy);
+                    state.tiles.push(tile);
+                }
+            }
+
+            // 3. Arch Reveal
+            const archId = parentWallId + '_reveal_arch';
+            const archCenter = centerPos.clone().add(new THREE.Vector3(0, 1, 0).multiplyScalar(CONFIG.window.heightRect));
+            const arcSteps = 12;
+            const arcLen = Math.PI * CONFIG.window.archRadius;
+            const tileArcLen = arcLen / arcSteps;
+
+            for (let i = 0; i < arcSteps; i++) {
+                const theta = (i + 0.5) * (Math.PI / arcSteps);
+                const localX = Math.cos(theta) * CONFIG.window.archRadius;
+                const localY = Math.sin(theta) * CONFIG.window.archRadius;
+
+                for (let id = 0; id < stepsD; id++) {
+                    const ld = (id + 0.5) * tileD;
+                    const pos = archCenter.clone()
+                        .add(wallDir.clone().multiplyScalar(localX))
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(localY))
+                        .sub(wallNormal.clone().multiplyScalar(ld));
+
+                    const tileNormal = wallDir.clone().multiplyScalar(Math.cos(theta))
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.sin(theta)))
+                        .negate()
+                        .normalize();
+
+                    const tile = new Tile(pos, tileNormal, tileD, tileArcLen, 'reveal', archId, id, i);
+                    state.tiles.push(tile);
+                }
+            }
+        }
+
+        function createDoorReveal(centerPos, wallNormal, wallDir, parentWallId) {
+            const halfW = CONFIG.door.width / 2;
+            const depth = 0.6; // Standard wall depth for reveal
+            const rebateDepth = 0.06; // Single tile/insulation rebate
+            const rebateWidth = 0.025; // Standard rebate width
+
+            const stepsY = Math.ceil(CONFIG.door.height / CONFIG.tileSize);
+            const stepsD = Math.ceil(depth / CONFIG.tileSize);
+            const tileH = CONFIG.door.height / stepsY;
+            const tileD = depth / stepsD;
+
+            // Helper to create reveal for one side
+            function sideReveal(sideDir, idSuffix) {
+                const sideId = parentWallId + idSuffix;
+                for (let iy = 0; iy < stepsY; iy++) {
+                    for (let id = 0; id < stepsD; id++) {
+                        const ly = (iy + 0.5) * tileH;
+                        const ld = (id + 0.5) * tileD;
+
+                        // If we are in the rebate zone (near interior), widen the hole
+                        const currentHalfW = (ld < rebateDepth) ? (halfW + rebateWidth) : halfW;
+
+                        const pos = centerPos.clone()
+                            .add(wallDir.clone().multiplyScalar(sideDir * currentHalfW))
+                            .add(new THREE.Vector3(0, 1, 0).multiplyScalar(ly))
+                            .sub(wallNormal.clone().multiplyScalar(ld));
+
+                        const tile = new Tile(pos, wallDir.clone().multiplyScalar(sideDir * -1), tileD, tileH, 'reveal', sideId, id, iy);
+                        state.tiles.push(tile);
+                    }
+                }
+            }
+
+            sideReveal(-1, '_door_reveal_left');
+            sideReveal(1, '_door_reveal_right');
+
+            // Head Reveal
+            const headId = parentWallId + '_door_reveal_head';
+            const headStepsW = Math.ceil(CONFIG.door.width / CONFIG.tileSize);
+            const tileW = CONFIG.door.width / headStepsW;
+
+            for (let ix = 0; ix < headStepsW; ix++) {
+                for (let id = 0; id < stepsD; id++) {
+                    const lx = (ix - (headStepsW - 1) / 2) * tileW;
+                    const ld = (id + 0.5) * tileD;
+
+                    const currentHeight = (ld < rebateDepth) ? (CONFIG.door.height + rebateWidth) : CONFIG.door.height;
+
+                    const pos = centerPos.clone()
+                        .add(wallDir.clone().multiplyScalar(lx))
+                        .add(new THREE.Vector3(0, 1, 0).multiplyScalar(currentHeight))
+                        .sub(wallNormal.clone().multiplyScalar(ld));
+
+                    const tile = new Tile(pos, new THREE.Vector3(0, -1, 0), tileW, tileD, 'reveal', headId, ix, id, null, wallDir);
+                    state.tiles.push(tile);
+                }
+            }
+        }
+
+        // --- Crittall Window Generation ---
+        // --- Crittall Window Generation ---
+        function createCrittallWindow(centerPos, normal, wallDir, wallId) {
+            const W = CONFIG.window.width;
+            const H_RECT = CONFIG.window.heightRect;
+            const R = CONFIG.window.archRadius;
+            const FRAME_D = CONFIG.window.frameDepth;
+            const GLASS_T = CONFIG.window.glazingThickness;
+            const OFFSET_IN = CONFIG.window.glazingInsideOffset;
+            const OFFSET_OUT = CONFIG.window.glazingOutsideOffset;
+
+            // Materials
+            const frameMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.crittall, roughness: 0.7, metalness: 0.2 });
+            const glassMat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.glass,
+                transparent: true,
+                opacity: 0.4,
+                roughness: 0.2,
+                metalness: 0.1
+            });
+
+            // Positioning within reveal
+            // centerPos is at the face of the wall. 
+            // We move deep into the reveal (towards exterior).
+            const windowPos = centerPos.clone().sub(normal.clone().multiplyScalar(state.windowDepthInset));
+
+            const windowGroup = new THREE.Group();
+            windowGroup.position.copy(windowPos);
+
+            // Orient the group: 
+            // Local X = wallDir (Side to Side)
+            // Local Y = Up
+            // Local Z = Inward (pointing INTO the room)
+            const upDir = new THREE.Vector3(0, 1, 0);
+            const matrix = new THREE.Matrix4();
+            matrix.makeBasis(wallDir, upDir, normal);
+            windowGroup.quaternion.setFromRotationMatrix(matrix);
+
+            registerArch(windowGroup);
+
+            // Sub-groups for fixed parts and openable parts
+            const fixedParts = new THREE.Group();
+            const openableSash = new THREE.Group();
+            windowGroup.add(fixedParts);
+            windowGroup.add(openableSash);
+
+            // Helper to create a bar (mullion/transom)
+            function createBar(w, h, d, x, y, z, parent = fixedParts) {
+                const geo = new THREE.BoxGeometry(w, h, d);
+                const mesh = new THREE.Mesh(geo, frameMat);
+                mesh.position.set(x, y, z);
+                parent.add(mesh);
+                return mesh;
+            }
+
+            // Helper to create a glass pane
+            function createGlass(w, h, x, y, parent = fixedParts) {
+                const geo = new THREE.BoxGeometry(w, h, GLASS_T);
+                const mesh = new THREE.Mesh(geo, glassMat);
+                // Since local Z faces INWARD, we want glass to be slightly towards the OUTSIDE (-Z)
+                mesh.position.set(x, y, -0.0015);
+                parent.add(mesh);
+                return mesh;
+            }
+
+            // --- 1. OUTER FRAME ---
+            createBar(0.02, H_RECT, FRAME_D, -W / 2 + 0.01, H_RECT / 2, 0);
+            createBar(0.02, H_RECT, FRAME_D, W / 2 - 0.01, H_RECT / 2, 0);
+            createBar(W - 0.04, 0.02, FRAME_D, 0, 0.01, 0);
+
+            // --- 2. INTERNAL GRID ---
+            const colWidth = W / 4;
+            const hBottom = (2 / 5) * H_RECT;
+            const hMiddle = (2 / 5) * H_RECT;
+            const hTop = (1 / 5) * H_RECT;
+
+            // Main Transoms - Widen by 50% (0.02 -> 0.03)
+            createBar(W - 0.04, 0.03, FRAME_D, 0, hBottom, 0);
+            createBar(W - 0.04, 0.03, FRAME_D, 0, hBottom + hMiddle, 0);
+            createBar(W - 0.04, 0.03, FRAME_D, 0, H_RECT - 0.015, 0); // Top bar
+
+            // Sub Transoms
+            createBar(W - 0.04, 0.015, FRAME_D, 0, hBottom / 2, 0);
+            // Fixed part of middle sub-transom
+            createBar(W / 2 - 0.04, 0.015, FRAME_D, -W / 4, hBottom + hMiddle / 2, 0);
+
+            // Mullions
+            for (let i = 1; i < 4; i++) {
+                const x = -W / 2 + i * colWidth;
+                // Center mullion (i=2) widened by 50%
+                const mWidth = (i === 2) ? 0.03 : 0.02;
+                if (i === 3) {
+                    // Split for sash area (Section 2)
+                    // Bottom Section
+                    createBar(mWidth, hBottom - 0.02, FRAME_D, x, hBottom / 2, 0);
+                    // Top Section
+                    createBar(mWidth, hTop - 0.02, FRAME_D, x, hBottom + hMiddle + hTop / 2, 0);
+                } else {
+                    createBar(mWidth, H_RECT - 0.02, FRAME_D, x, H_RECT / 2, 0);
+                }
+            }
+
+            // --- 3. GLAZING (Fixed parts) ---
+            // Bottom row (8 panes: 4 col x 2 sub-rows)
+            for (let c = 0; c < 4; c++) {
+                const x = -W / 2 + (c + 0.5) * colWidth;
+                createGlass(colWidth - 0.02, hBottom / 2 - 0.02, x, hBottom / 4);
+                createGlass(colWidth - 0.02, hBottom / 2 - 0.02, x, 3 * hBottom / 4);
+            }
+            // Top row (4 panes)
+            for (let c = 0; c < 4; c++) {
+                const x = -W / 2 + (c + 0.5) * colWidth;
+                createGlass(colWidth - 0.02, hTop - 0.02, x, hBottom + hMiddle + hTop / 2);
+            }
+            // Middle section - Left half (4 panes: 2 col x 2 sub-rows)
+            for (let c = 0; c < 2; c++) {
+                const x = -W / 2 + (c + 0.5) * colWidth;
+                createGlass(colWidth - 0.02, hMiddle / 2 - 0.02, x, hBottom + hMiddle / 4);
+                createGlass(colWidth - 0.02, hMiddle / 2 - 0.02, x, hBottom + 3 * hMiddle / 4);
+            }
+
+            // --- 4. OPENABLE SASH (Right half of Middle Section) ---
+            const sashW = colWidth * 2;
+            const sashH = hMiddle;
+
+            // Pivot at RIGHT edge (Relative to group center, that's X=W/2)
+            openableSash.position.set(W / 2, hBottom + hMiddle / 2, 0);
+            const sGroup = new THREE.Group();
+            openableSash.add(sGroup);
+
+            // Sash frame - Widen by 50% (0.02 -> 0.03)
+            createBar(0.03, sashH - 0.02, FRAME_D, -sashW + 0.015, 0, 0, sGroup);
+            createBar(0.03, sashH - 0.02, FRAME_D, -0.015, 0, 0, sGroup);
+            createBar(sashW, 0.03, FRAME_D, -sashW / 2, -sashH / 2 + 0.015, 0, sGroup);
+            createBar(sashW, 0.03, FRAME_D, -sashW / 2, sashH / 2 - 0.015, 0, sGroup);
+            // Sash Middle Mullion & Transom
+            createBar(0.02, sashH - 0.04, FRAME_D, -colWidth, 0, 0, sGroup);
+            createBar(sashW - 0.04, 0.015, FRAME_D, -sashW / 2, 0, 0, sGroup);
+
+            // Sash Glass (4 panes)
+            for (let c = 0; c < 2; c++) {
+                const x = -sashW + (c + 0.5) * colWidth;
+                createGlass(colWidth - 0.02, hMiddle / 2 - 0.02, x, -hMiddle / 4, sGroup);
+                createGlass(colWidth - 0.02, hMiddle / 2 - 0.02, x, hMiddle / 4, sGroup);
+            }
+
+            // Rotation (Since local Z faces INWARD, a positive Y rotation opens it IN).
+            openableSash.rotation.y = THREE.MathUtils.degToRad(state.windowOpening);
+
+            // --- 5. ARCH SECTION ---
+            const archGroup = new THREE.Group();
+            archGroup.position.set(0, H_RECT, 0);
+            fixedParts.add(archGroup);
+
+            // Corrected Arch Orientation: Use PI arc, rotate to be horizontal
+            const archFrameGeo = new THREE.TorusGeometry(R - 0.01, 0.01, 8, 32, Math.PI);
+            const archFrameMesh = new THREE.Mesh(archFrameGeo, frameMat);
+            archGroup.add(archFrameMesh);
+
+            const innerArchGeo = new THREE.TorusGeometry(R / 2 - 0.01, 0.01, 8, 32, Math.PI);
+            const innerArchMesh = new THREE.Mesh(innerArchGeo, frameMat);
+            archGroup.add(innerArchMesh);
+
+            // Radial bars
+            const angles = [Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4];
+            angles.forEach(angle => {
+                const barLen = R / 2;
+                const barGeo = new THREE.BoxGeometry(0.02, barLen, FRAME_D);
+                const barMesh = new THREE.Mesh(barGeo, frameMat);
+                const midDist = R * 0.75;
+                barMesh.position.set(Math.cos(angle) * midDist, Math.sin(angle) * midDist, 0);
+                barMesh.rotation.z = angle - Math.PI / 2;
+                archGroup.add(barMesh);
+            });
+
+            // Arch Glass
+            const innerGlassGeo = new THREE.CircleGeometry(R / 2 - 0.02, 32, 0, Math.PI);
+            const innerGlassMesh = new THREE.Mesh(innerGlassGeo, glassMat);
+            innerGlassMesh.position.set(0, 0, -0.0015);
+            archGroup.add(innerGlassMesh);
+
+            for (let i = 0; i < 4; i++) {
+                const startAngle = (i * Math.PI) / 4;
+                const endAngle = ((i + 1) * Math.PI) / 4;
+                const shape = new THREE.Shape();
+                shape.absarc(0, 0, R - 0.02, startAngle, endAngle, false);
+                shape.absarc(0, 0, R / 2 + 0.01, endAngle, startAngle, true);
+                const g = new THREE.Mesh(new THREE.ShapeGeometry(shape), glassMat);
+                g.position.set(0, 0, -0.0015);
+                archGroup.add(g);
+            }
+        }
+
+        // --- Architecture Helpers ---
+        function registerArch(mesh) {
+            mesh.userData.isArchitecture = true;
+
+            // Apply current opacity state to new architectural meshes
+            mesh.traverse(obj => {
+                if (obj.isMesh && obj.material) {
+                    obj.material.transparent = true;
+                    obj.material.opacity = state.archOpacity;
+                    obj.visible = (state.archOpacity > 0.05);
+                }
+            });
+
+            scene.add(mesh);
+        }
+
+        // --- Mezzanine Generation ---
+        function createMezzanine() {
+            const S = state.roomSize / 2;
+            const mainGeo = new THREE.BoxGeometry(state.roomSize, 0.25, 1);
+            const mainMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.mezzanine, roughness: 0.8, transparent: true });
+            const mainMesh = new THREE.Mesh(mainGeo, mainMat);
+            // Position: X=0, Y=2.375. Z: Mezzanine is 1m wide. 
+            // In original (4m room), CenterZ=1.5 implies it spans Z=1 to Z=2 (South Wall).
+            // So its South edge is at Z=S. Center Z = S - 0.5.
+            mainMesh.position.set(0, 2.375, S - 0.5);
+            mainMesh.receiveShadow = true;
+            mainMesh.castShadow = true;
+            registerArch(mainMesh);
+
+            const extGeo = new THREE.BoxGeometry(CONFIG.window.width, 0.25, CONFIG.window.depth);
+            const extMesh = new THREE.Mesh(extGeo, mainMat);
+            // Window Alcove Platform
+            extMesh.position.set(0, 2.375, S + CONFIG.window.depth / 2);
+            extMesh.receiveShadow = true;
+            registerArch(extMesh);
+
+            // Glass Balustrade - 1.25m tall, face-fixed to front of mezzanine
+            // Extends 1m up from mezzanine floor level (2.5m to 3.5m)
+            const balustradeHeight = 1.0;
+            const balustradeThickness = 0.015;
+            const mezzFloorY = 2.5;
+            const balustradeY = mezzFloorY + balustradeHeight / 2;
+
+            // North edge of mezzanine (facing room interior) at Z = S - 1 (since mezzanine is 1m deep)
+            const balustradeFrontZ = S - 1;
+
+            const gap = 0.8;
+            const balustradeWidth = state.roomSize - gap;
+            const balustradeGeo = new THREE.BoxGeometry(balustradeWidth, balustradeHeight, balustradeThickness);
+            const balustradeMat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.glass,
+                roughness: 0.1,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide
+            });
+            const balustradeMesh = new THREE.Mesh(balustradeGeo, balustradeMat);
+            // Shifted east (positive X) to leave 0.8m gap on West side (-S)
+            // Original center was 0. Original span -S to S.
+            // New span: -S + 0.8 to S. Center: ((-S + 0.8) + S) / 2 = 0.4.
+            balustradeMesh.position.set(0.4, balustradeY, balustradeFrontZ);
+            balustradeMesh.castShadow = true;
+            balustradeMesh.receiveShadow = true;
+            registerArch(balustradeMesh);
+        }
+
+        // --- Oak Floor ---
+        function createFloor() {
+            const S = state.roomSize / 2;
+            const floorHeight = 0.02;
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x9d7a54, // Medium Oak
+                roughness: 0.8,
+                metalness: 0
+            });
+
+            // Main Floor
+            const geo = new THREE.BoxGeometry(state.roomSize, floorHeight, state.roomSize);
+            const mesh = new THREE.Mesh(geo, floorMat);
+            mesh.position.set(0, floorHeight / 2, 0);
+            mesh.receiveShadow = true;
+            registerArch(mesh);
+
+            // Alcove Extensions
+            const extW = CONFIG.window.width;
+            const extD = state.windowDepthInset;
+            const extGeo = new THREE.BoxGeometry(extW, floorHeight, extD);
+
+            // North
+            const nExt = new THREE.Mesh(extGeo, floorMat);
+            nExt.position.set(0, floorHeight / 2, -S - extD / 2);
+            nExt.receiveShadow = true;
+            registerArch(nExt);
+
+            // South
+            const sExt = new THREE.Mesh(extGeo, floorMat);
+            sExt.position.set(0, floorHeight / 2, S + extD / 2);
+            sExt.receiveShadow = true;
+            registerArch(sExt);
+
+            // West
+            const wExt = new THREE.Mesh(new THREE.BoxGeometry(extD, floorHeight, extW), floorMat);
+            wExt.position.set(-S - extD / 2, floorHeight / 2, 0);
+            wExt.receiveShadow = true;
+            registerArch(wExt);
+
+            // East
+            const eExt = new THREE.Mesh(new THREE.BoxGeometry(extD, floorHeight, extW), floorMat);
+            eExt.position.set(S + extD / 2, floorHeight / 2, 0);
+            eExt.receiveShadow = true;
+            registerArch(eExt);
+        }
+
+        // --- Partition Wall ---
+        function createPartitionWall() {
+            const S = state.roomSize / 2;
+            const thickness = 0.2;
+            const height = 3.5;
+
+            // From mezzanine edge (S - 1.0) to 650mm from North wall (-S + 0.65)
+            const zStart = S - 1.0;
+            const zEnd = -S + 0.65;
+            const length = zStart - zEnd;
+            const centerZ = (zStart + zEnd) / 2;
+
+            // 660mm gap from West wall (-S) to Western face
+            // Western face at -S + 0.66. Center X = -S + 0.66 + (thickness / 2)
+            const centerX = -S + 0.66 + (thickness / 2);
+
+            const geo = new THREE.BoxGeometry(thickness, height, length);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(centerX, height / 2, centerZ);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            registerArch(mesh);
+        }
+
+        // --- Roof Bridge Generation ---
+        function createRoofBridge() {
+            const bridgeGeo = new THREE.BoxGeometry(state.roomSize, 0.6, 2.4);
+            const bridgeMat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.mezzanine,
+                roughness: 0.8,
+                transparent: true
+            });
+            const bridgeMesh = new THREE.Mesh(bridgeGeo, bridgeMat);
+            bridgeMesh.position.set(0, 4.9, 0); // Always centered
+            bridgeMesh.receiveShadow = true;
+            bridgeMesh.castShadow = true;
+            registerArch(bridgeMesh);
+        }
+
+
+        // --- Glass Landing & Stairs Generation ---
+        function createGlassLanding() {
+            // Landing in SE Corner (S, E)
+            const S = state.roomSize / 2; // East/South Extent
+            const width = 0.8;
+            const depth = 0.8;
+            const thickness = 0.03;
+
+            // Center is (S - 0.4, S - 0.4)
+            // Original: 2.0 - 0.4 = 1.6.  So Center = S - 0.4.
+
+            const geo = new THREE.BoxGeometry(width, thickness, depth);
+            const mat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.glass,
+                roughness: 0.1,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(S - 0.4, 5.15 + thickness / 2, S - 0.4);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            registerArch(mesh);
+
+            return mesh;
+        }
+
+        // --- North Skylight ---
+        function createNorthSkylight() {
+            const S = state.roomSize / 2;
+            const bridgeNorthZ = 1.2; // Bridge depth 2.4, centered
+            const gap = S - bridgeNorthZ;
+            const thickness = 0.03;
+
+            const geo = new THREE.BoxGeometry(state.roomSize, thickness, gap);
+            const mat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.glass,
+                roughness: 0.1,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            // Close gap between bridge and North wall (Z = -S)
+            // Bridge at Z centered, goes to -1.2. North Wall is at -S.
+            // Center of skylight is between -1.2 and -S.
+            mesh.position.set(0, 5.15 + thickness / 2, -(bridgeNorthZ + gap / 2));
+            mesh.receiveShadow = true;
+            registerArch(mesh);
+        }
+
+        // --- Retractable Stairs ---
+        let stairGroup;
+        let stairRotation = 42;
+
+        function createRetractableStairs() {
+            if (stairGroup) {
+                scene.remove(stairGroup);
+                stairGroup = null;
+            }
+
+            stairGroup = new THREE.Group();
+
+            const S = state.roomSize / 2;
+
+            // 1. Calculate Geometry Constants
+            // Landing West Edge X = (S - 0.8). Center Z = (S - 0.4).
+            // Stair Start (Top Nose) attaches to Landing West Edge.
+            const startPoint = new THREE.Vector3(S - 0.8, 5.18, S - 0.4);
+
+            const stepCount = 10;
+            const stepDepth = 0.25;
+            const stepWidth = 0.70;
+            const stepThickness = 0.03;
+            // Angle: 42 deg
+            const angleRad = 42 * (Math.PI / 180);
+            const stepDrop = stepDepth * Math.tan(angleRad) * 1.038;
+
+            // 2. Calculate Pivot Point (Center of Step 1)
+            const s1NoseX = startPoint.x - stepDepth;
+            const s1NoseY = startPoint.y - stepDrop;
+
+            const pivot = new THREE.Vector3(
+                s1NoseX + stepDepth / 2,
+                s1NoseY - stepThickness / 2,
+                startPoint.z
+            );
+
+            stairGroup.position.copy(pivot);
+            scene.add(stairGroup);
+
+            // 3. Generate Steps (Relative to Pivot)
+            const stepMat = new THREE.MeshStandardMaterial({
+                color: CONFIG.colors.glass,
+                roughness: 0.1,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+            const stepGeo = new THREE.BoxGeometry(stepDepth, stepThickness, stepWidth);
+
+            for (let i = 1; i <= stepCount; i++) {
+                const noseX = startPoint.x - (stepDepth * i);
+                const noseY = startPoint.y - (stepDrop * i);
+
+                const meshX = noseX + (stepDepth / 2);
+                const meshY = noseY - (stepThickness / 2);
+                const meshZ = startPoint.z;
+
+                const worldPos = new THREE.Vector3(meshX, meshY, meshZ);
+                const localPos = worldPos.clone().sub(pivot);
+
+                const stepMesh = new THREE.Mesh(stepGeo, stepMat);
+                stepMesh.position.copy(localPos);
+                stepMesh.castShadow = true;
+                stepMesh.receiveShadow = true;
+
+                stepMesh.userData.isArchitecture = true;
+                stairGroup.add(stepMesh);
+            }
+
+            // 4. Generate Stringers (Relative to Pivot)
+            const strMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.5,
+                metalness: 0.2,
+                side: THREE.DoubleSide
+            });
+
+            const strThick = 0.012;
+            const strDepth = 0.375;
+            const yOffset = -0.150;
+
+            const totalRun = stepDepth * stepCount;
+            const totalDrop = stepDrop * stepCount;
+            const flightVector = new THREE.Vector3(-totalRun, -totalDrop, 0);
+            const flightAngle = Math.atan2(flightVector.y, flightVector.x);
+            const flightLen = flightVector.length();
+
+            const rawLen = flightLen + 2.0;
+            const rawGeo = new THREE.BoxGeometry(rawLen, strDepth, strThick);
+            const rawBrush = new Brush(rawGeo);
+            rawBrush.rotation.z = flightAngle;
+            rawBrush.updateMatrixWorld();
+
+            const midVec = flightVector.clone().multiplyScalar(0.5);
+            const midPoint = startPoint.clone().add(midVec);
+            midPoint.y += yOffset;
+
+            rawBrush.position.copy(midPoint);
+            rawBrush.updateMatrixWorld();
+
+            const cutterGeo = new THREE.BoxGeometry(2, 6, 2);
+
+            const topCutter = new Brush(cutterGeo);
+            topCutter.position.set(startPoint.x + 1.0, 5.15, startPoint.z);
+            topCutter.updateMatrixWorld();
+
+            const botNoseX = startPoint.x - totalRun;
+            const bottomCutter = new Brush(cutterGeo);
+            bottomCutter.position.set(botNoseX - 1.0, 2, startPoint.z);
+            bottomCutter.updateMatrixWorld();
+
+            let res = csgEvaluator.evaluate(rawBrush, topCutter, SUBTRACTION);
+            res = csgEvaluator.evaluate(res, bottomCutter, SUBTRACTION);
+
+            res.geometry.translate(-pivot.x, -pivot.y, -pivot.z);
+
+            const meshL = new THREE.Mesh(res.geometry.clone(), strMat);
+            const meshR = new THREE.Mesh(res.geometry.clone(), strMat);
+
+            const halfW = stepWidth / 2;
+            const halfT = strThick / 2;
+
+            meshL.position.set(0, 0, -halfW + halfT);
+            meshR.position.set(0, 0, halfW - halfT);
+
+            meshL.castShadow = true; meshL.receiveShadow = true;
+            meshR.castShadow = true; meshR.receiveShadow = true;
+
+            meshL.userData.isArchitecture = true;
+            meshR.userData.isArchitecture = true;
+
+            stairGroup.add(meshL);
+            stairGroup.add(meshR);
+
+            setStairAngle(document.getElementById('stair-slider').value);
+        }
+
+        function setStairAngle(deg) {
+            const targetRot = (deg - 42) * (Math.PI / 180);
+            if (stairGroup) {
+                stairGroup.rotation.z = targetRot;
+                stairGroup.updateMatrixWorld();
+            }
+        }
+
+        // --- Raycasting ---
+        const rc = new THREE.Raycaster();
+        const ptr = new THREE.Vector2();
+
+        function onPointerDown(event) {
+            if (event.target !== renderer.domElement) return;
+
+            ptr.x = (event.clientX / window.innerWidth) * 2 - 1;
+            ptr.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+            rc.setFromCamera(ptr, camera);
+
+            // Filter out architecture and invisible objects for tile raycasting
+            const visibleChildren = scene.children.filter(obj => obj.visible && !obj.userData.isArchitecture);
+            const intersects = rc.intersectObjects(visibleChildren, true);
+
+            if (intersects.length > 0) {
+                // Find first object that has tile user data
+                // Traverse up parent if needed? 
+                // Our tiles are Meshes with userData.tile.
+                // Steps are Meshes but don't have tile userData.
+
+                // We only care about Tiles for interaction currently.
+                let target = intersects[0].object;
+                while (target && !target.userData.tile) {
+                    target = target.parent;
+                }
+
+                if (target && target.userData && target.userData.tile) {
+                    if (state.tilesLocked) return; // Prevent accidental clicks
+
+                    const tile = target.userData.tile;
+                    if (event.button === 0) {
+                        tile.toggle();
+                    } else if (event.button === 2) {
+                        handleRightClick(tile);
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('contextmenu', e => e.preventDefault());
+        window.addEventListener('pointerdown', onPointerDown);
+
+        function handleRightClick(tile) {
+            if (!state.selectedTile) {
+                state.selectedTile = tile;
+                tile.setSelection(true);
+            } else {
+                if (state.selectedTile === tile) {
+                    state.selectedTile = null;
+                    tile.setSelection(false);
+                    return;
+                }
+                if (state.selectedTile.wallId === tile.wallId) {
+                    performBlockFill(state.selectedTile, tile);
+                    state.selectedTile.setSelection(false);
+                    state.selectedTile = null;
+                } else {
+                    state.selectedTile.setSelection(false);
+                    state.selectedTile = tile;
+                    tile.setSelection(true);
+                }
+            }
+        }
+
+        function performBlockFill(t1, t2) {
+            const wallId = t1.wallId;
+            const minX = Math.min(t1.gridX, t2.gridX);
+            const maxX = Math.max(t1.gridX, t2.gridX);
+            const minY = Math.min(t1.gridY, t2.gridY);
+            const maxY = Math.max(t1.gridY, t2.gridY);
+
+            const tilesInRange = state.tiles.filter(t =>
+                t.wallId === wallId &&
+                t.gridX >= minX && t.gridX <= maxX &&
+                t.gridY >= minY && t.gridY <= maxY
+            );
+
+            if (tilesInRange.length === 0) return;
+
+            const counts = { 0: 0, 1: 0, 2: 0 };
+            tilesInRange.forEach(t => counts[t.state]++);
+
+            let commonState = 0;
+            let maxCount = -1;
+            for (let s = 0; s <= 2; s++) {
+                if (counts[s] > maxCount) {
+                    maxCount = counts[s];
+                    commonState = s;
+                }
+            }
+
+            const nextState = (commonState + 1) % 3;
+            tilesInRange.forEach(t => t.setState(nextState));
+            scheduleSave();
+        }
+
+        // --- Buttons ---
+        const bulkButtons = ['btn-reset', 'btn-render-all', 'btn-flush-all'];
+
+        function updateLockUI() {
+            const btn = document.getElementById('btn-lock-tiles');
+            if (state.tilesLocked) {
+                btn.innerHTML = '🔒 Tiles Locked';
+                btn.style.background = '#800000'; // Dark red for locked
+            } else {
+                btn.innerHTML = '🔓 Tiles Unlocked';
+                btn.style.background = '#444';
+            }
+            bulkButtons.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = state.tilesLocked;
+                    el.style.opacity = state.tilesLocked ? '0.5' : '1.0';
+                    el.style.cursor = state.tilesLocked ? 'not-allowed' : 'pointer';
+                }
+            });
+        }
+
+        document.getElementById('btn-lock-tiles').onclick = () => {
+            state.tilesLocked = !state.tilesLocked;
+            updateLockUI();
+        };
+
+        document.getElementById('btn-reset').onclick = () => {
+            if (state.tilesLocked) return;
+            state.tiles.forEach(t => t.setState(0));
+            scheduleSave();
+        };
+        document.getElementById('btn-render-all').onclick = () => {
+            if (state.tilesLocked) return;
+            state.tiles.forEach(t => t.setState(1));
+            scheduleSave();
+        };
+        document.getElementById('btn-flush-all').onclick = () => {
+            if (state.tilesLocked) return;
+            state.tiles.forEach(t => t.setState(2));
+            scheduleSave();
+        };
+        document.getElementById('btn-wireframe').onclick = () => {
+            state.isWireframe = !state.isWireframe;
+            scene.traverse(obj => {
+                if (obj.isMesh) {
+                    obj.material.wireframe = state.isWireframe;
+                }
+            });
+        };
+        document.getElementById('btn-toggle-gaps').onclick = () => {
+            state.gapEnabled = !state.gapEnabled;
+            state.tiles.forEach(t => t.updateVisuals());
+        };
+        document.getElementById('btn-export').onclick = () => {
+            saveToFirebase();
+        };
+
+        // --- Window Sliders ---
+        const winOpeningSlider = document.getElementById('winOpeningSlider');
+        const winOpeningValue = document.getElementById('winOpeningValue');
+        const winDepthSlider = document.getElementById('winDepthSlider');
+        const winDepthValue = document.getElementById('winDepthValue');
+
+        winOpeningSlider.addEventListener('input', (e) => {
+            state.windowOpening = parseFloat(e.target.value);
+            winOpeningValue.textContent = state.windowOpening.toFixed(0);
+            rebuildScene();
+        });
+
+        winDepthSlider.addEventListener('input', (e) => {
+            state.windowDepthInset = parseFloat(e.target.value);
+            winDepthValue.textContent = state.windowDepthInset.toFixed(2);
+            rebuildScene();
+        });
+
+        // --- Room Size Slider (4.2m default) ---
+        let sizeLocked = true;
+        const sizeSlider = document.getElementById('size-slider');
+        const sizeValue = document.getElementById('size-value');
+        const sizeLockBtn = document.getElementById('size-lock');
+
+        // Initial UI state for locked slider
+        sizeSlider.disabled = true;
+        sizeSlider.style.opacity = '0.5';
+
+        sizeSlider.addEventListener('input', (e) => {
+            if (sizeLocked) {
+                e.target.value = state.roomSize;
+                return;
+            }
+            state.roomSize = parseFloat(e.target.value);
+            sizeValue.textContent = state.roomSize.toFixed(2);
+            rebuildScene();
+        });
+
+        sizeLockBtn.addEventListener('click', () => {
+            if (sizeLocked) {
+                // Unlocking - show warning
+                const confirmed = confirm(
+                    '⚠️ WARNING: Changing the room size will RESET all tile states!\n\n' +
+                    'Any painted tiles (insulated, rendered) will be lost.\n\n' +
+                    'Are you sure you want to unlock the slider?'
+                );
+                if (confirmed) {
+                    sizeLocked = false;
+                    sizeLockBtn.textContent = '🔓';
+                    sizeSlider.disabled = false;
+                    sizeSlider.style.opacity = '1';
+                }
+            } else {
+                sizeLocked = true;
+                sizeLockBtn.textContent = '🔒';
+                sizeSlider.disabled = true;
+                sizeSlider.style.opacity = '0.5';
+            }
+        });
+
+        function rebuildScene() {
+            // 1a. Capture current tile states to preserve them
+            const stateMap = new Map();
+            state.tiles.forEach(t => {
+                const key = `${t.wallId}_${t.gridX}_${t.gridY}`;
+                stateMap.set(key, t.state);
+            });
+
+            // 1b. Clear existing tiles
+            state.tiles.forEach(t => {
+                scene.remove(t.mesh);
+                t.mesh.geometry.dispose();
+                t.mesh.material.dispose();
+            });
+            state.tiles = [];
+
+            // 2. Clear Architecture (Mezzanine, Bridge, Landing, Stairs)
+            // We need to track them or just find them by userData
+            const toRemove = [];
+            scene.traverse(obj => {
+                if (obj.userData && obj.userData.isArchitecture) {
+                    toRemove.push(obj);
+                }
+            });
+            toRemove.forEach(obj => {
+                scene.remove(obj);
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) obj.material.dispose();
+            });
+            if (stairGroup) {
+                scene.remove(stairGroup);
+                stairGroup.traverse(child => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                });
+                stairGroup = null;
+            }
+
+            // 3. Rebuild
+            // We need to verify if calling createWalls works. 
+            // createWalls clears nothing, just adds tiles.
+            const S = state.roomSize / 2;
+            const halfW = CONFIG.window.width / 2; // Window half-width = 0.75m
+
+            // Alcove centers should be at wall_dim/2 (= S) from the 90-degree corners
+            // North alcove: S from NW corner (-S, 0, -S) -> center at X = -S + S = 0
+            // East alcove: S from SE corner (S, 0, S) -> center at Z = S - S = 0
+            // Example: 4.2m room -> S=2.1 -> alcove center 2.1m from corner
+            const northAlcoveCenterX = 0;  // S from NW corner
+            const eastAlcoveCenterZ = 0;   // S from SE corner
+
+            // Chamfer connects NE jamb of North alcove to NE jamb of East alcove
+            // North alcove NE jamb: center + halfW = 0 + 0.75 = 0.75
+            // East alcove NE jamb: center - halfW = 0 - 0.75 = -0.75
+            // Example: 4.2m room -> NE jambs at 2.1 + 0.75 = 2.85m from corner
+            const NorthJambX = northAlcoveCenterX + halfW;  // 0.75
+            const EastJambZ = eastAlcoveCenterZ - halfW;    // -0.75
+
+            const SW = new THREE.Vector3(-S, 0, S);      // South-West
+            const SE = new THREE.Vector3(S, 0, S);       // South-East
+            const NW = new THREE.Vector3(-S, 0, -S);     // North-West
+            const NorthCut = new THREE.Vector3(NorthJambX, 0, -S);  // North side of chamfer
+            const EastCut = new THREE.Vector3(S, 0, EastJambZ);     // East side of chamfer
+
+            // Wall 0: South (Window) - SE to SW
+            createWall(SE, SW, 'window', 0);
+            // Wall 1: West (Window) - SW to NW
+            createWall(SW, NW, 'window', 1);
+            // Wall 2: North (partial, Window) - NW to NorthCut
+            // Window center at X=0, which is S from NW (at X=-S)
+            // Distance along wall from NW to window center = S
+            createWall(NW, NorthCut, 'window', 2, S);
+            // Wall 3: Chamfer (Door centered) - NorthCut to EastCut
+            createWall(NorthCut, EastCut, 'door', 3);
+            // Wall 4: East (partial, Window) - EastCut to SE
+            // Window center at Z=0, which is S from SE (at Z=S)
+            // Wall goes from EastCut (Z=-halfW) to SE (Z=S)
+            // Distance along wall from EastCut to window center = halfW
+            createWall(EastCut, SE, 'window', 4, halfW);
+
+            createMezzanine();
+            createFloor();
+            createPartitionWall();
+            createRoofBridge();
+            createGlassLanding();
+            createNorthSkylight();
+            createRetractableStairs();
+
+            // 4. Restore preserved tile states
+            state.tiles.forEach(t => {
+                const key = `${t.wallId}_${t.gridX}_${t.gridY}`;
+                if (stateMap.has(key)) {
+                    t.setState(stateMap.get(key));
+                }
+            });
+
+            // Sync UI
+            updateStats();
+        }
+
+        document.getElementById('opacity-slider').oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            state.archOpacity = val;
+            scene.traverse(obj => {
+                if (obj.userData && obj.userData.isArchitecture) {
+                    // Traverse group if it is one, or just update mesh material
+                    obj.traverse(child => {
+                        if (child.isMesh && child.material) {
+                            child.material.transparent = true;
+                            child.material.opacity = val;
+                            child.visible = (val > 0.05);
+                        }
+                    });
+                }
+            });
+        };
+
+        // --- Firebase Init ---
+        signInAnonymously(auth).then(() => {
+            onSnapshot(doc(db, 'artifacts', APP_ID, 'configurations', DOC_ID), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.tiles && Array.isArray(data.tiles)) {
+                        state.remoteUpdateInProgress = true;
+                        data.tiles.forEach((val, idx) => {
+                            if (state.tiles[idx]) {
+                                state.tiles[idx].setState(val);
+                            }
+                        });
+                        state.remoteUpdateInProgress = false;
+                        updateStats();
+                    }
+                }
+            });
+        }).catch(console.error);
+
+        updateStats();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        try {
+            console.log("Attempting to rebuild scene...");
+            rebuildScene();
+            console.log("Scene rebuild complete.");
+        } catch (e) {
+            console.error("Error building scene:", e);
+            alert("Error building scene: " + e.message);
+        }
+        animate();
+
+        document.getElementById('stair-slider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            setStairAngle(val);
+        });
+
+        // Initial call to ensure sync
+        setStairAngle(42);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+
+</html>
