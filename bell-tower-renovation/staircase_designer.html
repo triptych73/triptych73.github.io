@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staircase Designer - Straight-Winder-Straight</title>
+    <style>
+        :root {
+            --midnight: #0F1115;
+            --void: #050505;
+            --panel: #16191D;
+            --border: #2A2E35;
+            --stone: #F5F5F0;
+            --bronze: #9A8C74;
+            --emerald: #10B981;
+            --alert: #EF4444;
+            --gray-400: #9CA3AF;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--midnight);
+            font-family: 'Inter', sans-serif;
+            color: var(--stone);
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 320px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        .header {
+            padding: 16px;
+            background: var(--void);
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 16px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--stone);
+        }
+
+        .scroll-area {
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            color: var(--bronze);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type=range] {
+            flex-grow: 1;
+            accent-color: var(--bronze);
+        }
+
+        input[type=number] {
+            width: 60px;
+            background: var(--midnight);
+            border: 1px solid var(--border);
+            color: var(--stone);
+            padding: 4px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        .stats-panel {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--void);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            color: var(--gray-400);
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .compliance-badge {
+            margin-top: 8px;
+            padding: 6px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .pass {
+            background: var(--emerald);
+            color: var(--void);
+        }
+
+        .fail {
+            background: var(--alert);
+            color: white;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: var(--bronze);
+            border: none;
+            color: var(--void);
+            font-weight: 700;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 12px;
+            transition: opacity 0.2s;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button.secondary {
+            background: var(--border);
+            color: var(--stone);
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--bronze);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="loading">Initialising Engine...</div>
+    <div id="ui-panel">
+        <div class="header">
+            <h1>Staircase Designer</h1>
+            <a href="bell_chamber.html" style="color: #0078d4; text-decoration: none; font-size: 0.8em;">🏠 Back to Bell
+                Chamber</a>
+        </div>
+        <div class="scroll-area">
+            <div class="control-group">
+                <label>Total Rise (mm)</label>
+                <div class="input-row">
+                    <input type="range" id="rise-slider" min="1000" max="4000" step="10" value="2600">
+                    <input type="number" id="rise-input" value="2600">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Flight Width (mm)</label>
+                <div class="input-row">
+                    <input type="range" id="width-slider" min="600" max="1500" step="10" value="900">
+                    <input type="number" id="width-input" value="900">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Lower Straight Steps</label>
+                <div class="input-row">
+                    <input type="range" id="lower-slider" min="1" max="15" step="1" value="5">
+                    <input type="number" id="lower-input" value="5">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Winder Steps</label>
+                <div class="input-row">
+                    <input type="range" id="winder-slider" min="2" max="6" step="1" value="3">
+                    <input type="number" id="winder-input" value="3">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Upper Straight Steps</label>
+                <div class="input-row">
+                    <input type="range" id="upper-slider" min="1" max="10" step="1" value="2">
+                    <input type="number" id="upper-input" value="2">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Soffit Thickness (mm)</label>
+                <div class="input-row">
+                    <input type="range" id="soffit-slider" min="10" max="250" step="5" value="80">
+                    <input type="number" id="soffit-input" value="80">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Void Radius (mm)</label>
+                <div class="input-row">
+                    <input type="range" id="void-slider" min="0" max="1000" step="10" value="150">
+                    <input type="number" id="void-input" value="150">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Turn Angle (deg)</label>
+                <div class="input-row">
+                    <input type="range" id="turn-slider" min="10" max="180" step="1" value="90">
+                    <input type="number" id="turn-input" value="90">
+                </div>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stat-row">
+                    <span class="stat-label">Riser:</span>
+                    <span class="stat-value" id="stat-riser">0mm</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Going:</span>
+                    <span class="stat-value" id="stat-going">250mm</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Pitch:</span>
+                    <span class="stat-value" id="stat-pitch">0°</span>
+                </div>
+                <div id="compliance-badge" class="compliance-badge">Checking Compliance...</div>
+            </div>
+
+            <button id="btn-export">Export GLB for Bell Chamber</button>
+            <button id="btn-reset" class="secondary">Reset View</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+        // --- Configuration & State ---
+        const state = {
+            totalRise: 2600,
+            flightWidth: 900,
+            lowerSteps: 5,
+            winderSteps: 3,
+            upperSteps: 2,
+            soffitThickness: 80,
+            steelThickness: 10,
+            voidRadius: 150,
+            straightGoing: 220,
+            winderTurnAngle: Math.PI / 2
+        };
+
+        // --- Scene Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 50, 20000);
+        camera.position.set(4000, 3000, 4000);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 1000, 0);
+
+        // Lights
+        const ambient = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambient);
+
+        const spotLight = new THREE.SpotLight(0xffffff, 1500000);
+        spotLight.position.set(2000, 5000, 2000);
+        spotLight.angle = 0.5;
+        spotLight.penumbra = 0.5;
+        spotLight.castShadow = true;
+        spotLight.shadow.mapSize.width = 2048;
+        spotLight.shadow.mapSize.height = 2048;
+        scene.add(spotLight);
+
+        const pointLight = new THREE.PointLight(0x9A8C74, 500000);
+        pointLight.position.set(-1000, 1000, -1000);
+        scene.add(pointLight);
+
+        const grid = new THREE.GridHelper(5000, 20, 0x222222, 0x111111);
+        scene.add(grid);
+
+        // --- Materials ---
+        const materials = {
+            steel: new THREE.MeshStandardMaterial({
+                color: 0x1A1C20,
+                metalness: 0.8,
+                roughness: 0.2,
+                side: THREE.DoubleSide
+            }),
+            soffit: new THREE.MeshStandardMaterial({
+                color: 0xF5F5F0,
+                roughness: 0.9,
+                metalness: 0,
+                side: THREE.DoubleSide
+            }),
+            stringer: new THREE.MeshStandardMaterial({
+                color: 0x9A8C74,
+                metalness: 0.5,
+                roughness: 0.4
+            })
+        };
+
+        // --- Staircase Builder ---
+        let mainStairGroup = new THREE.Group();
+        scene.add(mainStairGroup);
+
+        function rebuildStaircase() {
+            while (mainStairGroup.children.length > 0) {
+                const obj = mainStairGroup.children[0];
+                obj.traverse(child => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material && !Object.values(materials).includes(child.material)) {
+                        child.material.dispose();
+                    }
+                });
+                mainStairGroup.remove(obj);
+            }
+
+            const totalSteps = state.lowerSteps + state.winderSteps + state.upperSteps;
+            const stepRise = state.totalRise / totalSteps;
+            const width = state.flightWidth;
+
+            const pathLeft = [];
+            const pathRight = [];
+
+            let pos = new THREE.Vector3(0, 0, 0);
+            let dir = new THREE.Vector3(1, 0, 0);
+            let left = new THREE.Vector3(0, 0, -1);
+            let up = new THREE.Vector3(0, 1, 0);
+
+            const recordPath = (p, l, isRiser) => {
+                const pL = p.clone().addScaledVector(l, width / 2);
+                const pR = p.clone().addScaledVector(l, -width / 2);
+                pathLeft.push({ pos: pL, isRiser });
+                pathRight.push({ pos: pR, isRiser });
+            };
+
+            recordPath(pos, left, false);
+
+            // LOWER STEPS
+            for (let i = 0; i < state.lowerSteps; i++) {
+                pos.addScaledVector(up, stepRise);
+                recordPath(pos, left, true);
+                pos.addScaledVector(dir, state.straightGoing);
+                recordPath(pos, left, false);
+            }
+
+            // WINDER STEPS
+            const pivotDist = state.voidRadius + width / 2;
+            const pivot = pos.clone().addScaledVector(left, -pivotDist);
+            const winderAngleStep = state.winderTurnAngle / state.winderSteps;
+
+            for (let i = 0; i < state.winderSteps; i++) {
+                // Riser
+                pos.addScaledVector(up, stepRise);
+                recordPath(pos, left, true);
+
+                const q = new THREE.Quaternion().setFromAxisAngle(up, -winderAngleStep);
+                dir.applyQuaternion(q);
+                left.applyQuaternion(q);
+
+                const nextPos = pivot.clone().addScaledVector(left, pivotDist);
+                nextPos.y = pos.y;
+                pos.copy(nextPos);
+
+                recordPath(pos, left, false);
+            }
+
+            // UPPER STEPS
+            for (let i = 0; i < state.upperSteps; i++) {
+                pos.addScaledVector(up, stepRise);
+                recordPath(pos, left, true);
+                pos.addScaledVector(dir, state.straightGoing);
+                recordPath(pos, left, false);
+            }
+
+            // BUILD MESHES
+            // 1. Folded Plate Stair
+            const stairGeo = new THREE.BufferGeometry();
+            const stairPos = [];
+
+            for (let i = 0; i < pathLeft.length - 1; i++) {
+                const l1 = pathLeft[i].pos;
+                const r1 = pathRight[i].pos;
+                const l2 = pathLeft[i + 1].pos;
+                const r2 = pathRight[i + 1].pos;
+
+                stairPos.push(l1.x, l1.y, l1.z, r1.x, r1.y, r1.z, l2.x, l2.y, l2.z);
+                stairPos.push(r1.x, r1.y, r1.z, r2.x, r2.y, r2.z, l2.x, l2.y, l2.z);
+            }
+            stairGeo.setAttribute('position', new THREE.Float32BufferAttribute(stairPos, 3));
+            stairGeo.computeVertexNormals();
+            const stairMesh = new THREE.Mesh(stairGeo, materials.steel);
+            stairMesh.castShadow = true;
+            stairMesh.receiveShadow = true;
+            mainStairGroup.add(stairMesh);
+
+            // 2. SOFFIT (SWEETING CURVE)
+            const soffitGeo = new THREE.BufferGeometry();
+            const soffitPos = [];
+            const sidePos = [];
+
+            const ptsL = pathLeft.map(p => p.pos.clone().addScaledVector(up, -state.soffitThickness));
+            const ptsR = pathRight.map(p => p.pos.clone().addScaledVector(up, -state.soffitThickness));
+
+            const curveL = new THREE.CatmullRomCurve3(ptsL);
+            const curveR = new THREE.CatmullRomCurve3(ptsR);
+
+            const segments = (totalSteps * 8);
+            const splinePtsL = curveL.getPoints(segments);
+            const splinePtsR = curveR.getPoints(segments);
+
+            for (let i = 0; i < splinePtsL.length - 1; i++) {
+                const sL1 = splinePtsL[i];
+                const sR1 = splinePtsR[i];
+                const sL2 = splinePtsL[i + 1];
+                const sR2 = splinePtsR[i + 1];
+
+                soffitPos.push(sL1.x, sL1.y, sL1.z, sR1.x, sR1.y, sR1.z, sL2.x, sL2.y, sL2.z);
+                soffitPos.push(sR1.x, sR1.y, sR1.z, sR2.x, sR2.y, sR2.z, sL2.x, sL2.y, sL2.z);
+            }
+            soffitGeo.setAttribute('position', new THREE.Float32BufferAttribute(soffitPos, 3));
+            soffitGeo.computeVertexNormals();
+            const soffitMesh = new THREE.Mesh(soffitGeo, materials.soffit);
+            soffitMesh.castShadow = true;
+            soffitMesh.receiveShadow = true;
+            mainStairGroup.add(soffitMesh);
+
+            // Side Panels
+            const sideGeo = new THREE.BufferGeometry();
+            const buildSide = (path, spline) => {
+                for (let i = 0; i < path.length - 1; i++) {
+                    const p1 = path[i].pos;
+                    const p2 = path[i + 1].pos;
+                    const t1 = i / (path.length - 1);
+                    const t2 = (i + 1) / (path.length - 1);
+                    const s1 = spline.getPointAt(t1);
+                    const s2 = spline.getPointAt(t2);
+                    sidePos.push(p1.x, p1.y, p1.z, s1.x, s1.y, s1.z, p2.x, p2.y, p2.z);
+                    sidePos.push(s1.x, s1.y, s1.z, s2.x, s2.y, s2.z, p2.x, p2.y, p2.z);
+                }
+            };
+            buildSide(pathLeft, curveL);
+            buildSide(pathRight, curveR);
+
+            sideGeo.setAttribute('position', new THREE.Float32BufferAttribute(sidePos, 3));
+            sideGeo.computeVertexNormals();
+            const sideMesh = new THREE.Mesh(sideGeo, materials.soffit);
+            sideMesh.castShadow = true;
+            sideMesh.receiveShadow = true;
+            mainStairGroup.add(sideMesh);
+
+            updateUI(stepRise, state.straightGoing);
+        }
+
+        function updateUI(rise, going) {
+            document.getElementById('stat-riser').innerText = Math.round(rise) + 'mm';
+            document.getElementById('stat-going').innerText = Math.round(going) + 'mm';
+            const pitch = Math.atan(rise / going) * (180 / Math.PI);
+            document.getElementById('stat-pitch').innerText = pitch.toFixed(1) + '°';
+
+            const badge = document.getElementById('compliance-badge');
+            const pitchOk = pitch <= 42;
+            const riseOk = rise >= 150 && rise <= 220;
+            const goingOk = going >= 220 && going <= 300;
+            const trgOk = (2 * rise + going >= 550) && (2 * rise + going <= 700);
+
+            if (pitchOk && riseOk && goingOk && trgOk) {
+                badge.innerText = "Compliant (Part K)";
+                badge.className = "compliance-badge pass";
+            } else {
+                badge.innerText = "Non-Compliant";
+                badge.className = "compliance-badge fail";
+            }
+        }
+
+        // --- Event Listeners ---
+        function syncInputs(id) {
+            const slider = document.getElementById(id + '-slider');
+            const input = document.getElementById(id + '-input');
+
+            slider.addEventListener('input', (e) => {
+                input.value = e.target.value;
+                updateState();
+            });
+            input.addEventListener('change', (e) => {
+                slider.value = e.target.value;
+                updateState();
+            });
+        }
+
+        function updateState() {
+            state.totalRise = parseFloat(document.getElementById('rise-input').value);
+            state.flightWidth = parseFloat(document.getElementById('width-input').value);
+            state.lowerSteps = parseInt(document.getElementById('lower-input').value);
+            state.winderSteps = parseInt(document.getElementById('winder-input').value);
+            state.upperSteps = parseInt(document.getElementById('upper-input').value);
+            state.soffitThickness = parseFloat(document.getElementById('soffit-input').value);
+            state.voidRadius = parseFloat(document.getElementById('void-input').value);
+            state.winderTurnAngle = parseFloat(document.getElementById('turn-input').value) * (Math.PI / 180);
+            rebuildStaircase();
+        }
+
+        ['rise', 'width', 'lower', 'winder', 'upper', 'soffit', 'void', 'turn'].forEach(syncInputs);
+
+        document.getElementById('btn-reset').onclick = () => {
+            controls.reset();
+        };
+
+        const exporter = new GLTFExporter();
+        document.getElementById('btn-export').onclick = () => {
+            exporter.parse(mainStairGroup, (gltf) => {
+                const blob = new Blob([JSON.stringify(gltf)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Custom_Staircase.gltf';
+                a.click();
+
+                // Also save to localStorage for direct import
+                localStorage.setItem('last_exported_stair', JSON.stringify(gltf));
+                alert('Staircase exported! You can now import it in the Bell Chamber app.');
+            }, { binary: false });
+        };
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        document.getElementById('loading').style.display = 'none';
+        rebuildStaircase();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+
+</html>

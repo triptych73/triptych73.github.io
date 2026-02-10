@@ -127,7 +127,8 @@
                 "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
                 "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
                 "three-mesh-bvh": "https://unpkg.com/three-mesh-bvh@0.7.3/build/index.module.js",
-                "three-bvh-csg": "https://unpkg.com/three-bvh-csg@0.0.16/build/index.module.js"
+                "three-bvh-csg": "https://unpkg.com/three-bvh-csg@0.0.16/build/index.module.js",
+                "three/addons/loaders/GLTFLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"
             }
         }
     </script>
@@ -137,6 +138,9 @@
 
     <div id="ui-panel">
         <h2>Bell Chamber Designer <span id="saved-indicator" class="saved-status">Saved ✓</span></h2>
+        <a href="staircase_designer.html" target="_blank"
+            style="color: #0078d4; text-decoration: none; font-size: 0.8em; display: block; margin-top: -10px; margin-bottom: 10px;">🛠
+            Open Staircase Designer</a>
         <div class="instructions">
             Left-Click: Toggle Tile<br>
             Right-Click: Select Start -> End (Rect Fill)
@@ -176,6 +180,21 @@
         <div class="control-group">
             <button id="btn-lock-tiles" style="background: #444; border: 1px solid #666; font-weight: bold;">🔓 Tiles
                 Unlocked</button>
+            <button id="btn-import-stair" class="primary">📥 Import GLB/GLTF</button>
+            <button id="id-load-last" style="background: #2a2e35; color: #daeef5; font-size: 0.8em;">↺ Load last from
+                Designer</button>
+            <input type="file" id="stair-file-input" style="display:none" accept=".gltf,.glb">
+            <div id="stair-controls"
+                style="display:none; margin-top:10px; padding:10px; background:rgba(255,255,255,0.05); border-radius:4px;">
+                <label>Stair Rotation Y: <span id="stair-rot-val">0</span>°</label>
+                <input type="range" id="stair-rot-slider" min="0" max="360" value="0">
+                <label>Stair Pos X: <span id="stair-x-val">0</span>m</label>
+                <input type="range" id="stair-x-slider" min="-5" max="5" step="0.1" value="0">
+                <label>Stair Pos Z: <span id="stair-z-val">0</span>m</label>
+                <input type="range" id="stair-z-slider" min="-5" max="5" step="0.1" value="0">
+                <button id="btn-remove-stair" style="background:#800000; margin-top:10px;">Remove Staircase</button>
+            </div>
+
             <button id="btn-reset" class="primary">Reset to Exposed Brick</button>
             <button id="btn-render-all">Set All to Insulated</button>
             <button id="btn-flush-all">Set All to Flush Render</button>
@@ -210,6 +229,7 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -282,7 +302,8 @@
             windowDepthInset: 0.58, // Default 0.58m
             sizeLocked: true, // Default locked
             archOpacity: 0.4, // Architecture visibility default
-            tilesLocked: false // Default to unlocked
+            tilesLocked: false, // Default to unlocked
+            importedStair: null
         };
 
         // --- Scene Setup ---
@@ -1672,7 +1693,7 @@
             // We need to track them or just find them by userData
             const toRemove = [];
             scene.traverse(obj => {
-                if (obj.userData && obj.userData.isArchitecture) {
+                if (obj.userData && obj.userData.isArchitecture && !obj.userData.isImportedStair) {
                     toRemove.push(obj);
                 }
             });
@@ -1819,6 +1840,94 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        // --- Custom Staircase Import ---
+        const stairLoader = new GLTFLoader();
+        const stairInput = document.getElementById('stair-file-input');
+        const stairControls = document.getElementById('stair-controls');
+
+        document.getElementById('btn-import-stair').onclick = () => stairInput.click();
+
+        stairInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                stairLoader.parse(event.target.result, '', (gltf) => {
+                    if (state.importedStair) scene.remove(state.importedStair);
+
+                    state.importedStair = gltf.scene;
+                    // Initial scaling (mm -> m)
+                    state.importedStair.scale.set(0.001, 0.001, 0.001);
+                    state.importedStair.userData.isArchitecture = true; // Respect opacity slider
+                    state.importedStair.userData.isImportedStair = true; // Avoid removal on rebuild
+
+                    scene.add(state.importedStair);
+                    stairControls.style.display = 'block';
+                    resetStairUI();
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        document.getElementById('id-load-last').onclick = () => {
+            const last = localStorage.getItem('last_exported_stair');
+            if (!last) {
+                alert('No recently exported staircase found in browser storage.');
+                return;
+            }
+            try {
+                const gltfData = JSON.parse(last);
+                stairLoader.parse(JSON.stringify(gltfData), '', (gltf) => {
+                    if (state.importedStair) scene.remove(state.importedStair);
+                    state.importedStair = gltf.scene;
+                    state.importedStair.scale.set(0.001, 0.001, 0.001);
+                    state.importedStair.userData.isArchitecture = true;
+                    state.importedStair.userData.isImportedStair = true;
+                    scene.add(state.importedStair);
+                    stairControls.style.display = 'block';
+                    resetStairUI();
+                });
+            } catch (e) {
+                console.error(e);
+                alert('Error loading from storage.');
+            }
+        };
+
+        function resetStairUI() {
+            document.getElementById('stair-rot-slider').value = 0;
+            document.getElementById('stair-x-slider').value = 0;
+            document.getElementById('stair-z-slider').value = 0;
+            updateStairFromUI();
+        }
+
+        function updateStairFromUI() {
+            if (!state.importedStair) return;
+
+            const rot = document.getElementById('stair-rot-slider').value;
+            const x = document.getElementById('stair-x-slider').value;
+            const z = document.getElementById('stair-z-slider').value;
+
+            document.getElementById('stair-rot-val').innerText = rot;
+            document.getElementById('stair-x-val').innerText = x;
+            document.getElementById('stair-z-val').innerText = z;
+
+            state.importedStair.rotation.y = rot * (Math.PI / 180);
+            state.importedStair.position.set(parseFloat(x), 0, parseFloat(z));
+        }
+
+        ['stair-rot-slider', 'stair-x-slider', 'stair-z-slider'].forEach(id => {
+            document.getElementById(id).oninput = updateStairFromUI;
+        });
+
+        document.getElementById('btn-remove-stair').onclick = () => {
+            if (state.importedStair) {
+                scene.remove(state.importedStair);
+                state.importedStair = null;
+                stairControls.style.display = 'none';
+            }
+        };
 
     </script>
 </body>
