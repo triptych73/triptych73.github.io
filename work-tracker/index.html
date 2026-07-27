@@ -1,0 +1,1860 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tower Programme Work Tracker</title>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f5f2;
+      --surface: #ffffff;
+      --surface-2: #eef1ed;
+      --surface-3: #e5ebe6;
+      --ink: #18201c;
+      --muted: #637069;
+      --line: #d4dcd6;
+      --line-strong: #aebbb3;
+      --primary: #155b48;
+      --primary-soft: #dcebe4;
+      --blue: #2f6b9a;
+      --amber: #a75b14;
+      --red: #9d3438;
+      --red-soft: #f9e4e4;
+      --focus: #1d68a3;
+      --radius: 6px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    button, input, select { font: inherit; letter-spacing: 0; }
+    button, input, select { border-radius: var(--radius); }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 35%, transparent); outline-offset: 2px; }
+    button { min-height: 36px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); padding: 7px 11px; cursor: pointer; }
+    button:hover { background: var(--surface-2); }
+    button.icon { width: 36px; padding: 0; display: inline-grid; place-items: center; }
+    button.primary { background: var(--primary); border-color: var(--primary); color: white; }
+    button.primary:hover { background: #0f4b3a; }
+    button.ghost { border-color: transparent; background: transparent; }
+    button[disabled] { opacity: .5; cursor: default; }
+    input, select { min-height: 36px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); padding: 7px 9px; }
+    a { color: inherit; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 23px; line-height: 1.2; font-weight: 650; letter-spacing: 0; }
+    h2 { font-size: 18px; line-height: 1.25; font-weight: 650; letter-spacing: 0; }
+    h3 { font-size: 14px; line-height: 1.3; font-weight: 650; letter-spacing: 0; }
+    [hidden] { display: none !important; }
+    .muted { color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .num { font-variant-numeric: tabular-nums; }
+    .app-header { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 96%, transparent); border-bottom: 1px solid var(--line); backdrop-filter: blur(10px); }
+    .header-main { max-width: 1680px; margin: 0 auto; padding: 14px 22px 10px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .brand { min-width: 0; display: grid; gap: 4px; }
+    .brand-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 12px; color: var(--muted); font-size: 12px; }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .action-link { min-height: 36px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); text-decoration: none; font-size: 13px; }
+    .action-link:hover { background: var(--surface-2); }
+    .view-tabs { max-width: 1680px; margin: 0 auto; padding: 0 22px; display: flex; gap: 2px; overflow-x: auto; }
+    .view-tab { min-width: max-content; min-height: 40px; border: 0; border-radius: 0; border-bottom: 3px solid transparent; background: transparent; padding: 8px 13px; display: inline-flex; align-items: center; gap: 7px; color: var(--muted); }
+    .view-tab:hover { color: var(--ink); background: var(--surface-2); }
+    .view-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 650; }
+    .page { max-width: 1680px; margin: 0 auto; padding: 18px 22px 32px; }
+    .view { display: grid; gap: 18px; align-content: start; }
+    .section { min-width: 0; background: var(--surface); border: 1px solid var(--line); }
+    .section-header { min-height: 54px; padding: 12px 15px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .section-title { display: grid; gap: 3px; min-width: 0; }
+    .section-title p { color: var(--muted); font-size: 12px; }
+    .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .toolbar select { min-width: 210px; }
+    .metric-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); }
+    .metric { min-width: 0; padding: 15px 17px; border-right: 1px solid var(--line); display: grid; gap: 5px; }
+    .metric:last-child { border-right: 0; }
+    .metric-label { color: var(--muted); font-size: 12px; }
+    .metric-value { font-size: 24px; line-height: 1.1; font-weight: 670; letter-spacing: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .metric-note { color: var(--muted); font-size: 11px; }
+    .overview-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .7fr); gap: 18px; }
+    .table-scroll { overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { position: sticky; top: 0; z-index: 1; padding: 9px 11px; background: var(--surface-2); color: var(--muted); text-align: left; font-size: 11px; font-weight: 650; white-space: nowrap; border-bottom: 1px solid var(--line-strong); }
+    td { padding: 10px 11px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr[data-package-id] { cursor: pointer; }
+    tbody tr[data-package-id]:hover { background: var(--surface-2); }
+    th.right, td.right { text-align: right; }
+    .package-name { display: flex; align-items: flex-start; gap: 9px; min-width: 230px; }
+    .swatch { width: 10px; height: 10px; margin-top: 4px; flex: 0 0 auto; border-radius: 2px; background: var(--primary); }
+    .package-name strong { display: block; line-height: 1.35; }
+    .package-name small { display: block; color: var(--muted); margin-top: 2px; }
+    .package-tree-toggle { width: 26px; min-height: 26px; padding: 0; border: 0; background: transparent; display: inline-grid; place-items: center; flex: 0 0 auto; }
+    .package-tree-toggle:hover { background: var(--surface-2); color: var(--primary); }
+    .package-tree-toggle svg { width: 16px; height: 16px; transition: transform .15s ease; }
+    .package-tree-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+    .overview-subcategory-row { background: color-mix(in srgb, var(--surface-2) 58%, white); cursor: pointer; }
+    .overview-subcategory-row:hover { background: var(--surface-2); }
+    .overview-subcategory-row td:first-child { padding-left: 49px; }
+    .overview-subcategory-row .package-name { min-width: 205px; }
+    .subcategory-stem { width: 9px; height: 2px; margin-top: 8px; flex: 0 0 auto; background: var(--line-strong); }
+    .status-panel { padding: 16px; display: grid; gap: 18px; align-content: start; }
+    .status-bar { height: 18px; display: flex; overflow: hidden; border-radius: 3px; background: var(--surface-2); }
+    .status-segment { min-width: 2px; height: 100%; }
+    .status-list { display: grid; }
+    .status-row { display: grid; grid-template-columns: 12px 1fr auto; gap: 9px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .status-row:last-child { border-bottom: 0; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .status-row span { color: var(--muted); font-size: 12px; }
+    .status-row strong { font-variant-numeric: tabular-nums; }
+    .confidence-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .confidence-cell { padding: 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: grid; gap: 3px; }
+    .confidence-cell span { color: var(--muted); font-size: 11px; }
+    .confidence-cell strong { font-size: 17px; }
+    .legend { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 11px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+    .legend-box { width: 12px; height: 12px; border: 1px solid var(--line-strong); border-radius: 2px; }
+    .heatmap-wrap { padding: 15px; overflow: auto; }
+    .heatmap { min-width: 930px; display: grid; grid-template-columns: 62px repeat(53, 14px); gap: 3px; align-items: center; }
+    .heat-corner, .heat-year { position: sticky; left: 0; z-index: 2; background: var(--surface); font-size: 11px; color: var(--muted); }
+    .heat-year { height: 14px; display: flex; align-items: center; font-weight: 650; color: var(--ink); }
+    .heat-week-label { width: 14px; color: var(--muted); font-size: 8px; text-align: center; }
+    .heat-cell { width: 14px; min-height: 14px; height: 14px; padding: 0; border: 1px solid color-mix(in srgb, var(--line) 75%, transparent); border-radius: 2px; background: var(--surface-2); }
+    .heat-cell:hover { outline: 2px solid var(--ink); outline-offset: 0; position: relative; z-index: 1; }
+    .heat-cell.outside { visibility: hidden; }
+    .heat-cell.exception { box-shadow: inset 0 -2px var(--red); }
+    .timeline-caption { padding: 0 15px 13px; color: var(--muted); font-size: 12px; }
+    .gantt-scroll { overflow: auto; max-height: calc(100vh - 238px); }
+    .gantt-inner { min-width: 1280px; position: relative; }
+    .gantt-header, .gantt-row { display: grid; grid-template-columns: 300px minmax(980px, 1fr); min-height: 44px; align-items: stretch; }
+    .gantt-header { position: sticky; top: 0; z-index: 7; background: var(--surface); border-bottom: 1px solid var(--line-strong); }
+    .gantt-label { position: sticky; left: 0; z-index: 5; min-width: 0; padding: 9px 12px; background: var(--surface); border: 0; border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line); border-radius: 0; display: flex; align-items: center; gap: 9px; }
+    .gantt-label-link { min-width: 0; min-height: 0; padding: 0; border: 0; background: transparent; text-align: left; display: flex; align-items: flex-start; gap: 9px; flex: 1; }
+    .gantt-label-link:hover { background: transparent; color: var(--primary); }
+    .gantt-tree-toggle { width: 25px; min-height: 25px; padding: 0; border: 0; background: transparent; display: inline-grid; place-items: center; flex: 0 0 auto; }
+    .gantt-tree-toggle:hover { background: var(--surface-2); color: var(--primary); }
+    .gantt-tree-toggle svg { width: 15px; height: 15px; transition: transform .15s ease; }
+    .gantt-tree-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+    .gantt-label-text { min-width: 0; flex: 1; }
+    .gantt-label strong { display: block; font-size: 12px; line-height: 1.3; }
+    .gantt-label small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .gantt-axis, .gantt-track { position: relative; min-width: 980px; border-bottom: 1px solid var(--line); background-image: linear-gradient(to right, transparent calc(100% - 1px), var(--line) 0); }
+    .gantt-axis { background: var(--surface-2); }
+    .axis-year { position: absolute; top: 0; bottom: 0; padding: 13px 7px; border-left: 1px solid var(--line-strong); color: var(--muted); font-size: 11px; font-weight: 650; }
+    .year-line { position: absolute; top: 0; bottom: 0; border-left: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent); pointer-events: none; }
+    .gantt-track { min-height: 44px; }
+    .gantt-bar { position: absolute; top: 50%; transform: translateY(-50%); height: 18px; min-height: 18px; padding: 0; border: 0; border-radius: 2px; }
+    .gantt-bar:hover { outline: 2px solid var(--ink); outline-offset: 1px; z-index: 2; filter: saturate(1.2); }
+    .gantt-row:hover .gantt-label { background: var(--surface-2); }
+    .gantt-subcategory-row, .gantt-subcategory-row .gantt-track { min-height: 38px; }
+    .gantt-subcategory-label { padding-left: 46px; background: color-mix(in srgb, var(--surface-2) 58%, white); }
+    .gantt-subcategory-label .gantt-label-link { align-items: center; }
+    .gantt-subcategory-row .gantt-bar { height: 12px; min-height: 12px; }
+    .gantt-subcategory-row .gantt-bar.material-only { height: 8px; min-height: 8px; border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent); background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.65) 0 2px, transparent 2px 4px); }
+    .gantt-now { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--red); pointer-events: none; z-index: 3; }
+    .evidence-review-bar { min-height: 58px; padding: 10px 12px; border: 1px solid var(--line); border-bottom: 0; background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .evidence-review-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 680; }
+    .review-mode-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .review-mode-count { min-width: 22px; padding: 1px 5px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+    .review-mode-button.active .review-mode-count { background: rgba(255, 255, 255, .18); color: white; }
+    .evidence-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: calc(100vh - 234px); background: var(--surface); border: 1px solid var(--line); }
+    .package-rail { min-width: 0; border-right: 1px solid var(--line); background: var(--surface); }
+    .rail-head { position: sticky; top: 111px; z-index: 5; padding: 12px; background: var(--surface); border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+    .rail-head input { width: 100%; }
+    .package-list { display: grid; max-height: calc(100vh - 245px); overflow: auto; }
+    .package-button { min-height: 0; padding: 10px 12px; border: 0; border-radius: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; display: grid; gap: 5px; }
+    .package-button:hover { background: var(--surface-2); }
+    .package-button.active { background: var(--primary-soft); box-shadow: inset 3px 0 var(--primary); }
+    .package-button-top { display: flex; align-items: flex-start; gap: 8px; }
+    .package-button strong { font-size: 12px; line-height: 1.35; }
+    .package-button-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 10px; }
+    .evidence-main { min-width: 0; display: grid; align-content: start; }
+    .package-summary { padding: 15px; border-bottom: 1px solid var(--line); display: grid; gap: 12px; }
+    .package-summary-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+    .package-kpis { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; }
+    .package-kpi { display: grid; gap: 2px; }
+    .package-kpi span { color: var(--muted); font-size: 10px; }
+    .package-kpi strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+    .package-subcategories { min-width: 0; display: grid; gap: 6px; }
+    .package-subcategories-label { color: var(--muted); font-size: 10px; font-weight: 650; }
+    .subcategory-strip { display: flex; gap: 6px; overflow: auto; padding-bottom: 3px; }
+    .subcategory-chip { min-width: 164px; min-height: 48px; padding: 7px 9px; text-align: left; display: grid; gap: 3px; border-color: var(--line); }
+    .subcategory-chip strong { font-size: 11px; line-height: 1.3; }
+    .subcategory-chip small { color: var(--muted); font-size: 9px; }
+    .week-strip { display: flex; gap: 6px; overflow: auto; padding-bottom: 3px; }
+    .week-chip { min-width: 116px; min-height: 55px; padding: 7px 9px; text-align: left; display: grid; gap: 3px; border-color: var(--line); }
+    .week-chip.active { border-color: var(--primary); background: var(--primary-soft); box-shadow: inset 0 -2px var(--primary); }
+    .week-chip-top { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; font-weight: 650; }
+    .week-chip-bottom { color: var(--muted); font-size: 10px; }
+    .week-chip.needs-review { border-top: 3px solid var(--red); }
+    .week-detail { min-width: 0; display: grid; }
+    .detail-header { padding: 14px 15px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+    .detail-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+    .detail-title { display: grid; gap: 3px; }
+    .detail-title p { color: var(--muted); font-size: 12px; }
+    .badges { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .badge { min-height: 23px; display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 8px; background: var(--surface-2); color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .badge.corrected, .badge.confirmed, .badge.continuity { background: var(--primary-soft); color: var(--primary); }
+    .badge.needs-review, .badge.attendance-caveat { background: var(--red-soft); color: var(--red); }
+    .badge.high { background: #e1eee8; color: #155b48; }
+    .badge.medium { background: #f7ecd9; color: #86510d; }
+    .badge.low { background: var(--red-soft); color: var(--red); }
+    .allocation-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .allocation-chip { min-height: 25px; display: inline-flex; align-items: center; gap: 7px; padding: 4px 8px; background: var(--surface-2); border-left: 3px solid var(--primary); font-size: 11px; }
+    .review-note { padding: 9px 11px; border-left: 3px solid var(--amber); background: #fbf2e5; font-size: 12px; line-height: 1.45; }
+    .detail-columns { min-width: 0; display: grid; grid-template-columns: minmax(400px, 1.05fr) minmax(340px, .95fr); }
+    .detail-panel { min-width: 0; border-right: 1px solid var(--line); }
+    .detail-panel:last-child { border-right: 0; }
+    .panel-toolbar { min-height: 51px; padding: 9px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 9px; flex-wrap: wrap; }
+    .panel-toolbar h3 { display: flex; align-items: center; gap: 7px; }
+    .media-tools { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .level-filter, .room-filter { min-height: 32px; padding: 4px 7px; font-size: 11px; }
+    .segmented { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
+    .segmented button { min-height: 30px; border: 0; border-right: 1px solid var(--line-strong); border-radius: 0; padding: 4px 8px; font-size: 11px; }
+    .segmented button:last-child { border-right: 0; }
+    .segmented button.active { background: var(--primary); color: white; }
+    .media-grid { min-width: 0; max-height: calc(100vh - 430px); min-height: 320px; overflow: auto; padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 9px; align-content: start; }
+    .media-card { min-width: 0; border: 1px solid var(--line); background: var(--surface); display: grid; align-content: start; }
+    .media-card.level-labelled { border-color: color-mix(in srgb, var(--primary) 55%, var(--line)); box-shadow: inset 0 -3px var(--primary); }
+    .media-card.level-inferred { border-color: color-mix(in srgb, var(--blue) 45%, var(--line)); box-shadow: inset 0 -3px var(--blue); }
+    .media-card.needs-review { border-color: color-mix(in srgb, var(--red) 65%, var(--line)); box-shadow: inset 0 -3px var(--red); }
+    .media-preview { position: relative; aspect-ratio: 4 / 3; min-height: 150px; overflow: hidden; background: #1b211e; display: grid; place-items: center; }
+    .media-preview img, .media-preview video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .media-preview button.open-media { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; border: 0; background: transparent; border-radius: 0; }
+    .privacy-mask { position: absolute; inset: 0; z-index: 2; padding: 18px; background: #242a27; color: white; display: grid; place-items: center; text-align: center; gap: 9px; }
+    .privacy-mask button { color: var(--ink); }
+    .role-label { position: absolute; left: 6px; top: 6px; z-index: 1; min-height: 22px; padding: 3px 6px; border-radius: 3px; background: rgba(16, 24, 20, .82); color: white; font-size: 10px; }
+    .media-body { padding: 9px; display: grid; gap: 7px; }
+    .media-file { font-size: 11px; font-weight: 650; overflow-wrap: anywhere; }
+    .media-description { font-size: 12px; line-height: 1.4; }
+    .media-context { color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .media-caveat { padding-left: 7px; border-left: 2px solid var(--amber); color: #72470d; font-size: 10px; line-height: 1.4; }
+    .level-control, .room-control { padding-top: 2px; display: grid; gap: 4px; }
+    .level-control label, .room-control label { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 650; }
+    .level-select, .room-select { width: 100%; min-height: 34px; font-size: 12px; font-weight: 650; }
+    .level-select.labelled { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
+    .room-select.assigned { color: #244f70; border-color: var(--blue); background: #edf4fa; }
+    .room-basis { color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .level-guess { color: var(--muted); font-size: 10px; }
+    .inference-note { padding: 6px 7px; border-left: 2px solid var(--blue); background: #e8f0f7; color: #244f70; font-size: 10px; line-height: 1.4; }
+    .chat-audit-note { padding: 6px 7px; border-left: 2px solid var(--primary); background: var(--primary-soft); color: #174f43; font-size: 10px; line-height: 1.4; }
+    .attendance-note { padding: 9px 11px; border-left: 3px solid var(--blue); background: #e8f0f7; font-size: 12px; line-height: 1.45; }
+    .message-list { max-height: calc(100vh - 430px); min-height: 320px; overflow: auto; padding: 10px; display: grid; gap: 7px; align-content: start; }
+    .message { border-left: 3px solid var(--line-strong); background: var(--surface-2); padding: 8px 9px; display: grid; gap: 5px; }
+    .message.arcadie { border-left-color: var(--primary); background: #e7f0eb; }
+    .message.relevant { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 35%, transparent); }
+    .message-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 10px; }
+    .message-head strong { color: var(--ink); }
+    .message-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.45; }
+    .attachment-list { display: flex; gap: 5px; flex-wrap: wrap; }
+    .attachment { min-height: 25px; padding: 3px 6px; font-size: 10px; }
+    .empty { min-height: 180px; display: grid; place-items: center; padding: 25px; color: var(--muted); text-align: center; }
+    .loading { min-height: 260px; display: grid; place-items: center; color: var(--muted); }
+    .spinner { width: 24px; height: 24px; border: 3px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .lightbox { position: fixed; inset: 0; z-index: 50; display: none; grid-template-rows: auto minmax(0, 1fr) auto; background: rgba(12, 16, 14, .96); color: white; }
+    .lightbox.open { display: grid; }
+    .lightbox-head, .lightbox-foot { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .lightbox-head strong { overflow-wrap: anywhere; }
+    .lightbox button { color: white; border-color: #65716a; background: #222a26; }
+    .lightbox-tools { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .lightbox-level { min-width: 160px; background: #222a26; border-color: #65716a; color: white; }
+    .lightbox-stage { min-width: 0; min-height: 0; display: grid; grid-template-columns: 50px minmax(0, 1fr) 50px; align-items: center; gap: 8px; padding: 0 10px; }
+    .lightbox-media { min-width: 0; min-height: 0; height: 100%; display: grid; place-items: center; overflow: hidden; }
+    .lightbox-media img, .lightbox-media video { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .lightbox-foot { align-items: flex-start; color: #d6ddd8; font-size: 12px; line-height: 1.45; }
+    .lightbox-copy { max-width: 1100px; display: grid; gap: 3px; }
+    .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60; max-width: min(560px, calc(100vw - 24px)); padding: 10px 14px; background: var(--ink); color: white; border-radius: var(--radius); opacity: 0; pointer-events: none; transition: opacity .16s ease; }
+    .toast.show { opacity: 1; }
+    .toast.error { background: var(--red); }
+    .cost-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(290px, .55fr); gap: 18px; align-items: start; }
+    .cost-tree-button { width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; display: flex; align-items: flex-start; gap: 8px; text-align: left; font-weight: 650; }
+    .cost-tree-button:hover { background: transparent; color: var(--primary); }
+    .cost-tree-button svg { flex: 0 0 auto; margin-top: 1px; transition: transform .15s ease; }
+    .cost-tree-button[aria-expanded="true"] svg { transform: rotate(90deg); }
+    .subcategory-row { background: color-mix(in srgb, var(--surface-2) 58%, white); }
+    .subcategory-row td:first-child { padding-left: 39px; }
+    .subcategory-name { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 240px; }
+    .subcategory-name button { flex: 0 0 auto; }
+    .cost-source-panel { padding: 15px; display: grid; gap: 15px; }
+    .source-status { padding: 10px 11px; border-left: 3px solid var(--amber); background: #fbf2e5; font-size: 12px; line-height: 1.45; }
+    .source-status.ready { border-left-color: var(--primary); background: var(--primary-soft); }
+    .source-list { display: grid; }
+    .source-row { padding: 9px 0; border-bottom: 1px solid var(--line); display: grid; gap: 3px; }
+    .source-row:last-child { border-bottom: 0; }
+    .source-row strong { font-size: 12px; }
+    .source-row span { color: var(--muted); font-size: 11px; }
+    .cost-editor { border: 1px solid var(--line); background: var(--surface); }
+    .cost-editor-form { padding: 14px 15px; display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.4fr) minmax(140px, .7fr) minmax(200px, 1.5fr) auto; gap: 9px; align-items: end; }
+    .field { min-width: 0; display: grid; gap: 5px; }
+    .field label { color: var(--muted); font-size: 11px; font-weight: 650; }
+    .field input, .field select { width: 100%; }
+    .form-actions { display: flex; gap: 7px; }
+    .accounting-note { padding: 9px 11px; border-left: 3px solid var(--primary); background: var(--primary-soft); font-size: 12px; line-height: 1.45; }
+    .transaction-allocation { color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .review-row { background: #fff9ef; }
+    .link-button { min-height: 0; padding: 0; border: 0; background: transparent; color: var(--primary); text-align: left; }
+    .link-button:hover { background: transparent; text-decoration: underline; }
+
+    @media (max-width: 1080px) {
+      .metric-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .metric:nth-child(3) { border-right: 0; }
+      .metric:nth-child(-n+3) { border-bottom: 1px solid var(--line); }
+      .overview-grid { grid-template-columns: 1fr; }
+      .cost-grid { grid-template-columns: 1fr; }
+      .cost-editor-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .evidence-layout { grid-template-columns: 250px minmax(0, 1fr); }
+      .detail-columns { grid-template-columns: 1fr; }
+      .detail-panel { border-right: 0; border-bottom: 1px solid var(--line); }
+      .media-grid, .message-list { max-height: 620px; }
+    }
+
+    @media (max-width: 760px) {
+      .header-main, .view-tabs, .page { padding-left: 12px; padding-right: 12px; }
+      .header-main { align-items: flex-start; }
+      .brand-meta span:nth-child(n+3) { display: none; }
+      .action-link span { display: none; }
+      .metric-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric { border-bottom: 1px solid var(--line); }
+      .metric:nth-child(odd) { border-right: 1px solid var(--line); }
+      .metric:nth-child(even) { border-right: 0; }
+      .metric:nth-last-child(-n+2) { border-bottom: 0; }
+      .evidence-layout { grid-template-columns: 1fr; }
+      .package-rail { border-right: 0; border-bottom: 1px solid var(--line); }
+      .rail-head { position: static; }
+      .package-list { max-height: 210px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .package-button { border-right: 1px solid var(--line); }
+      .media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; }
+      .message-list { max-height: 600px; }
+      .gantt-header, .gantt-row { grid-template-columns: 220px minmax(980px, 1fr); }
+      .lightbox-stage { grid-template-columns: 40px minmax(0, 1fr) 40px; padding: 0 5px; }
+      .cost-editor-form { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 500px) {
+      h1 { font-size: 19px; }
+      .view-tab { padding-left: 9px; padding-right: 9px; }
+      .view-tab span { font-size: 11px; }
+      .metric-value { font-size: 20px; }
+      .toolbar { align-items: stretch; }
+      .toolbar select { width: 100%; min-width: 0; }
+      .evidence-review-bar { align-items: stretch; }
+      .evidence-review-bar .segmented { width: 100%; }
+      .evidence-review-bar .segmented button { min-width: 0; flex: 1; padding-left: 5px; padding-right: 5px; }
+      .review-mode-button svg { display: none; }
+      .package-list { grid-template-columns: 1fr; }
+      .media-grid { grid-template-columns: 1fr; }
+      .package-summary-head { display: grid; }
+      .week-chip { min-width: 106px; }
+      .panel-toolbar, .media-tools { align-items: stretch; }
+      .level-filter, .room-filter { width: 100%; }
+      .lightbox-head { align-items: flex-start; }
+      .lightbox-tools { min-width: 142px; }
+      .lightbox-level { min-width: 0; width: 100%; }
+      .subcategory-name { min-width: 190px; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app-loader.js"></script>
+  <style>
+    .hosted-loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #f3f5f2;
+      color: #18201c;
+      font: 600 14px/1.5 Inter, ui-sans-serif, system-ui, sans-serif;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="hostedLoadingOverlay" class="hosted-loading-overlay" role="status" aria-live="polite">
+    <span id="hostedLoadingStatus">Checking STMS access...</span>
+  </div>
+  <header class="app-header">
+    <div class="header-main">
+      <div class="brand">
+        <h1>Tower Programme Work Tracker</h1>
+        <div class="brand-meta">
+          <span id="archiveRange">Loading archive</span>
+          <span id="workerMeta">Arcadie, multi-tradesman</span>
+          <span id="updatedMeta"></span>
+        </div>
+      </div>
+      <div class="header-actions" data-live-only>
+        <a class="action-link" href="/arcadie-evidence-review.html" title="Edit weekly reviews"><i data-lucide="square-pen" aria-hidden="true"></i><span>Edit reviews</span></a>
+        <a class="action-link" href="/arcadie-downloads/Arcadie%20Visual%20Audit%20Allocation.xlsx" title="Download Excel workbook"><i data-lucide="file-spreadsheet" aria-hidden="true"></i><span>Excel</span></a>
+      </div>
+      <div class="header-actions" data-static-only hidden>
+        <a class="action-link" href="https://stmsltd.uk/projectexecutive.html" title="Return to STMS portal"><i data-lucide="arrow-left" aria-hidden="true"></i><span>Portal</span></a>
+      </div>
+    </div>
+    <nav class="view-tabs" aria-label="Programme views">
+      <button class="view-tab active" type="button" data-view="overview"><i data-lucide="layout-dashboard" aria-hidden="true"></i><span>Overview</span></button>
+      <button class="view-tab" type="button" data-view="temporal"><i data-lucide="calendar-range" aria-hidden="true"></i><span>Temporal map</span></button>
+      <button class="view-tab" type="button" data-view="gantt"><i data-lucide="gantt-chart" aria-hidden="true"></i><span>Gantt</span></button>
+      <button class="view-tab" type="button" data-view="costs"><i data-lucide="circle-pound-sterling" aria-hidden="true"></i><span>Costs</span></button>
+      <button class="view-tab" type="button" data-view="evidence" data-live-only><i data-lucide="images" aria-hidden="true"></i><span>Evidence</span></button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section id="overviewView" class="view" data-view-panel="overview">
+      <div id="metricStrip" class="metric-strip" aria-label="Programme totals"></div>
+      <div class="overview-grid">
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">
+              <h2>Work packages</h2>
+              <p>Reviewed full-time labour allocation with counted materials and direct purchases</p>
+            </div>
+            <div class="toolbar">
+              <select id="packageSort" aria-label="Sort work packages">
+                <option value="cost">Combined cost</option>
+                <option value="first">First activity</option>
+                <option value="name">Package name</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Package</th><th class="right">FTE weeks</th><th>Activity span</th><th class="right">Labour</th><th class="right">Materials</th><th class="right">Total</th><th class="right">Share</th></tr></thead>
+              <tbody id="packageTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title"><h2>Review position</h2><p>Evidence-based adjudication of all charged weeks</p></div>
+          </div>
+          <div id="statusPanel" class="status-panel"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="temporalView" class="view" data-view-panel="temporal" hidden>
+      <section class="section">
+        <div class="section-header">
+          <div class="section-title"><h2>Weekly temporal map</h2><p id="temporalSubtitle">Evidence activity across the archive</p></div>
+          <div class="toolbar">
+            <select id="temporalPackage" aria-label="Filter temporal map by package"></select>
+            <select id="temporalMeasure" aria-label="Temporal map measure">
+              <option value="activity">Evidence activity</option>
+              <option value="allocation">Allocated share</option>
+              <option value="attendance">Attendance and payment evidence</option>
+              <option value="payments">Arcadie payment weeks (Xero)</option>
+              <option value="running">Additional project costs (journal)</option>
+            </select>
+          </div>
+        </div>
+        <div id="temporalLegend" class="section-header legend"></div>
+        <div class="heatmap-wrap"><div id="heatmap" class="heatmap"></div></div>
+        <div id="timelineCaption" class="timeline-caption"></div>
+      </section>
+    </section>
+
+    <section id="ganttView" class="view" data-view-panel="gantt" hidden>
+      <section class="section">
+        <div class="section-header">
+          <div class="section-title"><h2>Work package Gantt</h2><p>Expand a package to inspect its weekly subcategory allocations</p></div>
+          <div class="legend"><span class="legend-item"><span class="legend-box" style="background:#155b48"></span>Higher weekly share</span><span class="legend-item"><span class="legend-box" style="background:repeating-linear-gradient(135deg,#7ba496 0 2px,#dcebe4 2px 4px)"></span>Purchase-only week</span><span class="legend-item"><span class="legend-box" style="background:#d4dcd6"></span>Gap in allocation</span></div>
+        </div>
+        <div id="ganttScroll" class="gantt-scroll"><div id="ganttInner" class="gantt-inner"></div></div>
+      </section>
+    </section>
+
+    <section id="costsView" class="view" data-view-panel="costs" hidden>
+      <div id="costMetricStrip" class="metric-strip" aria-label="Cost accounting totals"></div>
+      <section id="costEditor" class="cost-editor" data-live-only hidden>
+        <div class="section-header"><div class="section-title"><h2 id="costEditorTitle">Add subcategory</h2><p>Stored centrally and available on every device using this app</p></div></div>
+        <form id="costEditorForm" class="cost-editor-form">
+          <div class="field"><label for="subcategoryPackage">Main package</label><select id="subcategoryPackage" required></select></div>
+          <div class="field"><label for="subcategoryName">Subcategory</label><input id="subcategoryName" maxlength="180" required></div>
+          <div class="field"><label for="subcategoryLevel">Level</label><select id="subcategoryLevel"></select></div>
+          <div class="field"><label for="subcategoryKeywords">Matching words</label><input id="subcategoryKeywords" placeholder="window, board, pipe"></div>
+          <div class="form-actions"><button class="primary" type="submit"><i data-lucide="save" aria-hidden="true"></i><span>Save</span></button><button id="cancelCostEditor" class="icon" type="button" title="Cancel"><i data-lucide="x" aria-hidden="true"></i></button></div>
+        </form>
+      </section>
+      <div class="cost-grid">
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title"><h2>Package cost hierarchy</h2><p>Arcadie labour and materials allocated to packages; project running costs are shown separately</p></div>
+            <div class="toolbar"><input id="costSearch" type="search" placeholder="Search costs" aria-label="Search package costs"><select id="costSubcategoryFilter" aria-label="Filter subcategories"><option value="active">With allocated cost</option><option value="all">All configured</option></select><button id="addSubcategory" type="button" data-live-only><i data-lucide="plus" aria-hidden="true"></i><span>Add subcategory</span></button></div>
+          </div>
+          <div class="table-scroll"><table><thead><tr><th>Package / subcategory</th><th>Level</th><th class="right">FTE weeks</th><th class="right">Labour</th><th class="right">Materials</th><th class="right">Total</th></tr></thead><tbody id="costHierarchyBody"></tbody></table></div>
+        </section>
+        <section class="section">
+          <div class="section-header"><div class="section-title"><h2>Accounting coverage</h2><p>Sources, limits and payment reconciliation</p></div></div>
+          <div id="costSourcePanel" class="cost-source-panel"></div>
+        </section>
+      </div>
+      <section class="section">
+        <div class="section-header"><div class="section-title"><h2>Journal project costs</h2><p>Additional site labour, running costs and professional fees outside the Arcadie package allocation</p></div></div>
+        <div class="table-scroll"><table><thead><tr><th>Category</th><th>Scope</th><th>Journal accounts</th><th class="right">Entries</th><th class="right">Debits</th><th class="right">Credits</th><th class="right">Net</th></tr></thead><tbody id="runningCostBody"></tbody></table></div>
+        <div id="runningCostCaption" class="timeline-caption"></div>
+      </section>
+      <section class="section" data-live-only>
+        <div class="section-header"><div class="section-title"><h2>Purchase ledger</h2><p>Counted items and uncoded online purchases held for review</p></div><div class="toolbar"><input id="transactionSearch" type="search" placeholder="Search purchases" aria-label="Search purchase ledger"><select id="transactionStatus" aria-label="Filter purchase status"><option value="included">Counted costs</option><option value="review">Needs coding</option><option value="all">All retained</option></select></div></div>
+        <div class="table-scroll"><table><thead><tr><th>Date</th><th>Transaction</th><th>Account / source</th><th>Allocation</th><th class="right">Amount</th></tr></thead><tbody id="costTransactionBody"></tbody></table></div>
+        <div id="costTransactionCaption" class="timeline-caption"></div>
+      </section>
+    </section>
+
+    <section id="evidenceView" class="view" data-view-panel="evidence" data-live-only hidden>
+      <div class="evidence-review-bar">
+        <div class="evidence-review-title"><i data-lucide="list-checks" aria-hidden="true"></i>Media review</div>
+        <div id="evidenceReviewModes" class="segmented" role="group" aria-label="Evidence review mode"></div>
+      </div>
+      <div class="evidence-layout">
+        <aside class="package-rail">
+          <div class="rail-head">
+            <h2>Packages</h2>
+            <input id="packageSearch" type="search" placeholder="Search packages" aria-label="Search work packages">
+          </div>
+          <div id="packageList" class="package-list"></div>
+        </aside>
+        <div class="evidence-main">
+          <section id="packageSummary" class="package-summary"></section>
+          <section id="weekDetail" class="week-detail"><div class="loading"><div class="spinner" aria-label="Loading"></div></div></section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Evidence image viewer">
+    <div class="lightbox-head"><strong id="lightboxTitle"></strong><div class="lightbox-tools"><select id="lightboxLevel" class="lightbox-level" aria-label="Set image level"></select><button id="closeLightbox" class="icon" type="button" title="Close image"><i data-lucide="x" aria-hidden="true"></i></button></div></div>
+    <div class="lightbox-stage">
+      <button id="previousMedia" class="icon" type="button" title="Previous image"><i data-lucide="chevron-left" aria-hidden="true"></i></button>
+      <div id="lightboxMedia" class="lightbox-media"></div>
+      <button id="nextMedia" class="icon" type="button" title="Next image"><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+    </div>
+    <div class="lightbox-foot"><div id="lightboxCopy" class="lightbox-copy"></div></div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const palette = ["#176b5b", "#2f6b9a", "#b05d2f", "#6f5c91", "#a33b4d", "#8a7a32", "#3b7c87", "#7e5a3b", "#4e6b3a", "#985f8a", "#536a88", "#c27a29", "#4f8072", "#7a4c59", "#5c6670"];
+    const statusColours = { confirmed: "#176b5b", corrected: "#2f6b9a", continuity: "#8a7a32", "needs-review": "#9d3438", "attendance-caveat": "#b05d2f", reviewed: "#176b5b", unreviewed: "#aebbb3" };
+    const levelOptions = [
+      ["", "Select level"],
+      ...Array.from({ length: 11 }, (_, index) => [`L${index + 1}`, `Level ${index + 1}`]),
+      ["WHOLE_BUILDING", "Whole building"],
+      ["EXTERNAL_ROOF", "External / roof"],
+      ["SPIRAL_STAIRS", "Spiral Stairs"],
+      ["OFF_SITE", "Off site"],
+      ["NOT_PROJECT", "Not project"],
+      ["UNCLEAR", "Unclear"]
+    ];
+    const reviewFilters = new Set(["all", "needs", "chat", "inferred", "unlabelled", "labelled"]);
+    const hostedDataPromise = window.WORK_TRACKER_DATA_PROMISE || (window.WORK_TRACKER_DATA ? Promise.resolve(window.WORK_TRACKER_DATA) : null);
+    const hostedMode = Boolean(hostedDataPromise);
+    const state = {
+      index: null,
+      accounting: null,
+      packageStats: [],
+      packageById: new Map(),
+      subcategoryById: new Map(),
+      detailCache: new Map(),
+      selectedPackageId: "",
+      selectedWeekKey: "",
+      activeView: "overview",
+      mediaMode: "all",
+      levelFilter: "all",
+      roomFilter: "all",
+      activeMedia: [],
+      lightboxIndex: 0,
+      revealedPrivate: new Set(),
+      savingLevels: new Set(),
+      savingRooms: new Set(),
+      weekStripScrollByPackage: new Map(),
+      expandedCostPackages: new Set(),
+      expandedOverviewPackages: new Set(),
+      expandedGanttPackages: new Set(),
+      editingSubcategoryId: ""
+    };
+
+    const els = Object.fromEntries(Array.from(document.querySelectorAll("[id]")).map((el) => [el.id, el]));
+
+    document.querySelectorAll(".view-tab").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
+    els.packageSort.addEventListener("change", renderPackageTable);
+    els.temporalPackage.addEventListener("change", renderTemporalMap);
+    els.temporalMeasure.addEventListener("change", renderTemporalMap);
+    els.packageSearch.addEventListener("input", renderPackageList);
+    els.costSearch.addEventListener("input", renderCostHierarchy);
+    els.costSubcategoryFilter.addEventListener("change", renderCostHierarchy);
+    els.transactionSearch.addEventListener("input", renderCostTransactions);
+    els.transactionStatus.addEventListener("change", renderCostTransactions);
+    els.addSubcategory.addEventListener("click", () => openCostEditor());
+    els.cancelCostEditor.addEventListener("click", closeCostEditor);
+    els.costEditorForm.addEventListener("submit", saveSubcategory);
+    els.evidenceReviewModes.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-review-filter]");
+      if (button) await setLevelFilter(button.dataset.reviewFilter, true);
+    });
+    els.closeLightbox.addEventListener("click", closeLightbox);
+    els.previousMedia.addEventListener("click", () => moveLightbox(-1));
+    els.nextMedia.addEventListener("click", () => moveLightbox(1));
+    els.lightboxLevel.addEventListener("change", () => {
+      const item = state.activeMedia[state.lightboxIndex];
+      if (item) saveImageLevel(item, els.lightboxLevel.value, els.lightboxLevel);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (!els.lightbox.classList.contains("open")) return;
+      if (event.target instanceof HTMLSelectElement) return;
+      if (event.key === "Escape") closeLightbox();
+      if (event.key === "ArrowLeft") moveLightbox(-1);
+      if (event.key === "ArrowRight") moveLightbox(1);
+    });
+    window.addEventListener("hashchange", () => {
+      if (state.index) hydrateRoute();
+    });
+
+    initialise();
+
+    async function initialise() {
+      try {
+        const requestedRoute = location.hash;
+        [state.index, state.accounting] = hostedMode
+          ? await hostedDataPromise.then((data) => [data.index, data.accounting])
+          : await Promise.all([
+              fetchJson("/api/arcadie-review-index"),
+              fetchJson("/api/arcadie-accounting")
+            ]);
+        if (hostedMode) {
+          document.querySelectorAll("[data-live-only]").forEach((element) => { element.hidden = true; });
+          document.querySelectorAll("[data-static-only]").forEach((element) => { element.hidden = false; });
+        }
+        state.packageById = new Map(state.index.packages.map((pkg, index) => [pkg.package_id, { ...pkg, colour: palette[index % palette.length] }]));
+        state.packageStats = buildPackageStats();
+        state.accounting.packages.slice(0, 3).forEach((pkg) => {
+          state.expandedCostPackages.add(pkg.package_id);
+          state.expandedOverviewPackages.add(pkg.package_id);
+          state.expandedGanttPackages.add(pkg.package_id);
+        });
+        state.selectedPackageId = state.packageStats[0]?.package_id || "";
+        renderHeader();
+        renderMetrics();
+        renderPackageTable();
+        renderStatusPanel();
+        populateTemporalPackages();
+        renderTemporalMap();
+        renderGantt();
+        populateCostEditor();
+        renderCosts();
+        if (!hostedMode) {
+          renderPackageList();
+          renderEvidenceReviewBar();
+          if (state.selectedPackageId) await selectPackage(state.selectedPackageId, false);
+        }
+        await hydrateRoute(requestedRoute);
+        refreshIcons();
+      } catch (error) {
+        document.querySelector(".page").innerHTML = `<div class="section empty">${esc(error.message || "Unable to load programme data")}</div>`;
+        toast(error.message || "Unable to load programme data", true);
+      }
+    }
+
+    function renderHeader() {
+      const weeks = state.index.weeks;
+      els.archiveRange.textContent = `${formatDate(weeks[0]?.week_start)} to ${formatDate(weeks.at(-1)?.week_end)}`;
+      els.workerMeta.textContent = `${state.index.worker || "Arcadie"}, ${state.index.worker_role || "multi-tradesman"}`;
+      els.updatedMeta.textContent = state.index.updated_at ? `Reviewed ${formatDateTime(state.index.updated_at)}` : "";
+    }
+
+    function buildPackageStats() {
+      const accountingPackages = new Map((state.accounting?.packages || []).map((row) => [row.package_id, row]));
+      const weekByKey = new Map((state.index?.weeks || []).map((week) => [week.week_key, week]));
+      const activityBySubcategory = new Map();
+      const activityFor = (subcategoryId, weekKey) => {
+        if (!activityBySubcategory.has(subcategoryId)) activityBySubcategory.set(subcategoryId, new Map());
+        const byWeek = activityBySubcategory.get(subcategoryId);
+        if (!byWeek.has(weekKey)) byWeek.set(weekKey, { week_key: weekKey, fraction: 0, labour: 0, materials: 0, labourCostSource: "", confidence: "" });
+        return byWeek.get(weekKey);
+      };
+      for (const allocation of state.accounting?.labour_allocations || []) {
+        if (!allocation.subcategory_id || !weekByKey.has(allocation.week_key)) continue;
+        const activity = activityFor(allocation.subcategory_id, allocation.week_key);
+        activity.fraction += Number(allocation.week_fraction || 0);
+        activity.labour += Number(allocation.labour_gbp || 0);
+        activity.labourCostSource ||= allocation.labour_cost_source || "";
+        activity.confidence ||= allocation.classification_confidence || "";
+      }
+      for (const transaction of state.accounting?.transactions || []) {
+        if (transaction.status !== "included" || !weekByKey.has(transaction.week_key)) continue;
+        for (const allocation of transaction.allocations || []) {
+          if (!allocation.subcategory_id) continue;
+          activityFor(allocation.subcategory_id, transaction.week_key).materials += Number(allocation.amount_gbp || 0);
+        }
+      }
+      const stats = new Map(state.index.packages.map((pkg, index) => [pkg.package_id, {
+        ...pkg,
+        colour: palette[index % palette.length],
+        fteWeeks: 0,
+        cost: 0,
+        activeWeeks: [],
+        evidenceWeeks: [],
+        first: "",
+        last: "",
+        materialsCost: Number(accountingPackages.get(pkg.package_id)?.materials_gbp || 0),
+        totalCost: Number(accountingPackages.get(pkg.package_id)?.total_gbp || 0)
+      }]));
+      for (const week of state.index.weeks) {
+        for (const allocation of week.allocations || []) {
+          const item = stats.get(allocation.package_id);
+          if (!item) continue;
+          const fraction = Number(allocation.week_fraction || 0);
+          item.fteWeeks += fraction;
+          item.cost += Number(allocation.allocated_cost_gbp || fraction * state.index.weekly_rate_gbp);
+          item.activeWeeks.push({ week, fraction });
+          if (!item.first || week.week_start < item.first) item.first = week.week_start;
+          if (!item.last || week.week_end > item.last) item.last = week.week_end;
+        }
+      }
+      for (const week of state.index.weeks) {
+        const packageIds = new Set([...(week.allocations || []).map((row) => row.package_id), ...(week.calibrated_package_ids || [])]);
+        for (const packageId of packageIds) {
+          const item = stats.get(packageId);
+          if (!item) continue;
+          const allocation = (week.allocations || []).find((row) => row.package_id === packageId);
+          item.evidenceWeeks.push({ week, fraction: Number(allocation?.week_fraction || 0), evidenceOnly: !allocation });
+        }
+      }
+      for (const item of stats.values()) {
+        const accounting = accountingPackages.get(item.package_id);
+        if (accounting) {
+          item.cost = Number(accounting.labour_gbp || item.cost);
+          item.materialsCost = Number(accounting.materials_gbp || 0);
+          item.totalCost = Number(accounting.total_gbp || item.cost + item.materialsCost);
+        } else item.totalCost = item.cost + item.materialsCost;
+        item.subcategories = (accounting?.subcategories || []).map((subcategory) => {
+          const activeWeeks = [...(activityBySubcategory.get(subcategory.subcategory_id)?.values() || [])]
+            .sort((a, b) => a.week_key.localeCompare(b.week_key))
+            .map((activity) => ({ ...activity, week: weekByKey.get(activity.week_key), materialOnly: !activity.fraction && Boolean(activity.materials) }));
+          const child = {
+            packageId: item.package_id,
+            package: item.package,
+            colour: item.colour,
+            subcategoryId: subcategory.subcategory_id,
+            subcategory: subcategory.subcategory,
+            level: subcategory.level || "UNCLEAR",
+            source: subcategory.source || "",
+            fteWeeks: Number(subcategory.fte_weeks || 0),
+            cost: Number(subcategory.labour_gbp || 0),
+            materialsCost: Number(subcategory.materials_gbp || 0),
+            totalCost: Number(subcategory.total_gbp || 0),
+            activeWeeks,
+            first: activeWeeks[0]?.week?.week_start || "",
+            last: activeWeeks.at(-1)?.week?.week_end || ""
+          };
+          return child;
+        });
+      }
+      const rows = [...stats.values()].sort((a, b) => b.totalCost - a.totalCost || a.package.localeCompare(b.package));
+      state.subcategoryById = new Map(rows.flatMap((item) => (item.subcategories || []).map((subcategory) => [subcategory.subcategoryId, subcategory])));
+      return rows;
+    }
+
+    function renderMetrics() {
+      const weeks = state.index.weeks;
+      const labourCost = Number(state.accounting?.summary?.labour_gbp || weeks.flatMap((week) => week.allocations || []).reduce((sum, row) => sum + Number(row.allocated_cost_gbp || 0), 0));
+      const materialsCost = Number(state.accounting?.summary?.materials_and_direct_gbp || 0);
+      const otherLabour = Number(state.accounting?.summary?.other_site_labour_gbp || 0);
+      const runningCost = Number(state.accounting?.summary?.project_running_costs_gbp || 0);
+      const totalCost = Number(state.accounting?.summary?.tracked_project_cost_gbp || state.accounting?.summary?.combined_cost_gbp || labourCost + materialsCost + otherLabour + runningCost);
+      const journalLabour = Number(state.accounting?.summary?.journal_labour_gbp || 0);
+      const estimatedLabour = Number(state.accounting?.summary?.estimated_labour_gbp || 0);
+      const reviewedImages = weeks.reduce((sum, week) => sum + Number(week.reviewed_images || 0), 0);
+      const messages = weeks.reduce((sum, week) => sum + Number(week.messages || 0), 0);
+      const exceptions = weeks.filter((week) => ["needs-review", "attendance-caveat"].includes(week.adjudication_status)).length;
+      const labelledImages = Number(state.index.level_labelled_images || 0);
+      const physicalImages = Number(state.index.physical_images || 0);
+      const labelPercent = physicalImages ? Math.round(labelledImages / physicalImages * 100) : 0;
+      const metrics = [
+        [weeks.length.toLocaleString(), "Charged weeks", `${formatDate(weeks[0]?.week_start)} to ${formatDate(weeks.at(-1)?.week_end)}`],
+        [formatCurrency(totalCost), "Tracked project cost", `${formatCurrency(labourCost)} Arcadie + ${formatCurrency(otherLabour)} other labour + ${formatCurrency(materialsCost)} purchases + ${formatCurrency(runningCost)} running/professional`],
+        [reviewedImages.toLocaleString(), "Reviewed images", `${Number(state.index.physical_images || 0).toLocaleString()} physical archive images`],
+        [messages.toLocaleString(), "Text messages", "WhatsApp context retained"],
+        [exceptions.toLocaleString(), "Flagged weeks", "Needs review or attendance caveat"],
+        [`${labelledImages.toLocaleString()} / ${physicalImages.toLocaleString()}`, "Confirmed levels", `${labelPercent}% manual | ${Number(state.index.room_assigned_images || 0).toLocaleString()} rooms assigned | ${Number(state.index.room_unresolved_images || 0).toLocaleString()} unresolved`]
+      ];
+      els.metricStrip.innerHTML = metrics.map(([value, label, note]) => `<div class="metric"><span class="metric-label">${esc(label)}</span><strong class="metric-value">${esc(value)}</strong><span class="metric-note">${esc(note)}</span></div>`).join("");
+    }
+
+    function renderPackageTable() {
+      const mode = els.packageSort.value;
+      const rows = [...state.packageStats].sort((a, b) => {
+        if (mode === "name") return a.package.localeCompare(b.package);
+        if (mode === "first") return a.first.localeCompare(b.first);
+        return b.totalCost - a.totalCost;
+      });
+      const total = rows.reduce((sum, row) => sum + row.totalCost, 0);
+      const tableRows = [];
+      for (const pkg of rows) {
+        const children = pkg.subcategories || [];
+        const expanded = state.expandedOverviewPackages.has(pkg.package_id);
+        tableRows.push(`
+          <tr data-package-id="${attr(pkg.package_id)}" tabindex="0" aria-label="Open ${attr(pkg.package)} evidence">
+            <td><div class="package-name">${children.length ? `<button class="package-tree-toggle" type="button" data-overview-toggle="${attr(pkg.package_id)}" aria-expanded="${expanded}" title="${expanded ? "Hide" : "Show"} subcategories"><i data-lucide="chevron-right" aria-hidden="true"></i></button>` : ""}<span class="swatch" style="background:${pkg.colour}"></span><div><strong>${esc(pkg.package)}</strong><small>${esc(pkg.family || "")}${children.length ? ` | ${children.length} subcategories` : ""}</small></div></div></td>
+            <td class="right num">${pkg.fteWeeks.toFixed(2)}</td>
+            <td class="num">${pkg.first ? `${esc(shortDate(pkg.first))} to ${esc(shortDate(pkg.last))}` : "No timed activity"}</td>
+            <td class="right num">${formatCurrency(pkg.cost)}</td>
+            <td class="right num">${formatCurrency(pkg.materialsCost)}</td>
+            <td class="right num"><strong>${formatCurrency(pkg.totalCost)}</strong></td>
+            <td class="right num">${total ? (pkg.totalCost / total * 100).toFixed(1) : "0.0"}%</td>
+          </tr>`);
+        for (const subcategory of children) {
+          tableRows.push(`
+            <tr class="overview-subcategory-row" data-parent-package="${attr(pkg.package_id)}" data-subcategory-id="${attr(subcategory.subcategoryId)}"${expanded ? "" : " hidden"} tabindex="0" aria-label="Open ${attr(subcategory.subcategory)} evidence weeks">
+              <td><div class="package-name"><span class="subcategory-stem"></span><div><strong>${esc(subcategory.subcategory)}</strong><small>${esc(labelLevel(subcategory.level))}${subcategory.source ? ` | ${esc(subcategory.source)}` : ""}</small></div></div></td>
+              <td class="right num">${subcategory.fteWeeks.toFixed(2)}</td>
+              <td class="num">${subcategory.first ? `${esc(shortDate(subcategory.first))} to ${esc(shortDate(subcategory.last))}` : "No timed activity"}</td>
+              <td class="right num">${formatCurrency(subcategory.cost)}</td>
+              <td class="right num">${formatCurrency(subcategory.materialsCost)}</td>
+              <td class="right num"><strong>${formatCurrency(subcategory.totalCost)}</strong></td>
+              <td class="right num">${total ? (subcategory.totalCost / total * 100).toFixed(1) : "0.0"}%</td>
+            </tr>`);
+        }
+      }
+      els.packageTableBody.innerHTML = tableRows.join("");
+      els.packageTableBody.querySelectorAll("[data-overview-toggle]").forEach((button) => button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const packageId = button.dataset.overviewToggle;
+        if (state.expandedOverviewPackages.has(packageId)) state.expandedOverviewPackages.delete(packageId);
+        else state.expandedOverviewPackages.add(packageId);
+        renderPackageTable();
+      }));
+      els.packageTableBody.querySelectorAll("tr[data-package-id]").forEach((row) => {
+        const open = () => { switchView("evidence"); selectPackage(row.dataset.packageId); };
+        row.addEventListener("click", open);
+        row.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } });
+      });
+      els.packageTableBody.querySelectorAll("tr[data-parent-package]").forEach((row) => {
+        const open = () => openSubcategoryEvidence(row.dataset.subcategoryId);
+        row.addEventListener("click", open);
+        row.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } });
+      });
+      refreshIcons();
+    }
+
+    function renderStatusPanel() {
+      const statuses = ["confirmed", "corrected", "continuity", "needs-review", "attendance-caveat"];
+      const counts = Object.fromEntries(statuses.map((status) => [status, 0]));
+      const confidence = { High: 0, Medium: 0, Low: 0 };
+      for (const week of state.index.weeks) {
+        const status = week.adjudication_status || week.status || "unreviewed";
+        counts[status] = (counts[status] || 0) + 1;
+        confidence[week.confidence] = (confidence[week.confidence] || 0) + 1;
+      }
+      const total = state.index.weeks.length;
+      const labels = { confirmed: "Confirmed", corrected: "Corrected", continuity: "Continuity", "needs-review": "Needs review", "attendance-caveat": "Attendance caveat" };
+      els.statusPanel.innerHTML = `
+        <div class="status-bar">${statuses.map((status) => `<span class="status-segment" style="width:${counts[status] / total * 100}%;background:${statusColours[status]}" title="${labels[status]}: ${counts[status]}"></span>`).join("")}</div>
+        <div class="status-list">${statuses.map((status) => `<div class="status-row"><span class="status-dot" style="background:${statusColours[status]}"></span><span>${labels[status]}</span><strong>${counts[status]}</strong></div>`).join("")}</div>
+        <h3>Confidence</h3>
+        <div class="confidence-grid">${["High", "Medium", "Low"].map((level) => `<div class="confidence-cell"><span>${level}</span><strong>${confidence[level]}</strong></div>`).join("")}</div>`;
+    }
+
+    function renderCosts() {
+      if (!state.accounting) return;
+      renderCostMetrics();
+      renderCostHierarchy();
+      renderRunningCosts();
+      renderCostSources();
+      if (!hostedMode) renderCostTransactions();
+    }
+
+    function renderCostMetrics() {
+      const summary = state.accounting.summary || {};
+      const metrics = [
+        [formatCurrency(summary.labour_gbp), "Arcadie labour", "Journal-backed cost plus uncovered estimate"],
+        [formatCurrency(summary.other_site_labour_gbp), "Other site labour", "Other CIS and contractor journal entries"],
+        [formatCurrency(summary.materials_and_direct_gbp), "Materials & direct", `${Number(summary.counted_transactions || 0).toLocaleString("en-GB")} net-cost transactions`],
+        [formatCurrency(summary.site_running_cost_gbp), "Site running costs", "Utilities, insurance and site operations"],
+        [formatCurrency(summary.professional_fees_gbp), "Professional fees", "Project consulting, architect and BIM entries"],
+        [formatCurrency(summary.tracked_project_cost_gbp || summary.combined_cost_gbp), "Tracked project cost", `All included project costs${summary.cost_basis ? ` | ${summary.cost_basis}` : ""}`]
+      ];
+      els.costMetricStrip.innerHTML = metrics.map(([value, label, note]) => `<div class="metric"><span class="metric-label">${esc(label)}</span><strong class="metric-value">${esc(value)}</strong><span class="metric-note">${esc(note)}</span></div>`).join("");
+    }
+
+    function renderRunningCosts() {
+      const running = state.accounting.running_costs || {};
+      const scopeLabels = { other_labour: "Other site labour", running: "Running cost", professional: "Professional fee" };
+      const rows = running.categories || [];
+      els.runningCostBody.innerHTML = rows.map((row) => `<tr><td><strong>${esc(row.category)}</strong><div class="transaction-allocation">${esc(row.basis || "")}</div></td><td>${esc(scopeLabels[row.scope] || row.scope || "")}</td><td>${esc((row.account_names || []).join(", "))}</td><td class="right num">${Number(row.transaction_count || 0).toLocaleString("en-GB")}</td><td class="right num">${formatCurrency(row.debits_gbp)}</td><td class="right num">${formatCurrency(row.credits_gbp)}</td><td class="right num"><strong>${formatCurrency(row.net_gbp)}</strong></td></tr>`).join("") || `<tr><td colspan="7"><div class="empty">No additional journal costs are available.</div></td></tr>`;
+      const excluded = running.excluded_categories || [];
+      const excludedTotal = Number(state.accounting.summary?.excluded_corporate_overhead_gbp || 0);
+      els.runningCostCaption.textContent = `${Number(running.transactions?.length || state.accounting.summary?.project_cost_journal_rows || 0).toLocaleString("en-GB")} journal rows are included at net cost. Credits reduce each tally. ${formatCurrency(excludedTotal)} across ${excluded.length.toLocaleString("en-GB")} unallocated payroll/corporate overhead groups remains visible for audit but is excluded from the project total.`;
+    }
+
+    function renderCostHierarchy() {
+      const query = els.costSearch.value.trim().toLowerCase();
+      const showAll = els.costSubcategoryFilter.value === "all";
+      const rows = [];
+      for (const pkg of state.accounting.packages || []) {
+        const packageMatch = `${pkg.package} ${pkg.family} ${pkg.package_id}`.toLowerCase().includes(query);
+        const children = (pkg.subcategories || []).filter((sub) => {
+          if (!showAll && !Number(sub.total_gbp)) return false;
+          return !query || packageMatch || `${sub.subcategory} ${sub.level} ${sub.subcategory_id}`.toLowerCase().includes(query);
+        });
+        if (query && !packageMatch && !children.length) continue;
+        const expanded = Boolean(query) || state.expandedCostPackages.has(pkg.package_id);
+        rows.push(`<tr class="package-cost-row"><td><button class="cost-tree-button" type="button" data-cost-toggle="${attr(pkg.package_id)}" aria-expanded="${expanded}"><i data-lucide="chevron-right" aria-hidden="true"></i><span>${esc(pkg.package)}</span></button></td><td>${esc(pkg.family || "")}</td><td class="right num">${Number(pkg.fte_weeks || 0).toFixed(2)}</td><td class="right num">${formatCurrency(pkg.labour_gbp)}</td><td class="right num">${formatCurrency(pkg.materials_gbp)}</td><td class="right num"><strong>${formatCurrency(pkg.total_gbp)}</strong></td></tr>`);
+        for (const sub of children) rows.push(`<tr class="subcategory-row" data-cost-child="${attr(pkg.package_id)}"${expanded ? "" : " hidden"}><td><div class="subcategory-name"><span>${esc(sub.subcategory)}</span><button class="icon ghost" type="button" data-edit-subcategory="${attr(sub.subcategory_id)}" title="Edit subcategory"><i data-lucide="pencil" aria-hidden="true"></i></button></div></td><td>${esc(labelLevel(sub.level))}</td><td class="right num">${Number(sub.fte_weeks || 0).toFixed(2)}</td><td class="right num">${formatCurrency(sub.labour_gbp)}</td><td class="right num">${formatCurrency(sub.materials_gbp)}</td><td class="right num">${formatCurrency(sub.total_gbp)}</td></tr>`);
+      }
+      els.costHierarchyBody.innerHTML = rows.join("") || `<tr><td colspan="6"><div class="empty">No cost categories match this filter.</div></td></tr>`;
+      els.costHierarchyBody.querySelectorAll("[data-cost-toggle]").forEach((button) => button.addEventListener("click", () => {
+        const packageId = button.dataset.costToggle;
+        if (state.expandedCostPackages.has(packageId)) state.expandedCostPackages.delete(packageId);
+        else state.expandedCostPackages.add(packageId);
+        renderCostHierarchy();
+      }));
+      els.costHierarchyBody.querySelectorAll("[data-edit-subcategory]").forEach((button) => button.addEventListener("click", () => openCostEditor(button.dataset.editSubcategory)));
+      refreshIcons();
+    }
+
+    function renderCostSources() {
+      const summary = state.accounting.summary || {};
+      const liveReady = summary.live_journal_status === "available";
+      const directAccounts = (state.accounting.chart_accounts || []).filter((row) => /material|contractor|direct wage|cis labour|direct expense/i.test(`${row.name} ${row.description}`)).slice(0, 10);
+      els.costSourcePanel.innerHTML = `
+        <div class="source-status${liveReady ? " ready" : ""}"><strong>${liveReady ? "STMS Xero journal imported" : "Live Xero journal needs STMS sign-in"}</strong><br>${liveReady ? `${Number(summary.live_journal_rows || 0).toLocaleString("en-GB")} coded entries are available through ${esc(formatDate(summary.accounting_date_through))}. Cost totals use the Arcadie programme period and net values.` : "This app is using the local classified workbook and later bank history. The protected Firestore journal cannot be refreshed until an authenticated STMS session is available."}</div>
+        <div class="source-list">${(state.accounting.source_files || []).map((source) => `<div class="source-row"><strong>${esc(source.name)}</strong><span>${esc(source.role)}${source.data_through ? ` | through ${esc(formatDate(source.data_through))}` : ""}</span></div>`).join("")}</div>
+        <div class="source-row"><strong>${formatCurrency(summary.journal_labour_gbp)} journal-backed Arcadie labour</strong><span>${Number(summary.recorded_arcadie_payment_rows || 0).toLocaleString("en-GB")} Xero rows set the covered-period cost base. Annual apportionment prevents delayed or combined posting weeks from distorting individual work packages.</span></div>
+        <div class="source-row"><strong>${formatCurrency(summary.estimated_labour_gbp)} estimated Arcadie labour</strong><span>${Number(summary.estimated_labour_weeks || 0).toLocaleString("en-GB")} programme weeks beyond ${formatDate(summary.journal_labour_coverage_through)} use the ${formatCurrency(summary.weekly_rate_gbp)} fallback rate.</span></div>
+        <div class="source-row"><strong>${formatCurrency(summary.additional_project_costs_gbp)} additional journal project costs</strong><span>Other site labour, contractors, utilities, insurance, site operations and professional fees are tallied separately from Arcadie package costs.</span></div>
+        <div class="source-row"><strong>${formatCurrency(summary.excluded_corporate_overhead_gbp)} excluded overhead</strong><span>Unallocated payroll, director and corporate administration costs remain auditable but are not charged to this project without a defensible allocation basis.</span></div>
+        <div class="source-row"><strong>Accounting period</strong><span>${formatDate(summary.accounting_date_from)} to ${formatDate(summary.accounting_date_through)}</span></div>
+        ${summary.cost_date_from ? `<div class="source-row"><strong>Cost window</strong><span>${formatDate(summary.cost_date_from)} to ${formatDate(summary.cost_date_through)} | ${esc(summary.cost_basis || "")}</span></div>` : ""}
+        ${directAccounts.length ? `<div class="source-row"><strong>Relevant journal accounts found</strong><span>${directAccounts.map((row) => `${esc(row.code)} ${esc(row.name)}`).join("; ")}</span></div>` : ""}
+        <div class="source-row"><strong>Allocation safeguard</strong><span>Accounting evidence can corroborate timing and package choice; it does not overwrite a manually reviewed image or work allocation.</span></div>`;
+    }
+
+    function renderCostTransactions() {
+      const status = els.transactionStatus.value;
+      const query = els.transactionSearch.value.trim().toLowerCase();
+      const allRows = (state.accounting.transactions || []).filter((row) => (status === "all" || row.status === status) && (!query || `${row.date} ${row.description} ${row.detail} ${row.account_category} ${row.source} ${(row.allocations || []).map((item) => `${item.package} ${item.subcategory}`).join(" ")}`.toLowerCase().includes(query))).sort((a, b) => b.date.localeCompare(a.date));
+      const rows = allRows.slice(0, 200);
+      const validWeeks = new Set(state.index.weeks.map((week) => week.week_key));
+      els.costTransactionBody.innerHTML = rows.map((row) => {
+        const allocations = (row.allocations || []).map((allocation) => validWeeks.has(row.week_key) ? `<button class="link-button" type="button" data-cost-week="${attr(row.week_key)}" data-cost-package="${attr(allocation.package_id)}">${esc(allocation.subcategory || allocation.package)} (${Math.round(Number(allocation.fraction || 0) * 100)}%)</button>` : `<span>${esc(allocation.subcategory || allocation.package)}</span>`).join("<br>");
+        return `<tr class="${row.status === "review" ? "review-row" : ""}"><td class="num">${esc(formatDate(row.date))}</td><td><strong>${esc(row.detail || row.description)}</strong>${row.detail ? `<div class="transaction-allocation">${esc(row.description)}</div>` : ""}</td><td><span>${esc(row.account_category || "Uncoded")}</span><div class="transaction-allocation">${esc(row.source)} | ${esc(row.accounting_confidence || "")}</div></td><td><div class="transaction-allocation">${allocations || (row.status === "review" ? "Needs coding" : "Counted, not yet allocated")}</div></td><td class="right num"><strong>${formatCurrency(row.amount_gbp)}</strong></td></tr>`;
+      }).join("") || `<tr><td colspan="5"><div class="empty">No purchase records match this filter.</div></td></tr>`;
+      els.costTransactionBody.querySelectorAll("[data-cost-week]").forEach((button) => button.addEventListener("click", () => openWeek(button.dataset.costWeek, button.dataset.costPackage)));
+      els.costTransactionCaption.textContent = `${rows.length.toLocaleString("en-GB")} of ${allRows.length.toLocaleString("en-GB")} matching retained transactions shown. ${status === "review" ? "Review items are excluded from cost totals until coded." : "Negative rows are credits and reduce the counted total."}`;
+    }
+
+    function populateCostEditor() {
+      els.subcategoryPackage.innerHTML = state.index.packages.map((pkg) => `<option value="${attr(pkg.package_id)}">${esc(pkg.package)}</option>`).join("");
+      els.subcategoryLevel.innerHTML = levelOptions.filter(([value]) => value).map(([value, label]) => `<option value="${attr(value)}">${esc(label)}</option>`).join("");
+    }
+
+    function openCostEditor(subcategoryId = "") {
+      const subcategory = (state.accounting.hierarchy?.subcategories || []).find((row) => row.subcategory_id === subcategoryId);
+      state.editingSubcategoryId = subcategory?.subcategory_id || "";
+      els.costEditorTitle.textContent = subcategory ? "Edit subcategory" : "Add subcategory";
+      els.subcategoryPackage.value = subcategory?.package_id || state.accounting.packages[0]?.package_id || "";
+      els.subcategoryPackage.disabled = Boolean(subcategory);
+      els.subcategoryName.value = subcategory?.name || "";
+      els.subcategoryLevel.value = subcategory?.level || "UNCLEAR";
+      els.subcategoryKeywords.value = (subcategory?.keywords || []).join(", ");
+      els.costEditor.hidden = false;
+      els.subcategoryName.focus();
+      els.costEditor.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      refreshIcons();
+    }
+
+    function closeCostEditor() {
+      state.editingSubcategoryId = "";
+      els.costEditor.hidden = true;
+      els.costEditorForm.reset();
+      els.subcategoryPackage.disabled = false;
+    }
+
+    async function saveSubcategory(event) {
+      event.preventDefault();
+      const submit = els.costEditorForm.querySelector('[type="submit"]');
+      submit.disabled = true;
+      try {
+        const response = await postJson("/api/arcadie-subcategory", {
+          subcategory_id: state.editingSubcategoryId,
+          package_id: els.subcategoryPackage.value,
+          name: els.subcategoryName.value,
+          level: els.subcategoryLevel.value,
+          keywords: els.subcategoryKeywords.value
+        });
+        state.accounting = response.accounting;
+        state.packageStats = buildPackageStats();
+        state.expandedCostPackages.add(response.subcategory.package_id);
+        state.expandedOverviewPackages.add(response.subcategory.package_id);
+        state.expandedGanttPackages.add(response.subcategory.package_id);
+        closeCostEditor();
+        renderCosts();
+        renderMetrics();
+        renderPackageTable();
+        populateTemporalPackages();
+        renderTemporalMap();
+        renderGantt();
+        renderPackageList();
+        if (state.selectedPackageId) await selectPackage(state.selectedPackageId, false);
+        toast("Subcategory saved");
+      } catch (error) {
+        toast(error.message || "Unable to save subcategory", true);
+      } finally {
+        submit.disabled = false;
+      }
+    }
+
+    function populateTemporalPackages() {
+      const selected = els.temporalPackage.value;
+      const options = [`<option value="">All packages and subcategories</option>`];
+      for (const pkg of state.packageStats) {
+        options.push(`<option value="${attr(pkg.package_id)}">${esc(pkg.package)}</option>`);
+        if (pkg.subcategories?.length) {
+          options.push(`<optgroup label="${attr(pkg.package)}">${pkg.subcategories.map((subcategory) => `<option value="subcategory:${attr(subcategory.subcategoryId)}">${esc(subcategory.subcategory)}${subcategory.level ? ` | ${esc(labelLevel(subcategory.level))}` : ""}</option>`).join("")}</optgroup>`);
+        }
+      }
+      els.temporalPackage.innerHTML = options.join("");
+      if ([...els.temporalPackage.options].some((option) => option.value === selected)) els.temporalPackage.value = selected;
+    }
+
+    function renderTemporalMap() {
+      if (!state.index) return;
+      const measure = els.temporalMeasure.value;
+      const attendanceMode = measure === "attendance";
+      const paymentMode = measure === "payments";
+      const runningMode = measure === "running";
+      const selectedValue = attendanceMode || paymentMode || runningMode ? "" : els.temporalPackage.value;
+      const selectedSubcategory = selectedValue.startsWith("subcategory:") ? state.subcategoryById.get(selectedValue.slice("subcategory:".length)) : null;
+      const selectedId = selectedSubcategory?.packageId || selectedValue;
+      const selectedPkg = state.packageById.get(selectedId);
+      const selectedSubcategoryWeeks = new Map((selectedSubcategory?.activeWeeks || []).map((activity) => [activity.week_key, activity]));
+      els.temporalPackage.disabled = attendanceMode || paymentMode || runningMode;
+      const byWeek = new Map(state.index.weeks.map((week) => [week.week_key, week]));
+      const years = [...new Set(state.index.weeks.map((week) => Number(week.week_key.slice(0, 4))))];
+      const activityScores = state.index.weeks.map((week) => Number(week.images || 0) + Number(week.messages || 0) * .15);
+      const maxActivity = Math.max(...activityScores, 1);
+      const maxPayment = Math.max(...state.index.weeks.map((week) => Number(week.net_paid_on_dates_this_week_gbp || 0)), 1);
+      const additionalProjectCost = (week) => Number(week.other_site_labour_gbp || 0) + Number(week.site_running_cost_gbp || 0) + Number(week.professional_fees_gbp || 0);
+      const maxRunningCost = Math.max(...state.index.weeks.map((week) => Math.max(0, additionalProjectCost(week))), 1);
+      const attendanceColours = { confirmed_on_site: "#176b5b", partial_or_interrupted_week: "#b05d2f", work_supported_by_text: "#2f6b9a", likely_not_on_site: "#9d3438", unresolved_continuity: "#aebbb3" };
+      let html = `<div class="heat-corner"></div>${Array.from({ length: 53 }, (_, i) => `<div class="heat-week-label">${(i + 1) % 4 === 1 ? i + 1 : ""}</div>`).join("")}`;
+      for (const year of years) {
+        html += `<div class="heat-year">${year}</div>`;
+        for (let weekNo = 1; weekNo <= 53; weekNo += 1) {
+          const key = `${year}-W${String(weekNo).padStart(2, "0")}`;
+          const week = byWeek.get(key);
+          if (!week) { html += `<button class="heat-cell outside" type="button" disabled></button>`; continue; }
+          const allocation = selectedId ? (week.allocations || []).find((row) => row.package_id === selectedId) : null;
+          const subcategoryActivity = selectedSubcategoryWeeks.get(key);
+          const selectedFraction = selectedSubcategory ? Number(subcategoryActivity?.fraction || 0) : Number(allocation?.week_fraction || 0);
+          let value = 0;
+          if (measure === "allocation") value = selectedValue ? selectedFraction : Math.max(...(week.allocations || []).map((row) => Number(row.week_fraction || 0)), 0);
+          else if (measure === "activity") {
+            const evidenceWeight = Math.min(1, (Number(week.images || 0) + Number(week.messages || 0) * .15) / Math.max(maxActivity * .35, 1));
+            value = selectedSubcategory
+              ? Math.max(selectedFraction, subcategoryActivity?.materials ? .16 : 0) * evidenceWeight
+              : selectedId ? (allocation || (week.calibrated_package_ids || []).includes(selectedId) ? Number(allocation?.week_fraction || 1) : 0) * evidenceWeight
+              : Math.sqrt((Number(week.images || 0) + Number(week.messages || 0) * .15) / maxActivity);
+          }
+          else if (paymentMode) value = Math.max(0, Number(week.net_paid_on_dates_this_week_gbp || 0)) / maxPayment;
+          else if (runningMode) value = Math.max(0, additionalProjectCost(week)) / maxRunningCost;
+          const colour = attendanceMode ? attendanceColours[week.attendance_status] || "#aebbb3" : selectedPkg?.colour || "#176b5b";
+          const paymentCovered = week.payment_coverage !== "outside_live_xero_journal_coverage";
+          const background = paymentMode
+            ? !paymentCovered ? "#cdd3ce" : value > 0 ? mixWithWhite("#176b5b", .28 + Math.sqrt(value) * .72) : "#eef1ed"
+            : runningMode
+            ? !paymentCovered ? "#cdd3ce" : value > 0 ? mixWithWhite("#b05d2f", .28 + Math.sqrt(value) * .72) : "#eef1ed"
+            : attendanceMode ? colour : value > 0 ? mixWithWhite(colour, .16 + value * .84) : "#eef1ed";
+          const dominant = dominantAllocation(week);
+          const exception = ["needs-review", "attendance-caveat"].includes(week.adjudication_status);
+          const title = paymentMode
+            ? `${key} | ${formatDate(week.week_start)} to ${formatDate(week.week_end)} | ${paymentCovered ? `${formatCurrency(week.net_paid_on_dates_this_week_gbp)} net posted in ${Number(week.journal_payment_row_count || 0)} Xero row(s)${(week.payment_dates || []).length ? ` on ${week.payment_dates.map(formatDate).join(", ")}` : ""}` : "outside current Xero journal coverage"} | posting date is not automatic proof of the work week`
+            : runningMode
+            ? `${key} | ${paymentCovered ? `${formatCurrency(additionalProjectCost(week))} additional project cost: ${formatCurrency(week.other_site_labour_gbp)} other labour, ${formatCurrency(week.site_running_cost_gbp)} running, ${formatCurrency(week.professional_fees_gbp)} professional` : "outside current Xero journal coverage"} | posting date is not automatic proof of the work week`
+            : attendanceMode
+            ? `${key} | ${labelStatus(week.attendance_status)} (${week.attendance_confidence || "unrated"}) | ${week.attendance_basis || "No attendance basis"} | payments dated this week: ${formatCurrency(week.net_paid_on_dates_this_week_gbp)}; payment date may differ from work week`
+            : selectedSubcategory
+            ? `${key} | ${selectedSubcategory.subcategory} | ${(selectedFraction * 100).toFixed(0)}% labour allocation | ${formatCurrency(subcategoryActivity?.labour || 0)} labour | ${formatCurrency(subcategoryActivity?.materials || 0)} purchases | ${week.images} images | ${week.messages} messages`
+            : `${key} | ${formatDate(week.week_start)} | ${dominant?.package || "No allocation"} | ${week.images} images | ${week.messages} messages | ${week.adjudication_status || week.status}`;
+          html += `<button class="heat-cell${!attendanceMode && !paymentMode && !runningMode && exception ? " exception" : ""}" data-week="${key}" data-package="${attr(selectedId || dominant?.package_id || "")}" type="button" style="background:${background}" title="${attr(title)}" aria-label="Open ${key}"></button>`;
+        }
+      }
+      els.heatmap.innerHTML = html;
+      els.heatmap.querySelectorAll("[data-week]").forEach((cell) => cell.addEventListener("click", () => openWeek(cell.dataset.week, cell.dataset.package)));
+      const context = selectedSubcategory?.subcategory || selectedPkg?.package || "all reviewed work";
+      els.temporalSubtitle.textContent = paymentMode ? "Arcadie CIS entries by Xero posting week" : runningMode ? "Additional project costs by Xero posting week" : attendanceMode ? "Weekly site-presence assessment, with payment dates retained separately" : measure === "allocation" ? `Weekly allocation share for ${context}` : `Evidence activity for ${context}`;
+      els.temporalLegend.innerHTML = paymentMode
+        ? `<span>No payment posted</span>${[.28, .48, .7, 1].map((value) => `<span class="legend-box" style="background:${mixWithWhite("#176b5b", value)}"></span>`).join("")}<span>Higher net payment</span><span class="legend-item"><span class="legend-box" style="background:#cdd3ce"></span>Beyond journal coverage</span>`
+        : runningMode
+        ? `<span>No additional cost posted</span>${[.28, .48, .7, 1].map((value) => `<span class="legend-box" style="background:${mixWithWhite("#b05d2f", value)}"></span>`).join("")}<span>Higher weekly net cost</span><span class="legend-item"><span class="legend-box" style="background:#cdd3ce"></span>Beyond journal coverage</span>`
+        : attendanceMode
+        ? [["#176b5b", "Confirmed on site"], ["#b05d2f", "Partial / interrupted"], ["#2f6b9a", "Work supported by text"], ["#9d3438", "Likely not on site"], ["#aebbb3", "Unresolved continuity"]].map(([colour, label]) => `<span class="legend-item"><span class="legend-box" style="background:${colour}"></span>${label}</span>`).join("")
+        : `<span>Lower activity</span>${[.18, .38, .62, .86, 1].map((value) => `<span class="legend-box" style="background:${mixWithWhite(selectedPkg?.colour || "#176b5b", value)}"></span>`).join("")}<span>Higher activity</span><span class="legend-item"><span class="legend-box" style="box-shadow:inset 0 -2px ${statusColours["needs-review"]}"></span>Flagged week</span>`;
+      const paymentSummary = state.index.payment_summary || {};
+      els.timelineCaption.textContent = paymentMode
+        ? `${Number(paymentSummary.payment_weeks_in_programme || 0).toLocaleString("en-GB")} programme weeks contain positive Arcadie journal entries totalling ${formatCurrency(paymentSummary.programme_net_paid_gbp)}. ${Number(paymentSummary.checked_no_payment_weeks_in_programme || 0).toLocaleString("en-GB")} checked weeks contain no payment; ${Number(paymentSummary.weeks_outside_journal_coverage || 0).toLocaleString("en-GB")} later weeks fall beyond the ${formatDate(paymentSummary.journal_coverage_through)} journal cutoff. Payment posting weeks are not automatic work-week assignments.`
+        : runningMode
+        ? `${formatCurrency(state.accounting?.summary?.additional_project_costs_gbp)} of additional project costs are shown by journal posting week. This includes other site labour as well as running and professional costs; posting timing is not assumed to be the work or consumption date.`
+        : attendanceMode ? `${state.index.weeks.length} calendar weeks assessed. Payments are shown by transfer date and are not automatically treated as the week worked.` : `${state.index.weeks.length} reviewed weeks. Empty cells fall outside the reviewed programme period.`;
+    }
+
+    function renderGantt() {
+      const weeks = state.index.weeks;
+      const start = parseDate(weeks[0].week_start);
+      const end = parseDate(weeks.at(-1).week_end);
+      const totalDays = Math.max(1, daysBetween(start, end) + 1);
+      const timelineWidth = Math.max(1100, Math.round(totalDays * .56));
+      const yearStarts = [];
+      for (let year = start.getUTCFullYear(); year <= end.getUTCFullYear(); year += 1) {
+        const date = new Date(Date.UTC(year, 0, 1));
+        const offset = Math.max(0, daysBetween(start, date));
+        if (offset <= totalDays) yearStarts.push({ year, left: offset / totalDays * timelineWidth });
+      }
+      const axis = yearStarts.map((item) => `<span class="axis-year" style="left:${item.left}px">${item.year}</span>`).join("");
+      const lines = yearStarts.map((item) => `<span class="year-line" style="left:${item.left}px"></span>`).join("");
+      let html = `<div class="gantt-header"><div class="gantt-label"><strong>Work package</strong></div><div class="gantt-axis" style="width:${timelineWidth}px">${axis}</div></div>`;
+      for (const pkg of state.packageStats) {
+        const children = pkg.subcategories || [];
+        const expanded = state.expandedGanttPackages.has(pkg.package_id);
+        const bars = pkg.activeWeeks.map(({ week, fraction }) => {
+          const left = daysBetween(start, parseDate(week.week_start)) / totalDays * timelineWidth;
+          const width = Math.max(3, 7 / totalDays * timelineWidth);
+          const title = `${week.week_key}: ${(fraction * 100).toFixed(0)}%, ${formatCurrency(fraction * Number(week.labour_gbp || state.index.weekly_rate_gbp))} | ${week.labour_cost_source === "xero_journal_reconciled" ? "journal-reconciled" : "estimated"} | ${week.adjudication_status || week.status}`;
+          return `<button class="gantt-bar" type="button" data-week="${week.week_key}" data-package="${attr(pkg.package_id)}" style="left:${left}px;width:${width}px;background:${pkg.colour};opacity:${(.3 + fraction * .7).toFixed(2)}" title="${attr(title)}" aria-label="Open ${week.week_key} ${attr(pkg.package)}"></button>`;
+        }).join("");
+        html += `<div class="gantt-row"><div class="gantt-label">${children.length ? `<button class="gantt-tree-toggle" type="button" data-gantt-toggle="${attr(pkg.package_id)}" aria-expanded="${expanded}" title="${expanded ? "Hide" : "Show"} subcategories"><i data-lucide="chevron-right" aria-hidden="true"></i></button>` : ""}<button class="gantt-label-link" type="button" data-package="${attr(pkg.package_id)}"><span class="swatch" style="background:${pkg.colour}"></span><span class="gantt-label-text"><strong>${esc(pkg.package)}</strong><small>${pkg.fteWeeks.toFixed(2)} weeks, ${formatCurrency(pkg.cost)}${children.length ? ` | ${children.length} subcategories` : ""}</small></span></button></div><div class="gantt-track" style="width:${timelineWidth}px">${lines}${bars}</div></div>`;
+        for (const subcategory of children) {
+          const childBars = subcategory.activeWeeks.map((activity) => {
+            const left = daysBetween(start, parseDate(activity.week.week_start)) / totalDays * timelineWidth;
+            const width = Math.max(activity.materialOnly ? 5 : 3, 7 / totalDays * timelineWidth);
+            const title = `${activity.week_key}: ${subcategory.subcategory} | ${(Number(activity.fraction || 0) * 100).toFixed(0)}% labour allocation | ${formatCurrency(activity.labour)} labour | ${formatCurrency(activity.materials)} purchases | ${activity.labourCostSource === "xero_journal_reconciled" ? "journal-reconciled" : activity.labourCostSource || "purchase timing"}`;
+            return `<button class="gantt-bar${activity.materialOnly ? " material-only" : ""}" type="button" data-week="${activity.week_key}" data-package="${attr(pkg.package_id)}" data-subcategory="${attr(subcategory.subcategoryId)}" style="left:${left}px;width:${width}px;background-color:${pkg.colour};opacity:${activity.materialOnly ? ".78" : (.28 + Math.min(1, Number(activity.fraction || 0)) * .72).toFixed(2)}" title="${attr(title)}" aria-label="Open ${activity.week_key} ${attr(subcategory.subcategory)}"></button>`;
+          }).join("");
+          html += `<div class="gantt-row gantt-subcategory-row" data-gantt-child="${attr(pkg.package_id)}"${expanded ? "" : " hidden"}><div class="gantt-label gantt-subcategory-label"><button class="gantt-label-link" type="button" data-subcategory="${attr(subcategory.subcategoryId)}"><span class="subcategory-stem"></span><span class="gantt-label-text"><strong>${esc(subcategory.subcategory)}</strong><small>${esc(labelLevel(subcategory.level))} | ${subcategory.fteWeeks.toFixed(2)} weeks, ${formatCurrency(subcategory.totalCost)}</small></span></button></div><div class="gantt-track" style="width:${timelineWidth}px">${lines}${childBars}</div></div>`;
+        }
+      }
+      els.ganttInner.innerHTML = html;
+      els.ganttInner.style.width = `${300 + timelineWidth}px`;
+      els.ganttInner.querySelectorAll(".gantt-bar").forEach((bar) => bar.addEventListener("click", () => openWeek(bar.dataset.week, bar.dataset.package)));
+      els.ganttInner.querySelectorAll(".gantt-label-link[data-package]").forEach((button) => button.addEventListener("click", () => { switchView("evidence"); selectPackage(button.dataset.package); }));
+      els.ganttInner.querySelectorAll(".gantt-label-link[data-subcategory]").forEach((button) => button.addEventListener("click", () => openSubcategoryEvidence(button.dataset.subcategory)));
+      els.ganttInner.querySelectorAll("[data-gantt-toggle]").forEach((button) => button.addEventListener("click", () => {
+        const packageId = button.dataset.ganttToggle;
+        if (state.expandedGanttPackages.has(packageId)) state.expandedGanttPackages.delete(packageId);
+        else state.expandedGanttPackages.add(packageId);
+        renderGantt();
+      }));
+      refreshIcons();
+    }
+
+    function reviewCountForWeek(week, filter) {
+      if (!week) return 0;
+      if (filter === "needs") return Number(week.needs_review_images || 0);
+      if (filter === "chat") return Number(week.chat_audited_images || 0);
+      return Number(week.images || 0);
+    }
+
+    function renderEvidenceReviewBar() {
+      if (!state.index) return;
+      const modes = [
+        ["all", "images", "All media", Number(state.index.physical_images || 0)],
+        ["needs", "circle-alert", "Needs review", Number(state.index.manual_review_required_images || 0)],
+        ["chat", "messages-square", "Chat audit", Number(state.index.chat_audited_unconfirmed_images || 0)]
+      ];
+      els.evidenceReviewModes.innerHTML = modes.map(([filter, icon, label, count]) => `<button type="button" class="review-mode-button${state.levelFilter === filter ? " active" : ""}" data-review-filter="${filter}"><i data-lucide="${icon}" aria-hidden="true"></i><span>${esc(label)}</span><span class="review-mode-count">${count.toLocaleString("en-GB")}</span></button>`).join("");
+      refreshIcons();
+    }
+
+    async function setLevelFilter(filter, jumpToQueue = false) {
+      if (!reviewFilters.has(filter)) return;
+      state.levelFilter = filter;
+      if (["needs", "chat"].includes(filter)) state.mediaMode = "all";
+      renderEvidenceReviewBar();
+      if (state.selectedPackageId) await selectPackage(state.selectedPackageId, false);
+      const currentWeek = state.index?.weeks.find((week) => week.week_key === state.selectedWeekKey);
+      if (jumpToQueue && ["needs", "chat"].includes(filter) && !reviewCountForWeek(currentWeek, filter)) {
+        if (await openNextReviewWeek(filter, false)) return;
+      }
+      const detail = state.detailCache.get(state.selectedWeekKey);
+      if (detail) renderWeekDetail(detail);
+      syncHash();
+    }
+
+    async function openNextReviewWeek(filter, afterCurrent = true) {
+      if (!["needs", "chat"].includes(filter) || !state.index?.weeks?.length) return false;
+      const weeks = state.index.weeks;
+      const currentIndex = weeks.findIndex((week) => week.week_key === state.selectedWeekKey);
+      const start = currentIndex < 0 ? 0 : currentIndex + (afterCurrent ? 1 : 0);
+      const ordered = [...weeks.slice(start), ...weeks.slice(0, start)];
+      for (const week of ordered) {
+        if (!reviewCountForWeek(week, filter)) continue;
+        const packageId = (week.calibrated_package_ids || []).find((id) => state.packageById.has(id)) || dominantAllocation(week)?.package_id || state.selectedPackageId;
+        if (packageId && packageId !== state.selectedPackageId) await selectPackage(packageId, false);
+        await selectWeek(week.week_key);
+        if (state.activeMedia.length) return true;
+        if (filter === "needs") week.needs_review_images = 0;
+        if (filter === "chat") week.chat_audited_images = 0;
+      }
+      renderEvidenceReviewBar();
+      return false;
+    }
+
+    function adjustReviewQueueCounts(item, change) {
+      if (!change) return;
+      const week = state.index.weeks.find((row) => row.week_key === state.selectedWeekKey);
+      if (item.inference_requires_manual_review) {
+        state.index.manual_review_required_images = Math.max(0, Number(state.index.manual_review_required_images || 0) + change);
+        if (week) week.needs_review_images = Math.max(0, Number(week.needs_review_images || 0) + change);
+      }
+      if (item.text_level_audit && item.text_level_audit.action !== "retain_visual") {
+        state.index.chat_audited_unconfirmed_images = Math.max(0, Number(state.index.chat_audited_unconfirmed_images || 0) + change);
+        if (week) week.chat_audited_images = Math.max(0, Number(week.chat_audited_images || 0) + change);
+      }
+      renderEvidenceReviewBar();
+    }
+
+    function renderPackageList() {
+      if (!state.index) return;
+      const query = els.packageSearch.value.trim().toLowerCase();
+      const rows = state.packageStats.filter((pkg) => `${pkg.package} ${pkg.family} ${pkg.package_id} ${(pkg.subcategories || []).map((subcategory) => `${subcategory.subcategory} ${subcategory.level}`).join(" ")}`.toLowerCase().includes(query));
+      els.packageList.innerHTML = rows.map((pkg) => `<button class="package-button${pkg.package_id === state.selectedPackageId ? " active" : ""}" type="button" data-package="${attr(pkg.package_id)}"><span class="package-button-top"><span class="swatch" style="background:${pkg.colour}"></span><strong>${esc(pkg.package)}</strong></span><span class="package-button-meta"><span>${pkg.fteWeeks.toFixed(2)} weeks</span><span>${formatCurrency(pkg.totalCost)}</span></span></button>`).join("") || `<div class="empty">No matching packages</div>`;
+      els.packageList.querySelectorAll("[data-package]").forEach((button) => button.addEventListener("click", () => selectPackage(button.dataset.package)));
+    }
+
+    async function selectPackage(packageId, loadWeek = true) {
+      const pkg = state.packageStats.find((item) => item.package_id === packageId);
+      if (!pkg) return;
+      const previousStrip = els.packageSummary.querySelector("#weekStrip");
+      if (previousStrip && state.selectedPackageId) {
+        state.weekStripScrollByPackage.set(state.selectedPackageId, previousStrip.scrollLeft);
+      }
+      const browseWeeks = pkg.evidenceWeeks?.length ? pkg.evidenceWeeks : pkg.activeWeeks;
+      const queueFilter = ["needs", "chat"].includes(state.levelFilter) ? state.levelFilter : "";
+      state.selectedPackageId = packageId;
+      renderPackageList();
+      els.packageSummary.innerHTML = `
+        <div class="package-summary-head"><div class="package-name"><span class="swatch" style="background:${pkg.colour}"></span><div><h2>${esc(pkg.package)}</h2><small>${esc(pkg.family || "")}${pkg.mapping_note ? ` | ${esc(pkg.mapping_note)}` : ""}</small></div></div><div class="package-kpis"><span class="package-kpi"><span>FTE weeks</span><strong>${pkg.fteWeeks.toFixed(2)}</strong></span><span class="package-kpi"><span>Evidence weeks</span><strong>${browseWeeks.length}</strong></span><span class="package-kpi"><span>Labour</span><strong>${formatCurrency(pkg.cost)}</strong></span><span class="package-kpi"><span>Materials</span><strong>${formatCurrency(pkg.materialsCost)}</strong></span><span class="package-kpi"><span>Total</span><strong>${formatCurrency(pkg.totalCost)}</strong></span><span class="package-kpi"><span>Span</span><strong>${pkg.first ? `${shortDate(pkg.first)} to ${shortDate(pkg.last)}` : "No activity"}</strong></span></div></div>
+        ${(pkg.subcategories || []).length ? `<div class="package-subcategories"><span class="package-subcategories-label">Subcategories</span><div class="subcategory-strip">${pkg.subcategories.map((subcategory) => `<button class="subcategory-chip" type="button" data-evidence-subcategory="${attr(subcategory.subcategoryId)}"><strong>${esc(subcategory.subcategory)}</strong><small>${esc(labelLevel(subcategory.level))} | ${subcategory.fteWeeks.toFixed(2)} weeks | ${formatCurrency(subcategory.totalCost)}</small></button>`).join("")}</div></div>` : ""}
+        <div id="weekStrip" class="week-strip">${browseWeeks.map(({ week, fraction, evidenceOnly }) => { const queued = queueFilter ? reviewCountForWeek(week, queueFilter) : 0; return `<button class="week-chip${week.week_key === state.selectedWeekKey ? " active" : ""}${["needs-review", "attendance-caveat"].includes(week.adjudication_status) ? " needs-review" : ""}" type="button" data-week="${week.week_key}"><span class="week-chip-top"><span>${week.week_key}</span><span>${queueFilter ? queued : evidenceOnly ? "Suggested" : `${(fraction * 100).toFixed(0)}%`}</span></span><span class="week-chip-bottom">${queueFilter ? `${queued} queued` : `${week.images} images, ${week.messages} messages`}</span></button>`; }).join("")}</div>`;
+      els.packageSummary.querySelectorAll("[data-week]").forEach((button) => button.addEventListener("click", () => selectWeek(button.dataset.week)));
+      els.packageSummary.querySelectorAll("[data-evidence-subcategory]").forEach((button) => button.addEventListener("click", () => openSubcategoryEvidence(button.dataset.evidenceSubcategory)));
+      const weekStrip = els.packageSummary.querySelector("#weekStrip");
+      const savedScrollLeft = state.weekStripScrollByPackage.get(packageId);
+      if (weekStrip && Number.isFinite(savedScrollLeft)) weekStrip.scrollLeft = savedScrollLeft;
+      weekStrip?.addEventListener("scroll", () => {
+        state.weekStripScrollByPackage.set(packageId, weekStrip.scrollLeft);
+      }, { passive: true });
+      if (loadWeek) {
+        const target = browseWeeks.some(({ week }) => week.week_key === state.selectedWeekKey) ? state.selectedWeekKey : browseWeeks[0]?.week.week_key;
+        if (target) await selectWeek(target);
+      } else {
+        requestAnimationFrame(() => keepSelectedWeekVisible("auto"));
+      }
+      syncHash();
+      refreshIcons();
+    }
+
+    async function selectWeek(weekKey) {
+      state.selectedWeekKey = weekKey;
+      els.packageSummary.querySelectorAll(".week-chip").forEach((button) => button.classList.toggle("active", button.dataset.week === weekKey));
+      keepSelectedWeekVisible("smooth");
+      els.weekDetail.innerHTML = `<div class="loading"><div class="spinner" aria-label="Loading week"></div></div>`;
+      try {
+        const detail = await getWeekDetail(weekKey);
+        renderWeekDetail(detail);
+        syncHash();
+      } catch (error) {
+        els.weekDetail.innerHTML = `<div class="empty">${esc(error.message || "Unable to load week")}</div>`;
+      }
+    }
+
+    function keepSelectedWeekVisible(behavior = "auto") {
+      const strip = els.packageSummary.querySelector("#weekStrip");
+      const activeChip = strip?.querySelector(`.week-chip[data-week="${CSS.escape(state.selectedWeekKey)}"]`);
+      if (!strip || !activeChip) return;
+      const stripRect = strip.getBoundingClientRect();
+      const activeRect = activeChip.getBoundingClientRect();
+      const nextRect = activeChip.nextElementSibling?.getBoundingClientRect();
+      const padding = 6;
+      let delta = 0;
+      if (activeRect.left < stripRect.left + padding) {
+        delta = activeRect.left - stripRect.left - padding;
+      } else {
+        const desiredRight = nextRect?.right || activeRect.right;
+        if (desiredRight > stripRect.right - padding) delta = desiredRight - stripRect.right + padding;
+      }
+      if (Math.abs(delta) > 1) strip.scrollBy({ left: delta, behavior });
+      state.weekStripScrollByPackage.set(state.selectedPackageId, strip.scrollLeft + delta);
+    }
+
+    function renderWeekDetail(detail) {
+      const summary = detail.summary;
+      const correction = detail.correction || {};
+      const packageId = state.selectedPackageId;
+      const packageInfo = state.packageById.get(packageId);
+      const allocations = summary.allocations || [];
+      const findings = correction.image_findings || {};
+      const media = (detail.media || []).map((item) => ({ ...item, finding: findings[item.evidence_id] || null }));
+      const relevantEvidence = new Set(media.filter((item) => effectiveMediaPackageId(item) === packageId).map((item) => item.evidence_id));
+      const packageMedia = state.mediaMode === "package" ? media.filter((item) => relevantEvidence.has(item.evidence_id)) : media;
+      const filteredMedia = packageMedia.filter((item) => {
+        let levelMatch = true;
+        if (state.levelFilter === "needs") levelMatch = item.kind === "image" && !item.manual_level && Boolean(item.inference_requires_manual_review);
+        if (state.levelFilter === "labelled") levelMatch = item.kind === "image" && Boolean(item.manual_level);
+        if (state.levelFilter === "chat") levelMatch = item.kind === "image" && !item.manual_level && Boolean(item.text_level_audit) && item.text_level_audit.action !== "retain_visual";
+        if (state.levelFilter === "inferred") levelMatch = item.kind === "image" && !item.manual_level && Boolean(item.inferred_level);
+        if (state.levelFilter === "unlabelled") levelMatch = item.kind === "image" && !item.manual_level && !item.inferred_level;
+        if (!levelMatch) return false;
+        if (state.roomFilter === "needs") return item.kind === "image" && (!item.room_id || item.room_needs_manual_review || item.room_id === "UNRESOLVED_ROOM");
+        if (state.roomFilter !== "all") return item.room_id === state.roomFilter;
+        return true;
+      });
+      state.activeMedia = filteredMedia;
+      renderEvidenceReviewBar();
+      const status = summary.adjudication_status || summary.status;
+      const attendance = detail.attendance || {};
+      const paymentRows = attendance.payments_dated_this_week || [];
+      const accounting = detail.accounting || {};
+      const accountingRows = accounting.transactions || [];
+      const projectCostRows = accounting.project_cost_transactions || [];
+      const roomChips = Object.entries(summary.room_counts || {}).sort((a, b) => b[1] - a[1]).map(([roomId, count]) =>
+        `<span class="allocation-chip"><strong>${count}</strong>${esc(roomName(roomId))}</span>`
+      ).join("");
+      els.weekDetail.innerHTML = `
+        <div class="detail-header">
+          <div class="detail-title-row"><div class="detail-title"><h2>${esc(summary.week_key)}</h2><p>${formatDate(summary.week_start)} to ${formatDate(summary.week_end)}</p></div><div class="badges"><span class="badge ${attr(status)}">${esc(labelStatus(status))}</span><span class="badge ${String(summary.confidence || "").toLowerCase()}">${esc(summary.confidence || "Unrated")}</span>${summary.attendance_status ? `<span class="badge">${esc(labelStatus(summary.attendance_status))}</span>` : ""}${summary.net_paid_on_dates_this_week_gbp ? `<span class="badge">${formatCurrency(summary.net_paid_on_dates_this_week_gbp)} paid on dates in week</span>` : ""}<span class="badge">${summary.reviewed_images} reviewed images</span><span class="badge">${summary.messages} messages</span></div></div>
+          <div class="allocation-chips">${allocations.map((row) => { const pkg = state.packageById.get(row.package_id); return `<span class="allocation-chip" style="border-left-color:${pkg?.colour || "#637069"}"><strong>${Math.round(Number(row.week_fraction) * 100)}%</strong>${esc(row.package)}</span>`; }).join("")}</div>
+          ${roomChips ? `<div class="allocation-chips room-chips" aria-label="Room allocation summary">${roomChips}</div>` : ""}
+          ${summary.review_note ? `<div class="review-note"><strong>Review note:</strong> ${esc(summary.review_note)}${summary.review_basis ? `<br><span class="muted">${esc(summary.review_basis)}</span>` : ""}</div>` : ""}
+          ${summary.attendance_status ? `<div class="attendance-note"><strong>Attendance: ${esc(labelStatus(summary.attendance_status))}</strong> (${esc(summary.attendance_confidence || "unrated")}). ${esc(summary.attendance_basis || "")}${summary.payment_status ? `<br><span class="muted">Payment record: ${esc(labelStatus(summary.payment_status))}. Payments are retained by transfer date and may be advances or arrears.</span>` : ""}${summary.reconciliation_notes?.length ? `<br><span class="muted">${esc(summary.reconciliation_notes.join(" "))}</span>` : ""}</div>` : ""}
+          ${paymentRows.length ? `<div class="attendance-note"><strong>Arcadie Xero entries dated in this week</strong><br>${paymentRows.map((payment) => `${esc(formatDate(payment.payment_date))}: ${formatCurrency(payment.net_amount_gbp)}${payment.paid_day_equivalent ? ` (${Number(payment.paid_day_equivalent).toFixed(1)} paid-day equivalent at the evidenced rate)` : ""}`).join("<br>")}<br><span class="muted">These are journal posting dates, not automatic work-date assignments.</span></div>` : ""}
+          ${accountingRows.length ? `<div class="accounting-note"><strong>Purchases dated in this week: ${formatCurrency(accounting.counted_materials_gbp)} counted${accounting.review_transactions ? `; ${accounting.review_transactions} need coding` : ""}</strong><br>${accountingRows.slice(0, 8).map((row) => `${esc(formatDate(row.date))}: ${formatCurrency(row.amount_gbp)} ${esc(row.detail || row.description)}${row.status === "review" ? " (held for review)" : ""}`).join("<br>")}${accountingRows.length > 8 ? `<br><span class="muted">${accountingRows.length - 8} more retained transaction(s) are in the Costs view.</span>` : ""}</div>` : ""}
+          ${projectCostRows.length ? `<div class="accounting-note"><strong>Additional journal project costs posted in this week: ${formatCurrency(Number(accounting.other_site_labour_gbp || 0) + Number(accounting.site_running_cost_gbp || 0) + Number(accounting.professional_fees_gbp || 0))}</strong><br>${projectCostRows.slice(0, 8).map((row) => `${esc(formatDate(row.date))}: ${formatCurrency(row.amount_gbp)} ${esc(row.category)} | ${esc(row.detail || row.contact || row.account_name)}`).join("<br>")}${projectCostRows.length > 8 ? `<br><span class="muted">${projectCostRows.length - 8} more journal row(s) are included.</span>` : ""}<br><span class="muted">Posting dates show journal timing and are not automatic proof of the work week.</span></div>` : ""}
+        </div>
+        <div class="detail-columns">
+          <section class="detail-panel">
+            <div class="panel-toolbar"><h3><i data-lucide="images" aria-hidden="true"></i>Images and media <span class="badge">${filteredMedia.length} shown</span></h3><div class="media-tools"><select class="level-filter" data-level-filter aria-label="Filter images by level status"><option value="all"${state.levelFilter === "all" ? " selected" : ""}>All media</option><option value="needs"${state.levelFilter === "needs" ? " selected" : ""}>Needs review</option><option value="chat"${state.levelFilter === "chat" ? " selected" : ""}>Chat audit</option><option value="unlabelled"${state.levelFilter === "unlabelled" ? " selected" : ""}>No level yet</option><option value="inferred"${state.levelFilter === "inferred" ? " selected" : ""}>Suggested levels</option><option value="labelled"${state.levelFilter === "labelled" ? " selected" : ""}>Manually confirmed</option></select><select class="room-filter" data-room-filter aria-label="Filter images by room">${roomFilterOptionsHtml()}</select><div class="segmented"><button type="button" data-media-mode="package" class="${state.mediaMode === "package" ? "active" : ""}">${esc(packageInfo?.package || "Package")}</button><button type="button" data-media-mode="all" class="${state.mediaMode === "all" ? "active" : ""}">All week</button></div></div></div>
+            <div id="mediaGrid" class="media-grid">${renderMediaCards(filteredMedia, packageId)}</div>
+          </section>
+          <section class="detail-panel">
+            <div class="panel-toolbar"><h3><i data-lucide="messages-square" aria-hidden="true"></i>WhatsApp text log</h3><span class="muted">${detail.messages.length} messages</span></div>
+            <div id="messageList" class="message-list">${renderMessages(detail.messages, relevantEvidence, media)}</div>
+          </section>
+        </div>`;
+      els.weekDetail.querySelectorAll("[data-media-mode]").forEach((button) => button.addEventListener("click", () => { state.mediaMode = button.dataset.mediaMode; renderWeekDetail(detail); }));
+      els.weekDetail.querySelector("[data-level-filter]")?.addEventListener("change", (event) => setLevelFilter(event.target.value));
+      els.weekDetail.querySelector("[data-room-filter]")?.addEventListener("change", (event) => { state.roomFilter = event.target.value; renderWeekDetail(detail); });
+      bindMediaCards();
+      bindAttachments(media);
+      refreshIcons();
+    }
+
+    function renderChatAuditNote(item) {
+      const audit = item.text_level_audit;
+      if (!audit || audit.action === "retain_visual") return "";
+      const actionLabels = {
+        override_visual: "Chat-corrected level",
+        corroborate_visual: "Chat-corroborated level",
+        manual_review: "Chat / visual conflict"
+      };
+      const level = audit.text_supported_level ? `: ${labelLevel(audit.text_supported_level)}` : "";
+      const previous = audit.action === "override_visual" && item.visual_level_before_text_audit ? `<br>Previous visual suggestion: ${esc(labelLevel(item.visual_level_before_text_audit))}.` : "";
+      const messages = (audit.evidence_messages || []).slice(0, 2).map((message) => `<br><strong>#${Number(message.message_index)}</strong> ${esc(message.sender || "")}: ${esc(message.text || "")}`).join("");
+      return `<div class="chat-audit-note"><strong>${esc(actionLabels[audit.action] || "Chat-level audit")}${esc(level)}</strong>${audit.text_confidence ? ` (${esc(audit.text_confidence)})` : ""}. ${esc(audit.rationale || "")}${previous}${messages}</div>`;
+    }
+
+    function renderMediaCards(media, packageId) {
+      if (!media.length) return `<div class="empty">No media matches the selected package, level and room filters.</div>`;
+      return media.map((item, index) => {
+        const finding = item.finding || {};
+        const privateItem = finding.privacy_flag || finding.evidence_role === "personal-irrelevant";
+        const revealed = state.revealedPrivate.has(item.evidence_id);
+        const preview = privateItem && !revealed ? `<i data-lucide="shield" aria-hidden="true"></i>` : item.kind === "image" ? `<img src="${attr(item.url)}" alt="${attr(finding.description || item.filename)}" loading="lazy">` : item.kind === "video" ? `<video src="${attr(item.url)}" preload="metadata" muted></video>` : `<i data-lucide="file-text" aria-hidden="true"></i>`;
+        const levelControl = item.kind === "image" ? `<div class="level-control"><label for="level-${index}"><i data-lucide="map-pin" aria-hidden="true"></i>Confirmed image level</label><select id="level-${index}" class="level-select${item.manual_level ? " labelled" : ""}" data-level-evidence="${attr(item.evidence_id)}" data-level-filename="${attr(item.filename)}" data-level-revision="${Number(item.level_label_revision || 0)}" aria-label="Set level for ${attr(item.filename)}"${state.savingLevels.has(item.filename.toLowerCase()) ? " disabled" : ""}>${levelOptionsHtml(item.manual_level)}</select>${finding.level_guess ? `<span class="level-guess">Earlier visual guess: ${esc(finding.level_guess)}</span>` : ""}</div>` : "";
+        const roomControl = item.kind === "image" ? `<div class="room-control"><label for="room-${index}"><i data-lucide="door-open" aria-hidden="true"></i>Room within level</label><select id="room-${index}" class="room-select${item.room_id ? " assigned" : ""}" data-room-evidence="${attr(item.evidence_id)}" data-room-filename="${attr(item.filename)}" data-room-revision="${Number(item.room_revision || 0)}" aria-label="Set room for ${attr(item.filename)}"${state.savingRooms.has(item.filename.toLowerCase()) ? " disabled" : ""}>${roomOptionsHtml(item)}</select>${item.room_basis ? `<span class="room-basis">${esc(item.room_confidence ? `${item.room_confidence}: ${item.room_basis}` : item.room_basis)}</span>` : ""}</div>` : "";
+        const suggestedPackage = state.packageById.get(effectiveMediaPackageId(item));
+        const originalPackage = state.packageById.get(item.original_package_id || finding.package_id);
+        const packageChanged = Boolean(suggestedPackage && originalPackage && suggestedPackage.package_id !== originalPackage.package_id);
+        const inferenceNote = item.kind === "image" && (packageChanged || (!item.manual_level && (item.inferred_level || item.inference_requires_manual_review))) ? `<div class="inference-note"><strong>${item.manual_level ? `${esc(labelLevel(item.manual_level))} confirmed` : item.inferred_level ? `Suggested ${esc(labelLevel(item.inferred_level))}` : "Manual review recommended"}</strong>${!item.manual_level && item.inference_confidence ? ` (${esc(item.inference_confidence)})` : ""}. ${esc(item.calibrated_package_reason || item.inference_basis || "")}${suggestedPackage ? `<br>${packageChanged ? "Calibrated" : "Suggested"} package: <strong>${esc(suggestedPackage.package)}</strong>${!item.manual_level && (item.calibrated_package_confidence || item.package_inference_confidence) ? ` (${esc(item.calibrated_package_confidence || item.package_inference_confidence)})` : ""}.` : ""}${packageChanged && originalPackage ? `<br>Previous package: ${esc(originalPackage.package)}.` : ""}${item.calibrated_task_description || item.inferred_task_description ? `<br>${esc(item.calibrated_task_description || item.inferred_task_description)}` : ""}</div>` : "";
+        const chatAuditNote = renderChatAuditNote(item);
+        return `<article class="media-card${item.manual_level ? " level-labelled" : item.inference_requires_manual_review || item.room_needs_manual_review ? " needs-review" : item.inferred_level ? " level-inferred" : ""}" data-evidence="${attr(item.evidence_id)}" data-level-filename="${attr(item.filename)}" data-room-filename="${attr(item.filename)}">
+          <div class="media-preview">${preview}<span class="role-label">${esc(labelRole(finding.evidence_role || item.kind))}</span>${privateItem && !revealed ? `<div class="privacy-mask"><div><i data-lucide="eye-off" aria-hidden="true"></i><p>Private evidence hidden</p><button type="button" data-reveal="${attr(item.evidence_id)}">Reveal</button></div></div>` : `<button class="open-media" type="button" data-media-index="${index}" aria-label="Open ${attr(item.filename)}"></button>`}</div>
+          <div class="media-body"><div class="media-file">${esc(item.filename)}</div>${levelControl}${roomControl}${chatAuditNote}${inferenceNote}${finding.description ? `<p class="media-description">${esc(finding.description)}</p>` : ""}${finding.visual_evidence ? `<p class="media-context">${esc(finding.visual_evidence)}</p>` : item.chat_text ? `<p class="media-context">${esc(item.chat_sender || "")}: ${esc(item.chat_text)}</p>` : ""}${finding.caveat ? `<p class="media-caveat">${esc(finding.caveat)}</p>` : ""}<div class="badges"><span class="badge">${esc(finding.confidence || "Unreviewed")}</span>${item.room_id ? `<span class="badge">${esc(item.room_name || roomName(item.room_id))}</span>` : ""}${finding.package_id && finding.package_id !== packageId ? `<span class="badge">${esc(state.packageById.get(finding.package_id)?.package || finding.package_id)}</span>` : ""}</div></div>
+        </article>`;
+      }).join("");
+    }
+
+    function bindMediaCards() {
+      els.weekDetail.querySelectorAll("[data-media-index]").forEach((button) => button.addEventListener("click", () => openLightbox(Number(button.dataset.mediaIndex))));
+      els.weekDetail.querySelectorAll("[data-level-evidence]").forEach((select) => select.addEventListener("change", () => {
+        const item = state.activeMedia.find((row) => row.evidence_id === select.dataset.levelEvidence);
+        if (item) saveImageLevel(item, select.value, select);
+      }));
+      els.weekDetail.querySelectorAll("[data-room-evidence]").forEach((select) => select.addEventListener("change", () => {
+        const item = state.activeMedia.find((row) => row.evidence_id === select.dataset.roomEvidence);
+        if (item) saveImageRoom(item, select.value, select);
+      }));
+      els.weekDetail.querySelectorAll("[data-reveal]").forEach((button) => button.addEventListener("click", () => {
+        state.revealedPrivate.add(button.dataset.reveal);
+        const detail = state.detailCache.get(state.selectedWeekKey);
+        if (detail) renderWeekDetail(detail);
+      }));
+    }
+
+    function renderMessages(messages, relevantEvidence, media) {
+      if (!messages.length) return `<div class="empty">No WhatsApp messages in this week.</div>`;
+      const relevantFilenames = new Set(media.filter((item) => relevantEvidence.has(item.evidence_id)).map((item) => item.filename));
+      return messages.map((message) => {
+        const relevant = (message.attachments || []).some((name) => relevantFilenames.has(name));
+        return `<article class="message ${String(message.sender || "").toLowerCase().includes("arcadie") ? "arcadie" : ""}${relevant ? " relevant" : ""}"><div class="message-head"><strong>${esc(message.sender || "Unknown")}</strong><span>${esc(formatDateTime(message.dt))}</span></div><div class="message-text">${esc(message.text || "")}</div>${message.attachments?.length ? `<div class="attachment-list">${message.attachments.map((name) => `<button class="attachment" type="button" data-attachment="${attr(name)}"><i data-lucide="paperclip" aria-hidden="true"></i>${esc(name)}</button>`).join("")}</div>` : ""}</article>`;
+      }).join("");
+    }
+
+    function bindAttachments(media) {
+      els.weekDetail.querySelectorAll("[data-attachment]").forEach((button) => button.addEventListener("click", () => {
+        const index = state.activeMedia.findIndex((item) => item.filename === button.dataset.attachment);
+        if (index >= 0) openLightbox(index);
+        else {
+          const item = media.find((row) => row.filename === button.dataset.attachment);
+          if (item) window.open(item.url, "_blank", "noopener");
+        }
+      }));
+    }
+
+    function openLightbox(index) {
+      const item = state.activeMedia[index];
+      if (!item) return;
+      const privateItem = item.finding?.privacy_flag || item.finding?.evidence_role === "personal-irrelevant";
+      if (privateItem && !state.revealedPrivate.has(item.evidence_id)) return;
+      state.lightboxIndex = index;
+      renderLightbox();
+      els.lightbox.classList.add("open");
+      document.body.style.overflow = "hidden";
+      els.closeLightbox.focus();
+    }
+
+    function renderLightbox() {
+      const item = state.activeMedia[state.lightboxIndex];
+      if (!item) return;
+      const finding = item.finding || {};
+      els.lightboxTitle.textContent = item.filename;
+      els.lightboxLevel.innerHTML = levelOptionsHtml(item.manual_level);
+      els.lightboxLevel.disabled = item.kind !== "image" || state.savingLevels.has(item.filename.toLowerCase());
+      els.lightboxLevel.hidden = item.kind !== "image";
+      els.lightboxMedia.innerHTML = item.kind === "image" ? `<img src="${attr(item.url)}" alt="${attr(finding.description || item.filename)}">` : item.kind === "video" ? `<video src="${attr(item.url)}" controls autoplay></video>` : `<iframe src="${attr(item.url)}" title="${attr(item.filename)}" style="width:100%;height:100%;border:0;background:white"></iframe>`;
+      const suggestedPackage = state.packageById.get(effectiveMediaPackageId(item));
+      const originalPackage = state.packageById.get(item.original_package_id || finding.package_id);
+      const packageChanged = Boolean(suggestedPackage && originalPackage && suggestedPackage.package_id !== originalPackage.package_id);
+      els.lightboxCopy.innerHTML = `<strong>${esc(finding.description || item.calibrated_task_description || item.inferred_task_description || labelRole(finding.evidence_role || item.kind))}</strong>${item.room_id ? `<span>Room: ${esc(item.room_name || roomName(item.room_id))}${item.room_confidence ? ` (${esc(item.room_confidence)})` : ""}${item.room_basis ? `: ${esc(item.room_basis)}` : ""}</span>` : ""}${renderChatAuditNote(item)}${!item.manual_level && item.inferred_level ? `<span>Suggested ${esc(labelLevel(item.inferred_level))}${item.inference_confidence ? ` (${esc(item.inference_confidence)})` : ""}: ${esc(item.inference_basis || "")}</span>` : ""}${suggestedPackage && (packageChanged || !item.manual_level) ? `<span>${packageChanged ? "Calibrated" : "Suggested"} package: ${esc(suggestedPackage.package)}${!item.manual_level && (item.calibrated_package_confidence || item.package_inference_confidence) ? ` (${esc(item.calibrated_package_confidence || item.package_inference_confidence)})` : ""}${packageChanged && originalPackage ? `; previously ${esc(originalPackage.package)}` : ""}</span>` : ""}${finding.visual_evidence ? `<span>${esc(finding.visual_evidence)}</span>` : ""}${item.chat_text ? `<span>${esc(item.chat_sender || "")}: ${esc(item.chat_text)}</span>` : ""}${finding.caveat ? `<span style="color:#f1c48b">${esc(finding.caveat)}</span>` : ""}`;
+      els.previousMedia.disabled = state.activeMedia.length < 2;
+      els.nextMedia.disabled = state.activeMedia.length < 2;
+    }
+
+    async function saveImageLevel(item, level, control) {
+      if (item.kind !== "image") return;
+      const key = item.filename.toLowerCase();
+      if (state.savingLevels.has(key)) return;
+      const weekKey = state.selectedWeekKey;
+      const wasConfirmed = Boolean(item.manual_level);
+      const wasLightboxOpen = els.lightbox.classList.contains("open");
+      const previousLightboxIndex = state.lightboxIndex;
+      const queueMode = ["needs", "chat"].includes(state.levelFilter);
+      state.savingLevels.add(key);
+      setLevelControlsDisabled(key, true);
+      try {
+        const response = await postJson("/api/arcadie-image-level", {
+          week_key: state.selectedWeekKey,
+          evidence_id: item.evidence_id,
+          filename: item.filename,
+          level,
+          base_revision: Number(item.level_label_revision || 0),
+          updated_by: "Greg"
+        });
+        applyLevelLabel(item.filename, response.label, response.calibrated_assignment);
+        applyRoomAssignment(item.filename, response.room_assignment);
+        const isConfirmed = Boolean(response.label);
+        if (wasConfirmed !== isConfirmed) adjustReviewQueueCounts(item, isConfirmed ? -1 : 1);
+        state.index.level_labelled_images = response.progress.labelled_images;
+        state.index.level_label_counts = response.progress.counts;
+        state.index.level_labels_updated_at = response.label?.updated_at || state.index.level_labels_updated_at;
+        if (response.room_progress) {
+          state.index.room_assigned_images = response.room_progress.assigned_images;
+          state.index.room_unresolved_images = response.room_progress.unresolved_images;
+          state.index.room_manual_review_images = response.room_progress.manual_review_images;
+          state.index.room_counts = response.room_progress.counts;
+        }
+        const weekIndex = state.index.weeks.findIndex((week) => week.week_key === weekKey);
+        if (weekIndex >= 0 && response.week_summary) state.index.weeks[weekIndex] = response.week_summary;
+        if (response.accounting_summary) state.accounting.summary = response.accounting_summary;
+        if (response.accounting_packages) state.accounting.packages = response.accounting_packages;
+        state.packageStats = buildPackageStats();
+        renderMetrics();
+        renderPackageTable();
+        renderStatusPanel();
+        renderTemporalMap();
+        renderGantt();
+        renderPackageList();
+        if (wasLightboxOpen) closeLightbox();
+
+        const effectivePackageId = response.calibrated_assignment?.calibrated_package_id || packageForLevel(response.label?.level);
+        const selectedStillApplies = (response.week_summary?.allocations || []).some((row) => row.package_id === state.selectedPackageId)
+          || (response.week_summary?.calibrated_package_ids || []).includes(state.selectedPackageId);
+        if (!selectedStillApplies && effectivePackageId && state.packageById.has(effectivePackageId)) state.selectedPackageId = effectivePackageId;
+        await selectPackage(state.selectedPackageId, false);
+        state.detailCache.delete(weekKey);
+        const detail = await getWeekDetail(weekKey);
+        state.selectedWeekKey = weekKey;
+        renderWeekDetail(detail);
+        syncHash();
+
+        if (wasLightboxOpen) {
+          if (state.activeMedia.length) openLightbox(Math.min(previousLightboxIndex, state.activeMedia.length - 1));
+          else if (queueMode && response.label && await openNextReviewWeek(state.levelFilter, true)) openLightbox(0);
+          else if (queueMode) toast("Review queue complete");
+        }
+        toast(response.label ? `${labelLevel(response.label.level)} saved` : "Level label removed");
+      } catch (error) {
+        if (control) control.value = item.manual_level || "";
+        toast(error.message || "Unable to save level", true);
+      } finally {
+        state.savingLevels.delete(key);
+        setLevelControlsDisabled(key, false);
+      }
+    }
+
+    async function saveImageRoom(item, roomId, control) {
+      if (item.kind !== "image") return;
+      const key = item.filename.toLowerCase();
+      if (state.savingRooms.has(key)) return;
+      state.savingRooms.add(key);
+      setRoomControlsDisabled(key, true);
+      try {
+        const response = await postJson("/api/arcadie-image-room", {
+          week_key: state.selectedWeekKey,
+          evidence_id: item.evidence_id,
+          filename: item.filename,
+          room_id: roomId,
+          base_revision: Number(item.room_revision || 0),
+          updated_by: "Greg"
+        });
+        applyRoomAssignment(item.filename, response.assignment);
+        state.index.room_assigned_images = response.progress.assigned_images;
+        state.index.room_unresolved_images = response.progress.unresolved_images;
+        state.index.room_manual_review_images = response.progress.manual_review_images;
+        state.index.room_counts = response.progress.counts;
+        const weekIndex = state.index.weeks.findIndex((week) => week.week_key === state.selectedWeekKey);
+        if (weekIndex >= 0 && response.week_summary) state.index.weeks[weekIndex] = response.week_summary;
+        const detail = state.detailCache.get(state.selectedWeekKey);
+        if (detail) {
+          detail.summary = response.week_summary || detail.summary;
+          renderWeekDetail(detail);
+        }
+        renderMetrics();
+        toast(response.assignment ? `${response.assignment.room_name} saved` : "Room assignment removed");
+      } catch (error) {
+        if (control) control.value = item.room_id || "";
+        toast(error.message || "Unable to save room", true);
+      } finally {
+        state.savingRooms.delete(key);
+        setRoomControlsDisabled(key, false);
+      }
+    }
+
+    function applyRoomAssignment(filename, assignment) {
+      const key = filename.toLowerCase();
+      for (const detail of state.detailCache.values()) {
+        for (const media of detail.media || []) {
+          if (media.filename.toLowerCase() !== key) continue;
+          applyRoomToMedia(media, assignment);
+        }
+      }
+      for (const media of state.activeMedia) {
+        if (media.filename.toLowerCase() !== key) continue;
+        applyRoomToMedia(media, assignment);
+      }
+    }
+
+    function applyRoomToMedia(media, assignment) {
+      media.room_id = assignment?.room_id || "";
+      media.room_name = assignment?.room_name || "";
+      media.room_reviewed_level = assignment?.reviewed_level || "";
+      media.room_confidence = assignment?.confidence || "";
+      media.room_visual_summary = assignment?.visual_summary || "";
+      media.room_basis = assignment?.basis || "";
+      media.room_level_conflict = Boolean(assignment?.level_conflict);
+      media.room_needs_manual_review = Boolean(assignment?.needs_manual_review);
+      media.room_source = assignment?.source || (assignment?.agent_id ? "agent-review" : "");
+      media.room_revision = Number(assignment?.revision || 0);
+    }
+
+    function setRoomControlsDisabled(filename, disabled) {
+      document.querySelectorAll("[data-room-filename]").forEach((element) => {
+        if (String(element.dataset.roomFilename || "").toLowerCase() !== filename) return;
+        if (element.matches("select")) element.disabled = disabled;
+      });
+    }
+
+    function applyLevelLabel(filename, label, assignment = null) {
+      const key = filename.toLowerCase();
+      for (const detail of state.detailCache.values()) {
+        for (const media of detail.media || []) {
+          if (media.filename.toLowerCase() !== key) continue;
+          applyLevelToMedia(media, label, assignment);
+        }
+      }
+      for (const media of state.activeMedia) {
+        if (media.filename.toLowerCase() !== key) continue;
+        applyLevelToMedia(media, label, assignment);
+      }
+    }
+
+    function applyLevelToMedia(media, label, assignment) {
+      media.manual_level = label?.level || "";
+      media.effective_level = assignment?.effective_level || label?.level || media.inferred_level || "";
+      media.level_source = assignment?.level_source || (label ? "manual" : media.inferred_level ? "inferred" : "");
+      media.level_label_revision = Number(label?.revision || 0);
+      media.level_label_updated_at = label?.updated_at || "";
+      if (!assignment) return;
+      media.original_package_id = assignment.original_package_id || media.original_package_id || "";
+      media.calibrated_package_id = assignment.calibrated_package_id || "";
+      media.effective_package_id = packageForLevel(media.effective_level) || assignment.calibrated_package_id || "";
+      media.calibrated_package_source = assignment.package_source || "";
+      media.calibrated_package_confidence = assignment.package_confidence || "";
+      media.calibrated_package_reason = assignment.package_reason || "";
+      media.calibrated_task_description = assignment.task_description || media.calibrated_task_description || "";
+    }
+
+    function updateVisibleLevelControls(filename, label) {
+      const key = filename.toLowerCase();
+      const media = state.activeMedia.find((item) => item.filename.toLowerCase() === key);
+      document.querySelectorAll("[data-level-filename]").forEach((element) => {
+        if (String(element.dataset.levelFilename || "").toLowerCase() !== key) return;
+        if (element.matches("select")) {
+          element.value = label?.level || "";
+          element.dataset.levelRevision = Number(label?.revision || 0);
+          element.classList.toggle("labelled", Boolean(label));
+        } else {
+          element.classList.toggle("level-labelled", Boolean(label));
+          element.classList.toggle("level-inferred", !label && Boolean(media?.inferred_level));
+        }
+      });
+      const current = state.activeMedia[state.lightboxIndex];
+      if (els.lightbox.classList.contains("open") && current?.filename.toLowerCase() === key) {
+        els.lightboxLevel.value = label?.level || "";
+      }
+    }
+
+    function setLevelControlsDisabled(filenameKey, disabled) {
+      document.querySelectorAll("[data-level-filename]").forEach((element) => {
+        if (String(element.dataset.levelFilename || "").toLowerCase() === filenameKey && element.matches("select")) element.disabled = disabled;
+      });
+      const current = state.activeMedia[state.lightboxIndex];
+      if (current?.filename.toLowerCase() === filenameKey) els.lightboxLevel.disabled = disabled;
+    }
+
+    function moveLightbox(direction) {
+      if (!state.activeMedia.length) return;
+      let next = state.lightboxIndex;
+      for (let attempts = 0; attempts < state.activeMedia.length; attempts += 1) {
+        next = (next + direction + state.activeMedia.length) % state.activeMedia.length;
+        const item = state.activeMedia[next];
+        const privateItem = item.finding?.privacy_flag || item.finding?.evidence_role === "personal-irrelevant";
+        if (!privateItem || state.revealedPrivate.has(item.evidence_id)) { state.lightboxIndex = next; break; }
+      }
+      renderLightbox();
+    }
+
+    function closeLightbox() {
+      els.lightbox.classList.remove("open");
+      els.lightboxMedia.innerHTML = "";
+      document.body.style.overflow = "";
+    }
+
+    async function openWeek(weekKey, packageId) {
+      switchView("evidence");
+      const candidate = state.packageStats.some((pkg) => pkg.package_id === packageId && (pkg.evidenceWeeks || pkg.activeWeeks).some(({ week }) => week.week_key === weekKey)) ? packageId : dominantAllocation(state.index.weeks.find((week) => week.week_key === weekKey))?.package_id;
+      if (candidate) await selectPackage(candidate, false);
+      await selectWeek(weekKey);
+    }
+
+    async function openSubcategoryEvidence(subcategoryId) {
+      const subcategory = state.subcategoryById.get(subcategoryId);
+      if (!subcategory) return;
+      switchView("evidence");
+      const target = subcategory.activeWeeks.find((activity) => activity.week_key === state.selectedWeekKey) || subcategory.activeWeeks[0];
+      if (target) {
+        await selectPackage(subcategory.packageId, false);
+        await selectWeek(target.week_key);
+      } else {
+        await selectPackage(subcategory.packageId);
+      }
+    }
+
+    function switchView(view) {
+      state.activeView = view;
+      document.querySelectorAll("[data-view-panel]").forEach((panel) => { panel.hidden = panel.dataset.viewPanel !== view; });
+      document.querySelectorAll(".view-tab").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+      if (view === "evidence") renderEvidenceReviewBar();
+      if (view === "costs") renderCosts();
+      if (view === "evidence" && state.selectedPackageId && !state.selectedWeekKey) selectPackage(state.selectedPackageId);
+      syncHash();
+      refreshIcons();
+    }
+
+    async function hydrateRoute(routeHash = location.hash) {
+      const parts = routeHash.replace(/^#\/?/, "").split("/").filter(Boolean);
+      const availableViews = hostedMode ? ["overview", "temporal", "gantt", "costs"] : ["overview", "temporal", "gantt", "costs", "evidence"];
+      const view = availableViews.includes(parts[0]) ? parts[0] : "overview";
+      if (view === "evidence" && reviewFilters.has(parts[3])) state.levelFilter = parts[3];
+      switchView(view);
+      if (view === "evidence" && parts[1] && state.packageById.has(parts[1])) {
+        await selectPackage(parts[1], false);
+        if (parts[2]) await selectWeek(parts[2]);
+        else await selectPackage(parts[1]);
+      }
+    }
+
+    function syncHash() {
+      const filter = state.levelFilter === "all" ? "" : `/${state.levelFilter}`;
+      const next = state.activeView === "evidence" ? `#evidence/${state.selectedPackageId || ""}/${state.selectedWeekKey || ""}${filter}` : `#${state.activeView}`;
+      history.replaceState(null, "", next.replace(/\/$/, ""));
+    }
+
+    async function getWeekDetail(weekKey) {
+      if (!state.detailCache.has(weekKey)) state.detailCache.set(weekKey, await fetchJson(`/api/arcadie-review-week/${encodeURIComponent(weekKey)}`));
+      return state.detailCache.get(weekKey);
+    }
+
+    function dominantAllocation(week) {
+      return [...(week?.allocations || [])].sort((a, b) => Number(b.week_fraction) - Number(a.week_fraction))[0] || null;
+    }
+
+    function labelStatus(value) {
+      return String(value || "Unreviewed").split(/[-_]/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+    }
+
+    function labelRole(value) {
+      const labels = { "arcadie-progress": "Arcadie progress", "arcadie-completed": "Arcadie completed", "greg-instruction": "Greg instruction", materials: "Materials", "personal-irrelevant": "Private", unclear: "Unclear", image: "Image", video: "Video", pdf: "PDF" };
+      return labels[value] || labelStatus(value);
+    }
+
+    function labelLevel(value) {
+      return levelOptions.find(([key]) => key === value)?.[1] || value || "Select level";
+    }
+
+    function roomTaxonomy() {
+      return state.index?.room_taxonomy || { levels: {}, level_aliases: {}, fallbacks: [] };
+    }
+
+    function taxonomyLevel(level) {
+      const value = String(level || "UNCLEAR").toUpperCase();
+      return roomTaxonomy().level_aliases?.[value] || value;
+    }
+
+    function roomDefinition(roomId) {
+      for (const rooms of Object.values(roomTaxonomy().levels || {})) {
+        const room = rooms.find((row) => row.room_id === roomId);
+        if (room) return room;
+      }
+      return (roomTaxonomy().fallbacks || []).find((row) => row.room_id === roomId) || null;
+    }
+
+    function roomName(roomId) {
+      return roomDefinition(roomId)?.name || roomId || "Unassigned";
+    }
+
+    function roomOptionsHtml(item) {
+      const level = taxonomyLevel(item.room_reviewed_level || item.manual_level || item.effective_level || item.inferred_level);
+      const excluded = ["OFF_SITE", "NOT_PROJECT"].includes(level);
+      const rooms = excluded
+        ? [{ room_id: "NOT_APPLICABLE", name: "Not applicable" }]
+        : [...(roomTaxonomy().levels?.[level] || []), { room_id: "UNRESOLVED_ROOM", name: "Unresolved within level" }, { room_id: "NOT_APPLICABLE", name: "Not applicable" }];
+      if (item.room_id && !rooms.some((room) => room.room_id === item.room_id)) {
+        rooms.push({ room_id: item.room_id, name: item.room_name || roomName(item.room_id) });
+      }
+      return `<option value="">Select room</option>${rooms.map((room) =>
+        `<option value="${attr(room.room_id)}"${room.room_id === item.room_id ? " selected" : ""}>${esc(room.name)}</option>`
+      ).join("")}`;
+    }
+
+    function roomFilterOptionsHtml() {
+      const options = [
+        `<option value="all"${state.roomFilter === "all" ? " selected" : ""}>All rooms</option>`,
+        `<option value="needs"${state.roomFilter === "needs" ? " selected" : ""}>Room review needed</option>`
+      ];
+      for (const [level, rooms] of Object.entries(roomTaxonomy().levels || {})) {
+        options.push(`<optgroup label="${attr(labelLevel(level))}">${rooms.map((room) =>
+          `<option value="${attr(room.room_id)}"${state.roomFilter === room.room_id ? " selected" : ""}>${esc(room.name)}</option>`
+        ).join("")}</optgroup>`);
+      }
+      options.push(`<optgroup label="Review states"><option value="UNRESOLVED_ROOM"${state.roomFilter === "UNRESOLVED_ROOM" ? " selected" : ""}>Unresolved within level</option><option value="NOT_APPLICABLE"${state.roomFilter === "NOT_APPLICABLE" ? " selected" : ""}>Not applicable</option></optgroup>`);
+      return options.join("");
+    }
+
+    function packageForLevel(level) {
+      return {
+        L1: "L1_RECEPTION",
+        L2: "L2_ENTRANCE",
+        L3: "L3_PLANT",
+        L4: "L4_MASTER_ENSUITE",
+        L5: "L5_BED_ENSUITE",
+        L6: "L6_LIVING_LAUNDRY",
+        L7: "L7_KITCHEN",
+        L8: "L8_DINING_OCULUS",
+        L9: "L9_BEDROOM_TOP",
+        L10: "L10_MEZZ_STEEL",
+        L11: "L11_ROOF",
+        SPIRAL_STAIRS: "STRUCTURAL_STEEL_STAIRS"
+      }[level] || "";
+    }
+
+    function effectiveMediaPackageId(item) {
+      const confirmedLevel = item.manual_level && item.manual_level !== "UNCLEAR" ? item.manual_level : "";
+      const effectiveLevel = confirmedLevel || item.room_reviewed_level || item.effective_level || "";
+      if (["OFF_SITE", "NOT_PROJECT"].includes(effectiveLevel)) return "";
+      return packageForLevel(effectiveLevel)
+        || item.effective_package_id
+        || item.calibrated_package_id
+        || item.recommended_package_id
+        || item.finding?.package_id
+        || "";
+    }
+
+    function levelOptionsHtml(selected = "") {
+      return levelOptions.map(([value, label]) => `<option value="${attr(value)}"${value === selected ? " selected" : ""}>${esc(label)}</option>`).join("");
+    }
+
+    function mixWithWhite(hex, amount) {
+      const clean = hex.replace("#", "");
+      const rgb = [0, 2, 4].map((offset) => parseInt(clean.slice(offset, offset + 2), 16));
+      const mixed = rgb.map((value) => Math.round(255 - (255 - value) * Math.max(0, Math.min(1, amount))));
+      return `rgb(${mixed.join(",")})`;
+    }
+
+    function parseDate(value) { return new Date(`${value}T00:00:00Z`); }
+    function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
+    function formatDate(value) { if (!value) return ""; return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(parseDate(value)); }
+    function shortDate(value) { if (!value) return ""; return new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }).format(parseDate(value)); }
+    function formatDateTime(value) { if (!value) return ""; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date); }
+    function formatCurrency(value) { return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(value || 0)); }
+    function esc(value) { return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char])); }
+    function attr(value) { return esc(value).replace(/`/g, "&#96;"); }
+    async function fetchJson(url) { const response = await fetch(url); if (!response.ok) throw new Error((await response.text()) || `Request failed: ${response.status}`); return response.json(); }
+    async function postJson(url, body) {
+      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `Request failed: ${response.status}`);
+      return payload;
+    }
+    function refreshIcons() { if (window.lucide) window.lucide.createIcons({ attrs: { width: 16, height: 16, "stroke-width": 1.8 } }); }
+    let toastTimer;
+    function toast(message, error = false) { clearTimeout(toastTimer); els.toast.textContent = message; els.toast.className = `toast show${error ? " error" : ""}`; toastTimer = setTimeout(() => { els.toast.className = "toast"; }, 3500); }
+  </script>
+</body>
+</html>
