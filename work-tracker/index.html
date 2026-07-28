@@ -387,7 +387,7 @@
           <span id="updatedMeta"></span>
         </div>
       </div>
-      <div class="header-actions" data-live-only>
+      <div class="header-actions" data-local-only>
         <a class="action-link" href="/arcadie-evidence-review.html" title="Edit weekly reviews"><i data-lucide="square-pen" aria-hidden="true"></i><span>Edit reviews</span></a>
         <a class="action-link" href="/arcadie-downloads/Arcadie%20Visual%20Audit%20Allocation.xlsx" title="Download Excel workbook"><i data-lucide="file-spreadsheet" aria-hidden="true"></i><span>Excel</span></a>
       </div>
@@ -400,7 +400,7 @@
       <button class="view-tab" type="button" data-view="temporal"><i data-lucide="calendar-range" aria-hidden="true"></i><span>Temporal map</span></button>
       <button class="view-tab" type="button" data-view="gantt"><i data-lucide="gantt-chart" aria-hidden="true"></i><span>Gantt</span></button>
       <button class="view-tab" type="button" data-view="costs"><i data-lucide="circle-pound-sterling" aria-hidden="true"></i><span>Costs</span></button>
-      <button class="view-tab" type="button" data-view="evidence" data-live-only><i data-lucide="images" aria-hidden="true"></i><span>Evidence</span></button>
+      <button class="view-tab" type="button" data-view="evidence"><i data-lucide="images" aria-hidden="true"></i><span>Evidence</span></button>
     </nav>
   </header>
 
@@ -471,7 +471,7 @@
 
     <section id="costsView" class="view" data-view-panel="costs" hidden>
       <div id="costMetricStrip" class="metric-strip" aria-label="Cost accounting totals"></div>
-      <section id="costEditor" class="cost-editor" data-live-only hidden>
+      <section id="costEditor" class="cost-editor" data-local-only hidden>
         <div class="section-header"><div class="section-title"><h2 id="costEditorTitle">Add subcategory</h2><p>Stored centrally and available on every device using this app</p></div></div>
         <form id="costEditorForm" class="cost-editor-form">
           <div class="field"><label for="subcategoryPackage">Main package</label><select id="subcategoryPackage" required></select></div>
@@ -485,7 +485,7 @@
         <section class="section">
           <div class="section-header">
             <div class="section-title"><h2>Package cost hierarchy</h2><p>Arcadie labour and materials allocated to packages; project running costs are shown separately</p></div>
-            <div class="toolbar"><input id="costSearch" type="search" placeholder="Search costs" aria-label="Search package costs"><select id="costSubcategoryFilter" aria-label="Filter subcategories"><option value="active">With allocated cost</option><option value="all">All configured</option></select><button id="addSubcategory" type="button" data-live-only><i data-lucide="plus" aria-hidden="true"></i><span>Add subcategory</span></button></div>
+            <div class="toolbar"><input id="costSearch" type="search" placeholder="Search costs" aria-label="Search package costs"><select id="costSubcategoryFilter" aria-label="Filter subcategories"><option value="active">With allocated cost</option><option value="all">All configured</option></select><button id="addSubcategory" type="button" data-local-only><i data-lucide="plus" aria-hidden="true"></i><span>Add subcategory</span></button></div>
           </div>
           <div class="table-scroll"><table><thead><tr><th>Package / subcategory</th><th>Level</th><th class="right">FTE weeks</th><th class="right">Labour</th><th class="right">Materials</th><th class="right">Total</th></tr></thead><tbody id="costHierarchyBody"></tbody></table></div>
         </section>
@@ -499,14 +499,14 @@
         <div class="table-scroll"><table><thead><tr><th>Category</th><th>Scope</th><th>Journal accounts</th><th class="right">Entries</th><th class="right">Debits</th><th class="right">Credits</th><th class="right">Net</th></tr></thead><tbody id="runningCostBody"></tbody></table></div>
         <div id="runningCostCaption" class="timeline-caption"></div>
       </section>
-      <section class="section" data-live-only>
+      <section class="section" data-local-only>
         <div class="section-header"><div class="section-title"><h2>Purchase ledger</h2><p>Counted items and uncoded online purchases held for review</p></div><div class="toolbar"><input id="transactionSearch" type="search" placeholder="Search purchases" aria-label="Search purchase ledger"><select id="transactionStatus" aria-label="Filter purchase status"><option value="included">Counted costs</option><option value="review">Needs coding</option><option value="all">All retained</option></select></div></div>
         <div class="table-scroll"><table><thead><tr><th>Date</th><th>Transaction</th><th>Account / source</th><th>Allocation</th><th class="right">Amount</th></tr></thead><tbody id="costTransactionBody"></tbody></table></div>
         <div id="costTransactionCaption" class="timeline-caption"></div>
       </section>
     </section>
 
-    <section id="evidenceView" class="view" data-view-panel="evidence" data-live-only hidden>
+    <section id="evidenceView" class="view" data-view-panel="evidence" hidden>
       <div class="evidence-review-bar">
         <div class="evidence-review-title"><i data-lucide="list-checks" aria-hidden="true"></i>Media review</div>
         <div id="evidenceReviewModes" class="segmented" role="group" aria-label="Evidence review mode"></div>
@@ -627,7 +627,7 @@
               fetchJson("/api/arcadie-accounting")
             ]);
         if (hostedMode) {
-          document.querySelectorAll("[data-live-only]").forEach((element) => { element.hidden = true; });
+          document.querySelectorAll("[data-local-only]").forEach((element) => { element.hidden = true; });
           document.querySelectorAll("[data-static-only]").forEach((element) => { element.hidden = false; });
         }
         state.packageById = new Map(state.index.packages.map((pkg, index) => [pkg.package_id, { ...pkg, colour: palette[index % palette.length] }]));
@@ -647,11 +647,9 @@
         renderGantt();
         populateCostEditor();
         renderCosts();
-        if (!hostedMode) {
-          renderPackageList();
-          renderEvidenceReviewBar();
-          if (state.selectedPackageId) await selectPackage(state.selectedPackageId, false);
-        }
+        renderPackageList();
+        renderEvidenceReviewBar();
+        if (!hostedMode && state.selectedPackageId) await selectPackage(state.selectedPackageId, false);
         await hydrateRoute(requestedRoute);
         refreshIcons();
       } catch (error) {
@@ -1375,9 +1373,13 @@
         const finding = item.finding || {};
         const privateItem = finding.privacy_flag || finding.evidence_role === "personal-irrelevant";
         const revealed = state.revealedPrivate.has(item.evidence_id);
-        const preview = privateItem && !revealed ? `<i data-lucide="shield" aria-hidden="true"></i>` : item.kind === "image" ? `<img src="${attr(item.url)}" alt="${attr(finding.description || item.filename)}" loading="lazy">` : item.kind === "video" ? `<video src="${attr(item.url)}" preload="metadata" muted></video>` : `<i data-lucide="file-text" aria-hidden="true"></i>`;
-        const levelControl = item.kind === "image" ? `<div class="level-control"><label for="level-${index}"><i data-lucide="map-pin" aria-hidden="true"></i>Confirmed image level</label><select id="level-${index}" class="level-select${item.manual_level ? " labelled" : ""}" data-level-evidence="${attr(item.evidence_id)}" data-level-filename="${attr(item.filename)}" data-level-revision="${Number(item.level_label_revision || 0)}" aria-label="Set level for ${attr(item.filename)}"${state.savingLevels.has(item.filename.toLowerCase()) ? " disabled" : ""}>${levelOptionsHtml(item.manual_level)}</select>${finding.level_guess ? `<span class="level-guess">Earlier visual guess: ${esc(finding.level_guess)}</span>` : ""}</div>` : "";
-        const roomControl = item.kind === "image" ? `<div class="room-control"><label for="room-${index}"><i data-lucide="door-open" aria-hidden="true"></i>Room within level</label><select id="room-${index}" class="room-select${item.room_id ? " assigned" : ""}" data-room-evidence="${attr(item.evidence_id)}" data-room-filename="${attr(item.filename)}" data-room-revision="${Number(item.room_revision || 0)}" aria-label="Set room for ${attr(item.filename)}"${state.savingRooms.has(item.filename.toLowerCase()) ? " disabled" : ""}>${roomOptionsHtml(item)}</select>${item.room_basis ? `<span class="room-basis">${esc(item.room_confidence ? `${item.room_confidence}: ${item.room_basis}` : item.room_basis)}</span>` : ""}</div>` : "";
+        const preview = privateItem && !revealed ? `<i data-lucide="shield" aria-hidden="true"></i>` : item.kind === "image" ? item.url ? `<img src="${attr(item.url)}" alt="${attr(finding.description || item.filename)}" loading="lazy">` : `<i data-lucide="image-off" aria-label="${attr(item.hosted_media_error || "Preview unavailable")}"></i>` : item.kind === "video" && item.url ? `<video src="${attr(item.url)}" preload="metadata" muted></video>` : `<i data-lucide="file-text" aria-hidden="true"></i>`;
+        const levelControl = item.kind === "image" ? hostedMode
+          ? `<div class="level-control"><label><i data-lucide="map-pin" aria-hidden="true"></i>Image level</label><div class="badges"><span class="badge">${esc(labelLevel(item.manual_level || item.effective_level || item.inferred_level))}</span>${item.manual_level ? `<span class="badge">Confirmed</span>` : ""}</div>${finding.level_guess ? `<span class="level-guess">Earlier visual guess: ${esc(finding.level_guess)}</span>` : ""}</div>`
+          : `<div class="level-control"><label for="level-${index}"><i data-lucide="map-pin" aria-hidden="true"></i>Confirmed image level</label><select id="level-${index}" class="level-select${item.manual_level ? " labelled" : ""}" data-level-evidence="${attr(item.evidence_id)}" data-level-filename="${attr(item.filename)}" data-level-revision="${Number(item.level_label_revision || 0)}" aria-label="Set level for ${attr(item.filename)}"${state.savingLevels.has(item.filename.toLowerCase()) ? " disabled" : ""}>${levelOptionsHtml(item.manual_level)}</select>${finding.level_guess ? `<span class="level-guess">Earlier visual guess: ${esc(finding.level_guess)}</span>` : ""}</div>` : "";
+        const roomControl = item.kind === "image" ? hostedMode
+          ? `<div class="room-control"><label><i data-lucide="door-open" aria-hidden="true"></i>Room within level</label><div class="badges"><span class="badge">${esc(item.room_name || roomName(item.room_id) || "Not assigned")}</span>${item.room_confidence ? `<span class="badge">${esc(item.room_confidence)}</span>` : ""}</div>${item.room_basis ? `<span class="room-basis">${esc(item.room_basis)}</span>` : ""}</div>`
+          : `<div class="room-control"><label for="room-${index}"><i data-lucide="door-open" aria-hidden="true"></i>Room within level</label><select id="room-${index}" class="room-select${item.room_id ? " assigned" : ""}" data-room-evidence="${attr(item.evidence_id)}" data-room-filename="${attr(item.filename)}" data-room-revision="${Number(item.room_revision || 0)}" aria-label="Set room for ${attr(item.filename)}"${state.savingRooms.has(item.filename.toLowerCase()) ? " disabled" : ""}>${roomOptionsHtml(item)}</select>${item.room_basis ? `<span class="room-basis">${esc(item.room_confidence ? `${item.room_confidence}: ${item.room_basis}` : item.room_basis)}</span>` : ""}</div>` : "";
         const suggestedPackage = state.packageById.get(effectiveMediaPackageId(item));
         const originalPackage = state.packageById.get(item.original_package_id || finding.package_id);
         const packageChanged = Boolean(suggestedPackage && originalPackage && suggestedPackage.package_id !== originalPackage.package_id);
@@ -1445,9 +1447,9 @@
       const finding = item.finding || {};
       els.lightboxTitle.textContent = item.filename;
       els.lightboxLevel.innerHTML = levelOptionsHtml(item.manual_level);
-      els.lightboxLevel.disabled = item.kind !== "image" || state.savingLevels.has(item.filename.toLowerCase());
-      els.lightboxLevel.hidden = item.kind !== "image";
-      els.lightboxMedia.innerHTML = item.kind === "image" ? `<img src="${attr(item.url)}" alt="${attr(finding.description || item.filename)}">` : item.kind === "video" ? `<video src="${attr(item.url)}" controls autoplay></video>` : `<iframe src="${attr(item.url)}" title="${attr(item.filename)}" style="width:100%;height:100%;border:0;background:white"></iframe>`;
+      els.lightboxLevel.disabled = hostedMode || item.kind !== "image" || state.savingLevels.has(item.filename.toLowerCase());
+      els.lightboxLevel.hidden = hostedMode || item.kind !== "image";
+      els.lightboxMedia.innerHTML = item.kind === "image" ? item.url ? `<img src="${attr(item.url)}" alt="${attr(finding.description || item.filename)}">` : `<div class="empty">${esc(item.hosted_media_error || "Preview unavailable")}</div>` : item.kind === "video" && item.url ? `<video src="${attr(item.url)}" controls autoplay></video>` : item.url ? `<iframe src="${attr(item.url)}" title="${attr(item.filename)}" style="width:100%;height:100%;border:0;background:white"></iframe>` : `<div class="empty">This media type is retained in the local archive.</div>`;
       const suggestedPackage = state.packageById.get(effectiveMediaPackageId(item));
       const originalPackage = state.packageById.get(item.original_package_id || finding.package_id);
       const packageChanged = Boolean(suggestedPackage && originalPackage && suggestedPackage.package_id !== originalPackage.package_id);
@@ -1709,7 +1711,7 @@
 
     async function hydrateRoute(routeHash = location.hash) {
       const parts = routeHash.replace(/^#\/?/, "").split("/").filter(Boolean);
-      const availableViews = hostedMode ? ["overview", "temporal", "gantt", "costs"] : ["overview", "temporal", "gantt", "costs", "evidence"];
+      const availableViews = ["overview", "temporal", "gantt", "costs", "evidence"];
       const view = availableViews.includes(parts[0]) ? parts[0] : "overview";
       if (view === "evidence" && reviewFilters.has(parts[3])) state.levelFilter = parts[3];
       switchView(view);
@@ -1727,7 +1729,12 @@
     }
 
     async function getWeekDetail(weekKey) {
-      if (!state.detailCache.has(weekKey)) state.detailCache.set(weekKey, await fetchJson(`/api/arcadie-review-week/${encodeURIComponent(weekKey)}`));
+      if (!state.detailCache.has(weekKey)) {
+        const detail = hostedMode
+          ? await window.WORK_TRACKER_WEEK_LOADER(weekKey)
+          : await fetchJson(`/api/arcadie-review-week/${encodeURIComponent(weekKey)}`);
+        state.detailCache.set(weekKey, detail);
+      }
       return state.detailCache.get(weekKey);
     }
 
